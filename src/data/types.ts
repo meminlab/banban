@@ -59,7 +59,7 @@ export interface Transaction {
   id: string;
   ledger_id: string;
   type: TransactionType;
-  amount: number; // 원, 정수 ≥ 1
+  amount: number; // 원, 정수 1 ~ 9,999,999,999
   occurred_on: string; // YYYY-MM-DD (KST 날짜)
   category_id: string; // 소분류
   pocket_id: string | null; // 지출일 때 필수
@@ -79,7 +79,7 @@ export interface Asset {
   name: string;
   kind: AssetKind;
   owner_id: string | null; // member id, null = 공동
-  balance: number; // 원, 정수 ≥ 0
+  balance: number; // 원, 정수 0 ~ 9,999,999,999
   memo: string | null;
   created_at: string;
   updated_at: string;

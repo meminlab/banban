@@ -11,7 +11,7 @@ for _ in $(seq 1 30); do
 done
 sleep 1
 run() { docker exec -i "$NAME" psql -U postgres -v ON_ERROR_STOP=1 -q -X "$@"; }
-run < supabase/tests/00_supabase_stub.sql
+if [ "${STRICT:-}" = 1 ]; then run -v strict=1 < supabase/tests/00_supabase_stub.sql; else run < supabase/tests/00_supabase_stub.sql; fi
 for f in supabase/migrations/*.sql; do echo "▶ migrate $f"; run < "$f"; done
 echo "▶ tests"
 run -o /dev/null < supabase/tests/10_rls_test.sql

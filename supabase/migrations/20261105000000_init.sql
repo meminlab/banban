@@ -4,14 +4,15 @@
 --   * 모든 데이터는 해당 가계부의 "현재 멤버"만 읽고 쓴다 (RLS)
 --   * 다른 가계부의 카테고리·주머니·멤버를 참조하지 못하게 (id, ledger_id) 복합 FK 사용
 --   * 가계부 생성·참여는 RPC(create_ledger / join_ledger)로만 한다 (인원 상한·1인 1가계부 규칙을 DB에서 보장)
---   * 금액은 원 단위 정수(bigint)
+--   * 금액은 원 단위 정수(bigint), 건당 최대 9,999,999,999원 (월 합계도 bigint라 넘치지 않음)
+--   * 테이블 권한은 기본값에 기대지 않고 명시적으로 부여 (프로젝트의 기본 노출 설정과 무관하게 동일하게 동작)
 
 -- ─────────────────────────────────────────────
 -- ledger: 가계부 (공유 단위)
 -- ─────────────────────────────────────────────
 create table public.ledger (
   id            uuid primary key default gen_random_uuid(),
-  name          text not null check (char_length(btrim(name)) between 1 and 30),
+  name          text not null check (char_length(btrim(name)) between 1 and 20),
   member_limit  int  not null default 2 check (member_limit >= 1),
   created_by    uuid not null references auth.users (id),
   created_at    timestamptz not null default now()
@@ -106,7 +107,7 @@ create table public.transaction (
   id           uuid primary key default gen_random_uuid(),
   ledger_id    uuid not null references public.ledger (id) on delete cascade,
   type         text not null check (type in ('expense', 'income', 'saving')),
-  amount       bigint not null check (amount >= 1),
+  amount       bigint not null check (amount between 1 and 9999999999),
   occurred_on  date not null default (now() at time zone 'Asia/Seoul')::date,
   category_id  uuid not null,
   pocket_id    uuid,
@@ -136,10 +137,10 @@ create index transaction_ledger_date_idx on public.transaction (ledger_id, occur
 create table public.asset (
   id          uuid primary key default gen_random_uuid(),
   ledger_id   uuid not null references public.ledger (id) on delete cascade,
-  name        text not null check (char_length(btrim(name)) between 1 and 30),
+  name        text not null check (char_length(btrim(name)) between 1 and 20),
   kind        text not null check (kind in ('checking', 'installment_saving', 'deposit', 'investment', 'cash', 'other')),
   owner_id    uuid,
-  balance     bigint not null default 0 check (balance >= 0),
+  balance     bigint not null default 0 check (balance between 0 and 9999999999),
   memo        text check (char_length(memo) <= 100),
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
@@ -408,26 +409,27 @@ alter table public.pocket      enable row level security;
 alter table public.transaction enable row level security;
 alter table public.asset       enable row level security;
 
--- 비로그인(anon)은 아무것도 못 한다
+-- 테이블 권한: 기본값을 모두 거두고 필요한 것만 명시적으로 준다. 비로그인(anon)은 아무것도 없음
 revoke all on public.ledger, public.member, public.invite, public.category,
-              public.pocket, public.transaction, public.asset from anon;
+              public.pocket, public.transaction, public.asset from public, anon, authenticated;
+grant usage on schema public to authenticated;
+grant select on public.ledger, public.member to authenticated;
+grant update (name) on public.ledger to authenticated;               -- member_limit은 변경 불가
+grant update (display_name) on public.member to authenticated;       -- 본인 이름만 (정책으로 제한)
+grant select, insert, update on public.invite to authenticated;
+grant select, insert, update, delete on public.category, public.pocket, public.transaction, public.asset to authenticated;
 
--- ledger: 멤버만 조회·이름/상한 수정. 생성은 create_ledger RPC로만, 삭제는 MVP 범위 밖
+-- ledger: 멤버만 조회·이름 수정. 생성은 create_ledger RPC로만, 삭제는 MVP 범위 밖
 create policy ledger_select on public.ledger for select to authenticated
   using (public.is_ledger_member(id));
 create policy ledger_update on public.ledger for update to authenticated
   using (public.is_ledger_member(id)) with check (public.is_ledger_member(id));
-revoke insert, delete on public.ledger from authenticated;
-revoke update on public.ledger from authenticated;
-grant update (name) on public.ledger to authenticated;  -- member_limit은 클라이언트에서 못 바꿈
 
 -- member: 같은 가계부 멤버끼리 조회. 본인 display_name만 수정. 추가는 RPC로만
 create policy member_select on public.member for select to authenticated
   using (public.is_ledger_member(ledger_id));
 create policy member_update_self on public.member for update to authenticated
   using (user_id = auth.uid() and left_at is null) with check (user_id = auth.uid());
-revoke insert, delete, update on public.member from authenticated;
-grant update (display_name) on public.member to authenticated;
 
 -- invite: 멤버만 조회·발급·무효화. 참여는 join_ledger RPC로만
 create policy invite_select on public.invite for select to authenticated
@@ -436,7 +438,6 @@ create policy invite_insert on public.invite for insert to authenticated
   with check (public.is_ledger_member(ledger_id));
 create policy invite_update on public.invite for update to authenticated
   using (public.is_ledger_member(ledger_id)) with check (public.is_ledger_member(ledger_id));
-revoke delete on public.invite from authenticated;
 
 -- category / pocket / transaction / asset: 멤버만 전부(조회·추가·수정·삭제)
 create policy category_all on public.category for all to authenticated

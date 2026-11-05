@@ -1,4 +1,7 @@
 -- 스키마·권한 규칙 테스트. 실패하면 예외로 중단된다.
+-- 전체를 한 트랜잭션으로 실행하고 마지막에 ROLLBACK 하므로 테스트 데이터·테스트용 스키마가 남지 않는다.
+-- → 실제 Supabase SQL Editor에서도 그대로 실행 가능 ("Success. No rows returned" = 통과)
+begin;
 -- 사용자: A(가계부 주인), B(초대로 참여), C(3번째 — 상한 초과), X(외부인)
 
 create schema test;
@@ -73,6 +76,9 @@ select test.expect_error($$select public.create_ledger('또', 'A')$$, 'ALREADY_I
 -- member_limit은 클라이언트가 못 바꾼다
 select test.expect_error($$update public.ledger set member_limit = 10$$, 'permission denied');
 select test.expect_affected($$update public.ledger set name = '반반네'$$, 1);
+-- 이름 1~20자
+select test.expect_error($$update public.ledger set name = repeat('가', 21)$$, 'check constraint');
+select test.expect_error($$update public.ledger set name = '   '$$, 'check constraint');
 
 -- 초대 발급 (두 번 발급 → 첫 번째는 무효)
 insert into public.invite (ledger_id) select val from test.ctx where key = 'ledger';
@@ -176,6 +182,11 @@ insert into public.transaction (ledger_id, type, amount, category_id, pocket_id,
 select test.expect_count($$select * from public.transaction t, test.v
   where t.source = 'manual' and t.created_by = v.mb and t.updated_by = v.mb and t.spender_id = v.ma
     and t.occurred_on = (now() at time zone 'Asia/Seoul')::date$$, 1);
+-- 금액 상한 9,999,999,999원까지 허용, 초과 불가
+insert into public.transaction (ledger_id, type, amount, category_id, spender_id)
+  select ledger, 'income', 9999999999, inc_child, mb from test.v;
+select test.expect_error($$insert into public.transaction (ledger_id, type, amount, category_id, spender_id)
+  select ledger, 'income', 10000000000, inc_child, mb from test.v$$, 'check constraint');
 -- 금액 0 불가
 select test.expect_error($$insert into public.transaction (ledger_id, type, amount, category_id, pocket_id, spender_id)
   select ledger, 'expense', 0, exp_child, pocket, mb from test.v$$, 'check constraint');
@@ -208,13 +219,15 @@ reset role;
 -- A가 수정하면 마지막 수정자 = A
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select test.expect_affected($$update public.transaction set amount = 15000, created_by = (select ma from test.v)$$, 1);
-select test.expect_count($$select * from public.transaction t, test.v where t.updated_by = v.ma and t.created_by = v.mb$$, 1);
+select test.expect_affected($$update public.transaction set amount = 15000, created_by = (select ma from test.v), updated_by = (select mb from test.v) where type = 'expense'$$, 1);
+select test.expect_count($$select * from public.transaction t, test.v where t.type = 'expense' and t.updated_by = v.ma and t.created_by = v.mb$$, 1);
 
 -- 자산: 공동(owner null) / 개인, 잔액 음수 불가
 insert into public.asset (ledger_id, name, kind, balance) select ledger, '생활비통장', 'checking', 500000 from test.v;
 insert into public.asset (ledger_id, name, kind, owner_id, balance) select ledger, 'A 적금', 'installment_saving', ma, 1000000 from test.v;
 select test.expect_error($$insert into public.asset (ledger_id, name, kind, balance) select ledger, '마이너스', 'cash', -1 from test.v$$, 'check constraint');
+select test.expect_error($$insert into public.asset (ledger_id, name, kind, balance) select ledger, '너무큼', 'cash', 10000000000 from test.v$$, 'check constraint');
+select test.expect_error($$insert into public.asset (ledger_id, name, kind) select ledger, repeat('가', 21), 'cash' from test.v$$, 'check constraint');
 select test.expect_error($$insert into public.asset (ledger_id, name, kind) select ledger, '이상한종류', 'crypto' from test.v$$, 'check constraint');
 select test.expect_count('select * from public.asset', 2);
 reset role;
@@ -238,3 +251,5 @@ select test.expect_error($$insert into public.transaction (ledger_id, type, amou
 reset role;
 
 select 'all RLS/schema tests passed' as result;
+
+rollback;
