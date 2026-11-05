@@ -250,6 +250,56 @@ select test.expect_error($$insert into public.transaction (ledger_id, type, amou
   select (select val from test.ctx where key = 'ledger_c'), 'income', 1000, inc_child, mb from test.v$$, 'foreign key');
 reset role;
 
+-- ── 10. D1 카테고리 2단계 (B, 멤버)
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+-- 자기 자신을 부모로 지정 불가
+select test.expect_error($$update public.category set parent_id = id where id = (select exp_parent from test.v)$$, 'CATEGORY_SELF_PARENT');
+-- 소분류가 있는 대분류(식비)는 다른 대분류(주거) 아래로 갈 수 없음
+select test.expect_error($$update public.category set parent_id = (select id from public.category where name = '주거' and parent_id is null)
+  where id = (select exp_parent from test.v)$$, 'CATEGORY_DEPTH_EXCEEDED');
+-- 소분류를 소분류 아래로 옮길 수 없음
+select test.expect_error($$update public.category set parent_id = (select exp_child from test.v)
+  where name = '배달' and type = 'expense'$$, 'CATEGORY_DEPTH_EXCEEDED');
+-- 부모와 type이 다르면 불가
+select test.expect_error($$insert into public.category (ledger_id, type, parent_id, name)
+  select ledger, 'income', exp_parent, '섞임' from test.v$$, 'foreign key');
+-- 자식이 있는 대분류의 type 변경 불가 (자식과 type이 달라짐)
+select test.expect_error($$update public.category set type = 'income' where id = (select exp_parent from test.v)$$, 'foreign key');
+-- 정상: 소분류 추가, 소분류를 다른 대분류로 이동, 자식 없는 대분류를 소분류로
+insert into public.category (ledger_id, type, parent_id, name) select ledger, 'expense', exp_parent, '야식' from test.v;
+select test.expect_affected($$update public.category set parent_id = (select id from public.category where name = '주거' and parent_id is null)
+  where name = '야식'$$, 1);
+insert into public.category (ledger_id, type, name) select ledger, 'expense', '임시대분류' from test.v;
+select test.expect_affected($$update public.category set parent_id = (select exp_parent from test.v) where name = '임시대분류'$$, 1);
+select test.expect_count($$select * from public.category c join public.category p on p.id = c.parent_id where p.parent_id is not null$$, 0);
+reset role;
+
+-- ── 11. D2 초대 규칙 (A, 멤버)
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+-- 클라이언트가 보낸 코드·만료일·무효여부·발급자는 무시
+insert into public.invite (ledger_id, code, expires_at, is_revoked, created_by)
+  select ledger, 'AAAAAAAA', '2099-01-01', true, mb from test.v;
+select test.expect_count($$select * from public.invite i, test.v
+  where i.is_revoked = false and i.code <> 'AAAAAAAA' and i.code ~ '^[A-Z0-9]{8}$'
+    and i.expires_at between now() + interval '7 days' - interval '1 minute' and now() + interval '7 days'
+    and i.created_by = v.ma$$, 1);
+-- 유효 초대는 항상 1개
+select test.expect_count('select * from public.invite where is_revoked = false', 1);
+-- 만료일·코드·가계부는 못 바꿈
+select test.expect_error($$update public.invite set expires_at = '2099-01-01'$$, 'permission denied');
+select test.expect_error($$update public.invite set code = 'BBBBBBBB'$$, 'permission denied');
+select test.expect_error($$update public.invite set ledger_id = ledger_id$$, 'permission denied');
+-- 무효 초대를 되살릴 수 없음
+select test.expect_error($$update public.invite set is_revoked = false where is_revoked$$, 'INVITE_CANNOT_UNREVOKE');
+-- 유효 초대를 무효로 만드는 건 가능
+select test.expect_affected($$update public.invite set is_revoked = true where is_revoked = false$$, 1);
+select test.expect_count('select * from public.invite where is_revoked = false', 0);
+reset role;
+-- 관리자도 무효 초대를 되살릴 수 없음
+select test.expect_error($$update public.invite set is_revoked = false$$, 'INVITE_CANNOT_UNREVOKE');
+
 select 'all RLS/schema tests passed' as result;
 
 rollback;

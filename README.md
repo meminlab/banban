@@ -59,8 +59,10 @@ npm run dev                  # http://localhost:5173
 
 1. https://supabase.com 에서 무료 프로젝트 생성
 2. **스키마 적용** — SQL Editor에서 아래 순서로 실행 (각 파일 전체 내용을 붙여넣고 Run)
-   1. `supabase/migrations/20261105000000_init.sql` — 스키마·권한 규칙. **한 번만** 실행 (다시 실행하면 "already exists" 오류)
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 7행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+   1. `supabase/migrations/` 의 파일을 **이름 순서대로, 각각 한 번만** 실행 (다시 실행하면 "already exists" 오류)
+      - `20261105000000_init.sql` — 스키마·권한 규칙
+      - `20261105010000_category_depth_invite_rules.sql` — 카테고리 2단계, 초대 만료·무효 규칙 보강
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 7행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `invite_rules=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
 3. 프로젝트 설정 → API Keys에서 URL, publishable key를 복사해 `.env.local`과 호스팅 환경변수에 넣기
@@ -81,8 +83,8 @@ npm run dev                  # http://localhost:5173
 |---|---|---|
 | `ledger` | 가계부 | `member_limit` 기본 2 (클라이언트에서 변경 불가) |
 | `member` | 멤버 | role `owner`/`member`, 사용자당 참여 중인 가계부 1개, 나가기는 `left_at` 기록(행 유지 → 그 사람 내역 보존) |
-| `invite` | 초대 | 8자리 코드, 7일 만료, 새로 발급하면 이전 것 `is_revoked` |
-| `category` | 카테고리 | type `expense`/`income`/`saving`, 대분류(`parent_id` null) > 소분류 2단계, 숨김 |
+| `invite` | 초대 | 코드(8자리)·만료(발급+7일)는 서버가 기록, 새로 발급하면 이전 것 `is_revoked`, 유효 초대는 가계부당 1개, 멤버는 무효화만 가능(되살리기·만료 연장 불가) |
+| `category` | 카테고리 | type `expense`/`income`/`saving`, 대분류(`parent_id` null) > 소분류 2단계만(자기 자신·소분류 있는 대분류는 부모 지정 불가, 부모와 type 같아야 함), 숨김 |
 | `pocket` | 주머니 | scope `shared`/`personal`, 숨김 |
 | `transaction` | 내역 | 금액 정수 1~9,999,999,999, `occurred_on` 날짜, 소분류만, 지출이면 주머니 필수, `is_fixed`는 지출만, 메모 100자, `source` 기본 `manual`, 작성자·마지막 수정자 자동 기록 |
 | `asset` | 자산 | kind `checking`/`installment_saving`/`deposit`/`investment`/`cash`/`other`, `owner_id` null = 공동, 잔액 정수 0~9,999,999,999 |
