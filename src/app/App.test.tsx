@@ -34,6 +34,9 @@ vi.mock('../data/ledger', () => ({
     return fake.ledgerId;
   },
 }));
+vi.mock('../data/summary', () => ({
+  getMonthSummaryData: async () => ({ transactions: [], members: [], pockets: [], categories: [] }),
+}));
 vi.mock('../data/profile', () => ({
   getProfile: async (id: string) => ({ id, display_name: '김반반', avatar_url: null, updated_at: '' }),
 }));
