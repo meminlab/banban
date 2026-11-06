@@ -178,7 +178,9 @@ button { font: inherit; }
   padding: calc(24px + var(--safe-top)) 20px calc(32px + var(--safe-bottom));
 }
 .login__brand { margin-top: 20vh; }
-.login__logo { margin: 0 0 12px; font-size: 2.25rem; font-weight: 800; color: var(--color-primary); }
+/* 로고: 높이 44px 고정, 가로는 비율대로(늘리기·찌그러뜨리기 금지 — docs/brand/README.md) */
+.brand-logo { display: block; align-self: flex-start; height: 44px; width: auto; max-width: 100%; object-fit: contain; }
+.login__logo { margin: 0 0 16px; }
 .login__title { margin: 0 0 8px; font-size: 1.375rem; }
 .login__desc { margin: 0; color: var(--color-text-sub); line-height: 1.5; }
 
@@ -190,6 +192,7 @@ button { font: inherit; }
 .avatar--initial { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary); }
 
 /* ── 시작 화면 */
+.start__logo { margin: 8px 0 4px; }
 .start__options { display: flex; flex-direction: column; gap: 12px; }
 .option-card {
   display: flex;

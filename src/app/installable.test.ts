@@ -28,20 +28,25 @@ describe('manifest', () => {
       start_url: '/',
       scope: '/',
       orientation: 'portrait',
-      theme_color: '#1f6f5c', // global.css --color-primary
-      background_color: '#ffffff',
+      theme_color: '#FFFFFF', // index.html meta theme-color와 같게(흰 상단바)
+      background_color: '#FFFFFF',
     });
   });
 
-  it('192·512 아이콘(any)과 maskable 아이콘이 있고 실제 크기가 맞다', () => {
+  it('아이콘은 192·512 두 개, 둘 다 any maskable이고 실제 크기가 맞다', () => {
     const icons = manifest.icons as { src: string; sizes: string; purpose: string }[];
-    for (const purpose of ['any', 'maskable']) {
-      for (const size of [192, 512]) {
-        const icon = icons.find((i) => i.purpose === purpose && i.sizes === `${size}x${size}`);
-        expect(icon, `${purpose} ${size}`).toBeDefined();
-        expect(pngSize(icon!.src)).toEqual([size, size]);
-      }
+    expect(icons).toHaveLength(2);
+    for (const size of [192, 512]) {
+      const icon = icons.find((i) => i.sizes === `${size}x${size}`);
+      expect(icon, `${size}`).toBeDefined();
+      expect(icon!.purpose).toBe('any maskable');
+      expect(pngSize(icon!.src)).toEqual([size, size]);
     }
+  });
+
+  it('theme_color는 index.html meta theme-color와 같다', () => {
+    const meta = html.match(/name="theme-color" content="([^"]+)"/)?.[1];
+    expect(meta?.toLowerCase()).toBe(manifest.theme_color.toLowerCase());
   });
 });
 
@@ -52,6 +57,11 @@ describe('index.html', () => {
     expect(html).toContain('name="apple-mobile-web-app-title" content="반반"');
     expect(html).toMatch(/name="apple-mobile-web-app-status-bar-style" content="\w/);
     expect(html).toContain('viewport-fit=cover');
+  });
+
+  it('파비콘: SVG + ICO 대체', () => {
+    expect(html).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" />');
+    expect(html).toContain('<link rel="alternate icon" href="/favicon.ico" />');
   });
 
   it('apple-touch-icon 180px', () => {
