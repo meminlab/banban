@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentUser } from '../app/auth';
 import { useLedgerId } from '../app/guards';
-import { LEDGER_PATH, type LedgerFlash } from '../app/routes';
+import { ledgerReturnPath, type LedgerFlash } from '../app/routes';
 import { Dialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
 import { StatusScreen } from '../components/StatusScreen';
@@ -68,10 +68,12 @@ export function TransactionFormPage() {
   const ledgerId = useLedgerId();
   const { transactionId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [returnTo] = useState(() => ledgerReturnPath(location.state));
   const { state, retry } = useFormData(ledgerId, transactionId);
   const close = useCallback(
-    (flash?: LedgerFlash) => navigate(LEDGER_PATH, { replace: true, state: flash ? { flash } : undefined }),
-    [navigate],
+    (flash?: LedgerFlash) => navigate(returnTo, { replace: true, state: flash ? { flash } : undefined }),
+    [navigate, returnTo],
   );
   const title = transactionId ? '내역 수정' : '내역 입력';
 

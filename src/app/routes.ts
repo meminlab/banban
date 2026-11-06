@@ -23,6 +23,15 @@ export const TRANSACTION_NEW_PATH = '/ledger/new';
 export const transactionPath = (id: string) => `/ledger/${id}`;
 /** 입력 화면을 닫고 가계부 탭으로 돌아갈 때 알려 줄 결과 (location.state.flash) */
 export type LedgerFlash = 'saved' | 'deleted';
+/** 가계부 탭 → 입력·수정 화면으로 갈 때 넘기는 state. 닫으면 보던 달·보기·필터(returnTo)로 돌아간다 */
+export interface TransactionFormState {
+  returnTo?: string;
+}
+/** 입력·수정 화면을 닫을 때 돌아갈 주소. 가계부 탭 주소(/ledger 또는 /ledger?...)만 받는다 */
+export function ledgerReturnPath(state: unknown): string {
+  const returnTo = (state as TransactionFormState | null)?.returnTo;
+  return typeof returnTo === 'string' && /^\/ledger(\?[^#]*)?$/.test(returnTo) ? returnTo : LEDGER_PATH;
+}
 /** 설정 > 가계부 이름 */
 export const LEDGER_NAME_PATH = '/settings/name';
 /** 설정 > 멤버·초대 */
