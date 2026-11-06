@@ -6,6 +6,14 @@ export type MemberRole = 'owner' | 'member';
 export type TransactionSource = 'manual' | 'excel' | 'sync';
 export type AssetKind = 'checking' | 'installment_saving' | 'deposit' | 'investment' | 'cash' | 'other';
 
+/** 사용자 프로필 — 구글 계정에서 가져와 DB 트리거가 저장. 화면은 읽기만 */
+export interface Profile {
+  id: string; // auth user id
+  display_name: string;
+  avatar_url: string | null; // https 만
+  updated_at: string;
+}
+
 export interface Ledger {
   id: string;
   name: string;

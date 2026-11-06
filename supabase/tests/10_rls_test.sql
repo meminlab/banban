@@ -300,6 +300,58 @@ reset role;
 -- 관리자도 무효 초대를 되살릴 수 없음
 select test.expect_error($$update public.invite set is_revoked = false$$, 'INVITE_CANNOT_UNREVOKE');
 
+-- ── 12. 프로필 (BANB-4): 구글 계정 정보로 자동 생성·갱신, 본인과 같은 가계부 사람만 조회
+-- 가입(auth.users insert) 때 이미 이메일 앞부분으로 만들어져 있다
+select test.expect_count($$select * from public.profile where id = '00000000-0000-0000-0000-0000000000ff' and display_name = 'x' and avatar_url is null$$, 1);
+-- 구글 정보가 들어오면(로그인 때 갱신) 이름·이미지를 반영한다
+update auth.users set raw_user_meta_data = '{"full_name":"  김에이  ","avatar_url":"https://lh3.googleusercontent.com/a/abc"}'
+  where id = '00000000-0000-0000-0000-00000000000a';
+update auth.users set raw_user_meta_data = '{"name":"비","picture":"http://insecure.example/b.png"}'
+  where id = '00000000-0000-0000-0000-00000000000b';
+update auth.users set raw_user_meta_data = jsonb_build_object('full_name', repeat('가', 150))
+  where id = '00000000-0000-0000-0000-00000000000c';
+select test.expect_count($$select * from public.profile where id = '00000000-0000-0000-0000-00000000000a' and display_name = '김에이' and avatar_url = 'https://lh3.googleusercontent.com/a/abc'$$, 1);
+select test.expect_count($$select * from public.profile where id = '00000000-0000-0000-0000-00000000000b' and display_name = '비' and avatar_url is null$$, 1);  -- https 아니면 버림
+select test.expect_count($$select * from public.profile where id = '00000000-0000-0000-0000-00000000000c' and char_length(display_name) = 100$$, 1);
+-- 이름이 바뀌지 않은 갱신은 updated_at을 건드리지 않는다
+update public.profile set updated_at = '2000-01-01' where id = '00000000-0000-0000-0000-00000000000a';
+update auth.users set raw_user_meta_data = raw_user_meta_data where id = '00000000-0000-0000-0000-00000000000a';
+select test.expect_count($$select * from public.profile where id = '00000000-0000-0000-0000-00000000000a' and updated_at = '2000-01-01'$$, 1);
+
+set role authenticated;
+-- A: 나 + 같은 가계부 B
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select test.expect_count('select * from public.profile', 2);
+select test.expect_count($$select * from public.profile where id in ('00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-0000000000ff')$$, 0);
+-- 클라이언트는 프로필을 못 바꾼다 (트리거만 기록)
+select test.expect_error($$update public.profile set display_name = '해킹'$$, 'permission denied');
+select test.expect_error($$insert into public.profile (id, display_name) values (auth.uid(), '가짜')$$, 'permission denied');
+select test.expect_error($$delete from public.profile$$, 'permission denied');
+select test.expect_error($$select public.sync_profile_from_auth()$$, 'permission denied');
+-- 외부인 X: 자기 것만
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000ff';
+select test.expect_count('select * from public.profile', 1);
+-- C: 다른 가계부 → 자기 것만
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
+select test.expect_count('select * from public.profile', 1);
+reset role;
+-- 비로그인: 못 봄
+set role anon;
+reset request.jwt.claim.sub;
+select test.expect_error('select * from public.profile', 'permission denied');
+reset role;
+-- B가 나가면: A는 여전히 B 프로필을 본다("(나감)" 표시용), B는 자기 것만
+update public.member set left_at = now() where user_id = '00000000-0000-0000-0000-00000000000b';
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+select test.expect_count('select * from public.profile', 2);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+select test.expect_count('select * from public.profile', 1);
+reset role;
+-- 사용자 삭제 시 프로필도 삭제
+delete from auth.users where id = '00000000-0000-0000-0000-0000000000ff';
+select test.expect_count($$select * from public.profile where id = '00000000-0000-0000-0000-0000000000ff'$$, 0);
+
 select 'all RLS/schema tests passed' as result;
 
 rollback;

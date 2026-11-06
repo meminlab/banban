@@ -1,6 +1,7 @@
 -- 마이그레이션 적용 확인 (읽기 전용). Supabase SQL Editor에서 실행.
--- 기대 결과: 7행 모두 rls_enabled = true, anon_select = false, authenticated_select = true,
+-- 기대 결과: 8행 모두 rls_enabled = true, anon_select = false, authenticated_select = true,
 --           policies: ledger 2 / member 2 / invite 3 / 나머지 1, rpc = true,
+--           profile_sync = true (20261106000000 마이그레이션: 프로필 테이블·트리거)
 --           invite_rules = true (20261105010000 마이그레이션 적용 여부)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -11,9 +12,11 @@ select c.relname                                          as table_name,
        (to_regprocedure('public.create_ledger(text,text)') is not null
         and to_regprocedure('public.join_ledger(text,text)') is not null) as rpc,
        (to_regclass('public.invite_one_active_per_ledger') is not null
-        and not has_column_privilege('authenticated', 'public.invite', 'expires_at', 'update')) as invite_rules
+        and not has_column_privilege('authenticated', 'public.invite', 'expires_at', 'update')) as invite_rules,
+       exists (select 1 from pg_trigger t
+                where t.tgrelid = 'auth.users'::regclass and t.tgname = 'profile_sync_after_auth_user') as profile_sync
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile')
 order by c.relname;
