@@ -8,6 +8,7 @@ import {
   compactWon,
   dailyTotals,
   filterTransactions,
+  knownFilter,
   formatDayLabel,
   groupByDate,
   parseLedgerQuery,
@@ -131,12 +132,20 @@ describe('필터 선택지', () => {
     ]);
   });
 
+  it('사람: 이미 고른 나간 멤버는 이 달 내역에 없어도 보인다 (BANB-20)', () => {
+    const members = [m('mA', '김', '2026-11-01'), m('mC', '최', '2026-11-03', '2026-11-04')];
+    expect(spenderFilterOptions(members, new Set(), ['mC']).map((o) => o.label)).toEqual(['김', '최 (나감)']);
+    expect(spenderFilterOptions(members, new Set(), []).map((o) => o.label)).toEqual(['김']);
+  });
+
   it('주머니: 숨긴 주머니는 이 달에 쓰였을 때만', () => {
     const p = (id: string, name: string, sort_order: number, is_hidden = false): Pocket => ({
       id, ledger_id: 'L', name, scope: 'shared', sort_order, is_hidden, created_at: '',
     });
     const pockets = [p('b', '여행', 2), p('a', '공동소비', 1), p('h1', '숨김1', 3, true), p('h2', '숨김2', 4, true)];
     expect(pocketFilterOptions(pockets, new Set(['h2'])).map((o) => o.label)).toEqual(['공동소비', '여행', '숨김2']);
+    // 이미 고른 숨긴 주머니는 이 달에 안 쓰였어도 보인다 (BANB-20)
+    expect(pocketFilterOptions(pockets, new Set(), ['h1']).map((o) => o.label)).toEqual(['공동소비', '여행', '숨김1']);
   });
 
   it('카테고리: 유형별 대분류, 숨긴 대분류는 그 아래 소분류가 이 달에 쓰였을 때만', () => {
@@ -146,6 +155,29 @@ describe('필터 선택지', () => {
       ['income', ['급여']],
       ['saving', ['적금']],
     ]);
+  });
+  it('카테고리: 이미 고른 숨긴 대분류는 이 달에 안 쓰였어도 보인다 (BANB-20)', () => {
+    const expense = categoryFilterGroups(CATEGORIES, new Set(), ['old'])[0];
+    expect(expense.options.map((o) => o.label)).toEqual(['식비', '주거', '옛날']);
+  });
+});
+
+describe('알 수 없는 필터 값 무시 (BANB-20)', () => {
+  const options = {
+    members: [{ id: 'm1' }],
+    pockets: [{ id: 'p1' }],
+    categories: [
+      { id: 'food', parent_id: null },
+      { id: 'food-out', parent_id: 'food' },
+    ],
+  };
+  it('가계부에 없는 id·대분류가 아닌 카테고리는 뺀다', () => {
+    const f = { types: ['expense' as const], spenders: ['m1', 'gone'], categories: ['food', 'food-out', 'gone'], pockets: ['gone'] };
+    expect(knownFilter(f, options)).toEqual({ types: ['expense'], spenders: ['m1'], categories: ['food'], pockets: [] });
+  });
+  it('모두 알 수 있으면 같은 객체를 그대로 돌려준다', () => {
+    const f = { types: [], spenders: ['m1'], categories: ['food'], pockets: ['p1'] };
+    expect(knownFilter(f, options)).toBe(f);
   });
 });
 

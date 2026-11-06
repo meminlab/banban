@@ -57,6 +57,26 @@ export function filterTransactions<T extends FilterableTx>(
   );
 }
 
+/**
+ * 가계부에 없는 값(삭제된 카테고리·주머니 등 이름을 알 수 없는 id, 대분류가 아닌 카테고리)은 뺀다.
+ * 주소에 남은 값은 칩으로 보여 줄 수 없으므로 잘못된 쿼리처럼 무시한다.
+ */
+export function knownFilter(
+  f: LedgerFilter,
+  options: { members: Pick<Member, 'id'>[]; pockets: Pick<Pocket, 'id'>[]; categories: Pick<Category, 'id' | 'parent_id'>[] },
+): LedgerFilter {
+  const members = new Set(options.members.map((m) => m.id));
+  const pockets = new Set(options.pockets.map((p) => p.id));
+  const parents = new Set(options.categories.filter((c) => c.parent_id === null).map((c) => c.id));
+  const next: LedgerFilter = {
+    types: f.types,
+    spenders: f.spenders.filter((id) => members.has(id)),
+    categories: f.categories.filter((id) => parents.has(id)),
+    pockets: f.pockets.filter((id) => pockets.has(id)),
+  };
+  return activeFilterCount(next) === activeFilterCount(f) ? f : next;
+}
+
 // ── 필터 선택지
 
 export interface FilterOption {
@@ -67,18 +87,36 @@ export interface FilterOption {
 const byOrder = (a: { sort_order: number; name: string }, b: { sort_order: number; name: string }) =>
   a.sort_order - b.sort_order || a.name.localeCompare(b.name, 'ko');
 
-/** 사람: 현재 멤버(참여 순) + 이 달 내역에 나오는 나간 멤버("이름 (나감)") */
-export function spenderFilterOptions(members: Member[], usedIds: ReadonlySet<string>): FilterOption[] {
+/**
+ * 이미 고른 값은 그 달 내역에 쓰였는지와 상관없이 선택지에 남긴다.
+ * (달을 옮겨도 필터는 유지되므로, 숨김·나감 항목이 고른 채로 사라지면 무엇이 걸렸는지 알 수 없다)
+ */
+function visibleIds(usedIds: ReadonlySet<string>, selectedIds: readonly string[]): ReadonlySet<string> {
+  return selectedIds.length === 0 ? usedIds : new Set([...usedIds, ...selectedIds]);
+}
+
+/** 사람: 현재 멤버(참여 순) + 이 달 내역에 나오거나 이미 고른 나간 멤버("이름 (나감)") */
+export function spenderFilterOptions(
+  members: Member[],
+  usedIds: ReadonlySet<string>,
+  selectedIds: readonly string[] = [],
+): FilterOption[] {
+  const show = visibleIds(usedIds, selectedIds);
   return members
-    .filter((m) => m.left_at === null || usedIds.has(m.id))
+    .filter((m) => m.left_at === null || show.has(m.id))
     .sort((a, b) => a.joined_at.localeCompare(b.joined_at))
     .map((m) => ({ id: m.id, label: m.left_at ? `${m.display_name} (나감)` : m.display_name }));
 }
 
-/** 주머니: 숨기지 않은 것 + 이 달 내역에 쓰인 숨긴 주머니. 순서대로 */
-export function pocketFilterOptions(pockets: Pocket[], usedIds: ReadonlySet<string>): FilterOption[] {
+/** 주머니: 숨기지 않은 것 + 이 달 내역에 쓰였거나 이미 고른 숨긴 주머니. 순서대로 */
+export function pocketFilterOptions(
+  pockets: Pocket[],
+  usedIds: ReadonlySet<string>,
+  selectedIds: readonly string[] = [],
+): FilterOption[] {
+  const show = visibleIds(usedIds, selectedIds);
   return pockets
-    .filter((p) => !p.is_hidden || usedIds.has(p.id))
+    .filter((p) => !p.is_hidden || show.has(p.id))
     .sort(byOrder)
     .map((p) => ({ id: p.id, label: p.name }));
 }
@@ -88,10 +126,14 @@ export interface CategoryFilterGroup {
   options: FilterOption[];
 }
 
-/** 카테고리: 유형별 대분류. 숨긴 대분류는 이 달 내역에 쓰였을 때만 */
-export function categoryFilterGroups(categories: Category[], usedCategoryIds: ReadonlySet<string>): CategoryFilterGroup[] {
+/** 카테고리: 유형별 대분류. 숨긴 대분류는 이 달 내역에 쓰였거나(소분류 포함) 이미 골랐을 때만 */
+export function categoryFilterGroups(
+  categories: Category[],
+  usedCategoryIds: ReadonlySet<string>,
+  selectedIds: readonly string[] = [],
+): CategoryFilterGroup[] {
   const parentOf = parentIdMap(categories);
-  const usedParents = new Set([...usedCategoryIds].map((id) => parentOf.get(id) ?? id));
+  const usedParents = new Set([...[...usedCategoryIds].map((id) => parentOf.get(id) ?? id), ...selectedIds]);
   return TYPE_ORDER.map((type) => ({
     type,
     options: categories

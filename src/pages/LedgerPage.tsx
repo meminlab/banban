@@ -21,6 +21,7 @@ import {
   dailyTotals,
   dayOfMonth,
   filterTransactions,
+  knownFilter,
   formatDayLabel,
   groupByDate,
   parseLedgerQuery,
@@ -104,13 +105,15 @@ export function LedgerPage() {
   }, [location.state, location.pathname, location.search, navigate]);
 
   const returnState: TransactionFormState = { returnTo: `${location.pathname}${location.search}` };
-  const filterCount = activeFilterCount(query.filter);
   const closeFilter = useCallback(() => setFilterOpen(false), []);
 
   const data = state.status === 'ready' ? state.data : null;
+  // 주소에 남은 알 수 없는 값(삭제된 카테고리·주머니 등)은 무시한다. 불러오는 중에는 주소 그대로
+  const filter = useMemo(() => (data ? knownFilter(query.filter, data.options) : query.filter), [data, query.filter]);
+  const filterCount = activeFilterCount(filter);
   const filtered = useMemo(
-    () => (data ? filterTransactions(data.items, query.filter, data.options.categories) : []),
-    [data, query.filter],
+    () => (data ? filterTransactions(data.items, filter, data.options.categories) : []),
+    [data, filter],
   );
 
   return (
@@ -221,7 +224,7 @@ export function LedgerPage() {
 
       {filterOpen && data && (
         <FilterSheet
-          filter={query.filter}
+          filter={filter}
           data={data}
           resultCount={filtered.length}
           onChange={(filter) => setQuery({ filter })}
@@ -481,9 +484,19 @@ function FilterSheet({
     }),
     [items],
   );
-  const spenders = useMemo(() => spenderFilterOptions(options.members, used.spenders), [options.members, used]);
-  const pockets = useMemo(() => pocketFilterOptions(options.pockets, used.pockets), [options.pockets, used]);
-  const categoryGroups = useMemo(() => categoryFilterGroups(options.categories, used.categories), [options.categories, used]);
+  // 이미 고른 숨김·나감 항목은 이 달에 안 쓰였어도 칩으로 보여 끌 수 있게 한다
+  const spenders = useMemo(
+    () => spenderFilterOptions(options.members, used.spenders, filter.spenders),
+    [options.members, used, filter.spenders],
+  );
+  const pockets = useMemo(
+    () => pocketFilterOptions(options.pockets, used.pockets, filter.pockets),
+    [options.pockets, used, filter.pockets],
+  );
+  const categoryGroups = useMemo(
+    () => categoryFilterGroups(options.categories, used.categories, filter.categories),
+    [options.categories, used, filter.categories],
+  );
   const toggle = (key: FilterKey) => (id: string) => onChange(toggleFilter(filter, key, id));
 
   return (
