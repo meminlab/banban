@@ -2,14 +2,20 @@
 import type { Asset, AssetKind, Member } from '../data/types';
 import { parseWonInput } from './money';
 
-/** 종류 — 표시 순서 = 선택지 순서 */
-export const ASSET_KINDS: readonly { value: AssetKind; label: string }[] = [
-  { value: 'checking', label: '입출금' },
-  { value: 'installment_saving', label: '적금' },
-  { value: 'deposit', label: '예금' },
-  { value: 'investment', label: '투자' },
-  { value: 'cash', label: '현금' },
-  { value: 'other', label: '기타' },
+/** 종류 — 표시 순서 = 선택지 순서. group: 자산 / 부채 (BANB-2 자산관리 1단계, design.md 5.20) */
+export const ASSET_KINDS: readonly { value: AssetKind; label: string; group: 'asset' | 'liability' }[] = [
+  { value: 'checking', label: '입출금', group: 'asset' },
+  { value: 'installment_saving', label: '적금', group: 'asset' },
+  { value: 'deposit', label: '예금', group: 'asset' },
+  { value: 'investment', label: '투자', group: 'asset' },
+  { value: 'pension', label: '연금', group: 'asset' },
+  { value: 'cash', label: '현금', group: 'asset' },
+  { value: 'real_estate', label: '부동산', group: 'asset' },
+  { value: 'vehicle', label: '자동차', group: 'asset' },
+  { value: 'other', label: '기타', group: 'asset' },
+  { value: 'loan', label: '대출', group: 'liability' },
+  { value: 'card_payable', label: '카드값', group: 'liability' },
+  { value: 'other_liability', label: '기타 부채', group: 'liability' },
 ];
 
 export function assetKindLabel(kind: AssetKind): string {
@@ -77,54 +83,25 @@ export function validateAssetForm(v: AssetFormValues): ValidateResult {
   };
 }
 
-// ── 합계
+// ── 사람별 보기 칩
 
-export interface OwnerTotal {
+export interface OwnerOption {
   ownerId: string | null; // null = 공동
-  label: string;
-  total: number;
-  count: number;
-}
-
-export interface AssetSummary {
-  total: number;
-  byOwner: OwnerTotal[];
+  label: string; // 이름 (나간 멤버는 이름만, left 로 구분)
+  left: boolean;
 }
 
 /**
- * 전체 / 소유자별(공동 포함) 합계.
- * 순서: 현재 멤버(참여 순) → 공동 → 나간 멤버 중 자산이 있는 사람.
- * 현재 멤버와 공동은 자산이 없어도 0원으로 보인다.
+ * 사람별 보기 칩 순서: 현재 멤버(참여 순) → 공동 → 나간 멤버 중 자산(보관 포함)을 가진 사람 (design.md 5.22)
  */
-export function summarizeAssets(assets: readonly Asset[], members: readonly Member[]): AssetSummary {
-  const totals = new Map<string | null, { total: number; count: number }>();
-  let total = 0;
-  for (const a of assets) {
-    total += a.balance;
-    const t = totals.get(a.owner_id) ?? { total: 0, count: 0 };
-    t.total += a.balance;
-    t.count += 1;
-    totals.set(a.owner_id, t);
-  }
-
+export function ownerOptions(assets: readonly Pick<Asset, 'owner_id'>[], members: readonly Member[]): OwnerOption[] {
+  const owners = new Set(assets.map((a) => a.owner_id));
   const byJoin = [...members].sort((a, b) => a.joined_at.localeCompare(b.joined_at));
-  const row = (ownerId: string | null): OwnerTotal => ({
-    ownerId,
-    label: ownerLabel(ownerId, members),
-    total: totals.get(ownerId)?.total ?? 0,
-    count: totals.get(ownerId)?.count ?? 0,
-  });
-
-  const byOwner: OwnerTotal[] = [
-    ...byJoin.filter((m) => !m.left_at).map((m) => row(m.id)),
-    row(null),
-    ...byJoin.filter((m) => m.left_at && totals.has(m.id)).map((m) => row(m.id)),
+  return [
+    ...byJoin.filter((m) => !m.left_at).map((m) => ({ ownerId: m.id, label: m.display_name, left: false })),
+    { ownerId: null, label: SHARED_OWNER_LABEL, left: false },
+    ...byJoin.filter((m) => m.left_at && owners.has(m.id)).map((m) => ({ ownerId: m.id, label: m.display_name, left: true })),
   ];
-  // 멤버 목록에 없는 소유자(이론상 없음)도 합계에서 빠지지 않게
-  for (const id of totals.keys()) {
-    if (!byOwner.some((o) => o.ownerId === id)) byOwner.push(row(id));
-  }
-  return { total, byOwner };
 }
 
 /** 목록 순서: 잔액 큰 순, 같으면 이름 순 */
@@ -132,14 +109,36 @@ export function sortAssets(assets: readonly Asset[]): Asset[] {
   return [...assets].sort((a, b) => b.balance - a.balance || a.name.localeCompare(b.name, 'ko'));
 }
 
-/** 수정 시각 표시 (KST). 올해면 "11월 6일 14:03", 아니면 "2025년 11월 6일" */
-export function formatUpdatedAt(iso: string, now: Date = new Date()): string {
+// ── 날짜 표시 (KST)
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** KST 달력 날짜 기준으로 며칠 지났나 (오늘 = 0) */
+export function daysSinceKST(iso: string, now: Date = new Date()): number {
+  const day = (t: number) => Math.floor((t + KST_OFFSET_MS) / 86_400_000);
+  return Math.max(0, day(now.getTime()) - day(Date.parse(iso)));
+}
+
+/** "n일 전 수정"을 강조하는 기준: 30일 넘게 안 고침 (명세 "30일 넘게") */
+export const STALE_DAYS = 30;
+
+export function updatedAgo(iso: string, now: Date = new Date()): { text: string; stale: boolean } {
+  const days = daysSinceKST(iso, now);
+  return { text: days === 0 ? '오늘 수정' : `${days}일 전 수정`, stale: days > STALE_DAYS };
+}
+
+/** "11월 6일" (올해) / "2025년 11월 6일" */
+export function formatDateKST(iso: string, now: Date = new Date()): string {
   const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', ...opts }).format(d);
   const d = new Date(iso);
   const sameYear = fmt(d, { year: 'numeric' }) === fmt(now, { year: 'numeric' });
-  if (!sameYear) return fmt(d, { year: 'numeric', month: 'long', day: 'numeric' });
-  const date = fmt(d, { month: 'long', day: 'numeric' });
-  const time = fmt(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  return `${date} ${time}`;
+  return fmt(d, sameYear ? { month: 'long', day: 'numeric' } : { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/** 이름 + 목적격 조사: '우리 차'를 / '통장'을. 한글이 아니면 '을(를)' */
+export function quoteWithObject(name: string): string {
+  const last = name.charCodeAt(name.length - 1);
+  if (last >= 0xac00 && last <= 0xd7a3) return `'${name}'${(last - 0xac00) % 28 === 0 ? '를' : '을'}`;
+  return `'${name}'을(를)`;
 }
