@@ -33,14 +33,14 @@ describe('manifest', () => {
     });
   });
 
-  it('아이콘은 192·512 두 개, 둘 다 any maskable이고 실제 크기가 맞다', () => {
+  it('192·512 아이콘(any)과 maskable 아이콘이 있고 실제 크기가 맞다', () => {
     const icons = manifest.icons as { src: string; sizes: string; purpose: string }[];
-    expect(icons).toHaveLength(2);
-    for (const size of [192, 512]) {
-      const icon = icons.find((i) => i.sizes === `${size}x${size}`);
-      expect(icon, `${size}`).toBeDefined();
-      expect(icon!.purpose).toBe('any maskable');
-      expect(pngSize(icon!.src)).toEqual([size, size]);
+    for (const purpose of ['any', 'maskable']) {
+      for (const size of [192, 512]) {
+        const icon = icons.find((i) => i.purpose === purpose && i.sizes === `${size}x${size}`);
+        expect(icon, `${purpose} ${size}`).toBeDefined();
+        expect(pngSize(icon!.src)).toEqual([size, size]);
+      }
     }
   });
 
