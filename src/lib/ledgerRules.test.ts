@@ -83,10 +83,10 @@ describe('오류 안내', () => {
     expect(parseLedgerError(new TypeError('Failed to fetch'))).toEqual({ code: 'UNKNOWN', limit: null });
     expect(parseLedgerError(undefined)).toEqual({ code: 'UNKNOWN', limit: null });
   });
-  it('인원 상한 문구는 설정값을 따른다 (없으면 2명)', () => {
+  it('인원 상한 문구는 설정값을 따른다 (없으면 기본 4명)', () => {
     expect(joinErrorMessage('MEMBER_LIMIT_REACHED', 2)).toBe('현재 최대 2명까지 참여할 수 있어요.');
     expect(joinErrorMessage('MEMBER_LIMIT_REACHED', 4)).toBe('현재 최대 4명까지 참여할 수 있어요.');
-    expect(joinErrorMessage('MEMBER_LIMIT_REACHED', null)).toBe('현재 최대 2명까지 참여할 수 있어요.');
+    expect(joinErrorMessage('MEMBER_LIMIT_REACHED', null)).toBe('현재 최대 4명까지 참여할 수 있어요.');
   });
   it('만료 / 무효 / 다른 가계부 참여자 / 네트워크', () => {
     expect(joinErrorMessage('INVITE_EXPIRED', null)).toMatch('만료');
