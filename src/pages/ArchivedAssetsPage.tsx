@@ -79,7 +79,8 @@ export function ArchivedAssetsPage() {
         {archived.length === 0 ? (
           <p className="status-text">보관한 자산이 없어요</p>
         ) : (
-          <ul className="asset-card asset-items" aria-label="보관한 자산">
+          <section className="asset-card">
+          <ul className="asset-items" aria-label="보관한 자산">
             {archived.map((a) => (
               <li key={a.id} className="asset-item asset-item--archived">
                 <span className="asset-item__icon" aria-hidden="true">
@@ -106,6 +107,7 @@ export function ArchivedAssetsPage() {
               </li>
             ))}
           </ul>
+          </section>
         )}
         <p className="hint">보관한 자산은 합계에 들어가지 않아요. 보관하기 전 달까지의 추이에는 남아 있어요.</p>
       </main>
