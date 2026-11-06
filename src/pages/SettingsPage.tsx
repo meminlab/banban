@@ -1,5 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useLedgerId } from '../app/guards';
+import { LEDGER_NAME_PATH, MEMBERS_PATH } from '../app/routes';
+import { useLoad } from '../app/useLoad';
 import { useMyProfile } from '../app/useProfile';
+import { getLedger } from '../data/ledger';
 import { useSignOut } from '../app/useSignOut';
 import { Avatar } from '../components/Avatar';
 import { Icon } from '../components/Icon';
@@ -16,6 +20,9 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const profile = useMyProfile();
   const logout = useSignOut();
+  const ledgerId = useLedgerId();
+  const ledger = useLoad(() => getLedger(ledgerId), [ledgerId]);
+  const ledgerName = ledger.state.status === 'ready' ? ledger.state.data.name : null;
 
   return (
     <div className="shell">
@@ -35,10 +42,26 @@ export function SettingsPage() {
           </div>
         </section>
 
-        <Placeholder
-          title="가계부 설정"
-          description="가계부 이름, 멤버·초대, 카테고리, 주머니가 여기에 들어옵니다. (준비 중)"
-        />
+        <nav aria-label="가계부 설정">
+          <h2 className="section-title">가계부 설정</h2>
+          <ul className="menu-list">
+            <li>
+              <Link to={LEDGER_NAME_PATH} className="menu-list__item">
+                <span>가계부 이름</span>
+                <span className="menu-list__value">
+                  {ledgerName ?? (ledger.state.status === 'error' ? '불러오지 못했어요' : '불러오는 중…')}
+                </span>
+              </Link>
+            </li>
+            <li>
+              <Link to={MEMBERS_PATH} className="menu-list__item">
+                <span>멤버·초대</span>
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <Placeholder title="카테고리·주머니" description="카테고리 관리, 주머니 관리가 여기에 들어옵니다. (준비 중)" />
 
         {logout.error && (
           <p className="form-error" role="alert">

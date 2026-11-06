@@ -93,10 +93,11 @@ export interface Asset {
   updated_at: string;
 }
 
-/** create_ledger / join_ledger RPC가 던지는 오류 코드 */
+/** create_ledger / join_ledger / leave_ledger RPC가 던지는 오류 코드 (MEMBER_LIMIT_REACHED 는 details 에 상한 값) */
 export type LedgerRpcError =
   | 'NOT_AUTHENTICATED'
   | 'ALREADY_IN_LEDGER'
   | 'INVITE_NOT_FOUND'
   | 'INVITE_EXPIRED'
-  | 'MEMBER_LIMIT_REACHED';
+  | 'MEMBER_LIMIT_REACHED'
+  | 'NOT_IN_LEDGER';

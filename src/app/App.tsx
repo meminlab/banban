@@ -7,12 +7,16 @@ import { SettingsPage } from '../pages/SettingsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { StartPage } from '../pages/StartPage';
 import { TransactionFormPage } from '../pages/TransactionFormPage';
+import { JoinPage } from '../pages/JoinPage';
+import { MembersPage } from '../pages/MembersPage';
+import { LedgerNamePage } from '../pages/LedgerNamePage';
 import { RequireAuth, RequireLedger, RequireNoLedger } from './guards';
 
 export function App() {
   return (
     <Routes>
       <Route path="login" element={<LoginPage />} />
+      <Route path="join/:code" element={<JoinPage />} />
       <Route element={<RequireAuth />}>
         <Route element={<RequireNoLedger />}>
           <Route path="start" element={<StartPage />} />
@@ -26,6 +30,8 @@ export function App() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="ledger/new" element={<TransactionFormPage />} />
           <Route path="ledger/:transactionId" element={<TransactionFormPage />} />
+          <Route path="settings/name" element={<LedgerNamePage />} />
+          <Route path="settings/members" element={<MembersPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
