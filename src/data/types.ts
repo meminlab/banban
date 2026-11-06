@@ -63,6 +63,8 @@ export interface Category {
   name: string;
   sort_order: number;
   is_hidden: boolean;
+  /** Lucide kebab-case 아이콘 이름. null·모르는 이름이면 대분류 아이콘 → 첫 글자 (domain/categoryIcon) */
+  icon: string | null;
   created_at: string;
 }
 

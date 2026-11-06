@@ -8,11 +8,13 @@ import {
   selectableCategoryTree,
   selectablePockets,
   sortByOrder,
+  iconFollowers,
 } from './catalog';
 
 function cat(id: string, parent: string | null, sort: number, extra: Partial<Category> = {}): Category {
   return {
     id,
+    icon: null,
     ledger_id: 'L',
     type: 'expense',
     parent_id: parent,
@@ -148,5 +150,20 @@ describe('positionOf', () => {
     expect(positionOf(list, 'a')).toEqual({ isFirst: true, isLast: false });
     expect(positionOf(list, 'b')).toEqual({ isFirst: false, isLast: true });
     expect(positionOf([cat('a', null, 1)], 'a')).toEqual({ isFirst: true, isLast: true });
+  });
+});
+
+describe('iconFollowers (대분류 아이콘을 바꿀 때 같이 바꿀 소분류)', () => {
+  const parent = { ...cat('edu', null, 1), name: '교육', type: 'expense' as const, icon: 'graduation-cap' };
+  const same = { ...cat('edu-c', 'edu', 1), name: '교육', type: 'expense' as const, icon: 'graduation-cap' };
+  const sameNull = { ...cat('edu-n', 'edu', 2), name: '교육', type: 'expense' as const, icon: null };
+  const custom = { ...cat('edu-x', 'edu', 3), name: '교육', type: 'expense' as const, icon: 'book' };
+  const other = { ...cat('edu-o', 'edu', 4), name: '학원', type: 'expense' as const, icon: 'graduation-cap' };
+
+  it('이름이 같고 아이콘이 원래 대분류 아이콘이거나 비어 있는 소분류만', () => {
+    expect(iconFollowers([parent, same, sameNull, custom, other], parent).map((c) => c.id)).toEqual(['edu-c', 'edu-n']);
+  });
+  it('소분류를 고치면 따라 바뀌는 것은 없다', () => {
+    expect(iconFollowers([parent, same], same)).toEqual([]);
   });
 });

@@ -28,8 +28,8 @@ describe('manifest', () => {
       start_url: '/',
       scope: '/',
       orientation: 'portrait',
-      theme_color: '#1f6f5c', // global.css --color-primary
-      background_color: '#ffffff',
+      theme_color: '#FFFFFF', // index.html meta theme-color와 같게(흰 상단바)
+      background_color: '#FFFFFF',
     });
   });
 
@@ -43,6 +43,11 @@ describe('manifest', () => {
       }
     }
   });
+
+  it('theme_color는 index.html meta theme-color와 같다', () => {
+    const meta = html.match(/name="theme-color" content="([^"]+)"/)?.[1];
+    expect(meta?.toLowerCase()).toBe(manifest.theme_color.toLowerCase());
+  });
 });
 
 describe('index.html', () => {
@@ -52,6 +57,11 @@ describe('index.html', () => {
     expect(html).toContain('name="apple-mobile-web-app-title" content="반반"');
     expect(html).toMatch(/name="apple-mobile-web-app-status-bar-style" content="\w/);
     expect(html).toContain('viewport-fit=cover');
+  });
+
+  it('파비콘: SVG + ICO 대체', () => {
+    expect(html).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml" />');
+    expect(html).toContain('<link rel="alternate icon" href="/favicon.ico" />');
   });
 
   it('apple-touch-icon 180px', () => {

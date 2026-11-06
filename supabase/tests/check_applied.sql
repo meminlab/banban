@@ -8,6 +8,7 @@
 --           member_limit_4 = true (20261106140000 마이그레이션: 기본 상한 4, 기존 가계부 모두 4, 멤버는 못 바꿈)
 --           multi_ledger = true (20261106150000 마이그레이션: 1인 1가계부 제거, 1인 상한 5, 마지막으로 본 가계부, leave_ledger(uuid))
 --           asset_net_worth = true (20261106160000 마이그레이션: 자산 종류 12개, 보관, 잔액 이력 트리거, 이력 직접 쓰기·자산 삭제 불가)
+--           category_icon = true (20261106170000 마이그레이션: category.icon 컬럼·기본 매핑 함수, 새 가계부 기본값에 아이콘)
 --           (asset_balance_history 행이 추가되어 10행. 이력 테이블 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
@@ -49,7 +50,13 @@ select c.relname                                          as table_name,
         and not has_table_privilege('authenticated', 'public.asset_balance_history', 'update')
         and not has_table_privilege('authenticated', 'public.asset_balance_history', 'delete')
         and not exists (select 1 from public.asset a
-                         where not exists (select 1 from public.asset_balance_history h where h.asset_id = a.id))) as asset_net_worth
+                         where not exists (select 1 from public.asset_balance_history h where h.asset_id = a.id))) as asset_net_worth,
+       (exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'category' and column_name = 'icon')
+        and to_regprocedure('public.default_category_icon(text,text,text)') is not null
+        and (select prosrc like '%default_category_icon%' from pg_proc
+              where oid = 'public.seed_ledger_defaults(uuid)'::regprocedure)
+        and not has_function_privilege('authenticated', 'public.default_category_icon(text,text,text)', 'execute')) as category_icon
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
@@ -63,3 +70,6 @@ select member_limit, count(*) as ledgers from public.ledger group by member_limi
 select active_ledgers, count(*) as users from (
   select user_id, count(*) as active_ledgers from public.member where left_at is null group by user_id
 ) q group by active_ledgers order by active_ledgers;
+
+-- BANB-24 카테고리 아이콘 채움 현황 (기대: 기본 카테고리는 icon 있음. 비어 있는 것은 이름 바꾼 기본값·직접 만든 것뿐)
+select (icon is not null) as has_icon, (parent_id is null) as is_parent, count(*) from public.category group by 1, 2 order by 1, 2;

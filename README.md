@@ -72,10 +72,11 @@ npm run dev                  # http://localhost:5173
       - `20261106140000_member_limit_four.sql` — 가계부 인원 상한 2명 → 4명 (기본값 + 기존 가계부 모두)
       - `20261106150000_multi_ledger.sql` — 여러 가계부·1인 5개 상한·마지막으로 본 가계부
       - `20261106160000_asset_net_worth.sql` — 자산 종류 12개(부채 3종 포함), 삭제 대신 보관(`archived_at`, 서버 시각), 잔액 이력(`asset_balance_history`, 트리거 기록·직접 쓰기 불가). 기존 자산은 적용 시각에 현재 잔액으로 이력 1행씩 채움
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+      - `20261106170000_category_icon.sql` — 카테고리 아이콘(`category.icon`, Lucide 이름, null 허용). 기본 매핑 함수 `default_category_icon` + 새 가계부 기본값에 아이콘. 기존 가계부는 이름이 기본값과 같은 카테고리만 채움(이름 바꾼 것·직접 만든 것은 비워 둠 → 앱이 대분류 아이콘/첫 글자로 표시)
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, `category_icon=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
-   5. `supabase/tests/30_multi_ledger_test.sql`, `supabase/tests/40_asset_net_worth_test.sql` — 여러 가계부 / 자산 이력·보관·권한 테스트 (같은 방식)
+   5. `supabase/tests/30_multi_ledger_test.sql`, `supabase/tests/40_asset_net_worth_test.sql`, `supabase/tests/50_category_icon_test.sql` — 여러 가계부 / 자산 이력·보관·권한 / 카테고리 아이콘 테스트 (같은 방식)
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
 3. 프로젝트 설정 → API Keys에서 URL, publishable key를 복사해 `.env.local`과 호스팅 환경변수에 넣기
 4. 구글 로그인 설정 — 아래 "구글 로그인 설정" 참고
@@ -107,6 +108,8 @@ npm run dev                  # http://localhost:5173
 ## QA 기준 데이터 (자산 1단계, 테스트 DB 전용)
 
 `supabase/seed/qa_assets_v4.sql` — QA 테스트 케이스 v4 "기준 데이터"(9~11월 잔액 이력, 보관 자산)를 만든다. 이력 시각을 관리자 권한으로 직접 넣으므로 **운영 DB에서는 실행하지 않는다**. 설정(`banban.qa_seed = 'test-db-only'`)이 없으면 `QA_SEED_NOT_ALLOWED`로 멈춘다. 계정 이메일은 파일 위쪽 `c_email_a/b/c`를 바꾼다. 실행법은 파일 머리말 참고.
+카테고리 아이콘(BANB-24) 로컬 확인(Docker): `bash supabase/seed/check_category_icon.sh` — 기존 가계부에 마이그레이션 적용 시 기본 70개 채움·이름 바꾼/직접 만든 것은 비움, 새 가계부 70개, check_applied `category_icon=true`.
+
 로컬 확인(Docker): `bash supabase/seed/check_qa_assets_v4.sh` — 기존 자산 이력 채우기, check_applied, 설정 없을 때 거부, v4 기대값(월말·현재 순자산, 사람별)을 SQL로 계산해 비교.
 
 ## 샘플 가계부 (화면 확인용 데이터)
@@ -142,7 +145,7 @@ npm run dev                  # http://localhost:5173
 - 아이폰은 홈 화면 앱과 사파리가 로그인 저장소를 따로 쓴다 → 홈 화면 앱에서 처음 한 번은 다시 로그인해야 할 수 있다
 - 설정 파일: `public/manifest.webmanifest`, 아이폰용 설정은 `index.html`의 `apple-*` 메타 태그
 - 노치·홈 바: `viewport-fit=cover` + `global.css`의 `--safe-top` / `--safe-bottom` 여백(상단바·하단 탭·로그인·상태 화면에 적용)
-- 아이콘: `public/icons/` (초록 배경 + 흰 글자 "반반"). 바꿀 때만 `python3 scripts/make-icons.py <Pretendard-ExtraBold.otf>`로 다시 만든다(Pillow 필요, 글꼴은 OFL 라이선스 Pretendard)
+- 아이콘: 로고 B-1(웃는 주머니). 원본은 `docs/brand/`이고 앱에는 복사본을 쓴다 — `public/favicon.svg`·`favicon.ico`, `public/icons/apple-touch-icon-180.png`·`icon-192.png`·`icon-512.png`(manifest에는 파일마다 `any` 항목·`maskable` 항목을 따로 등록 — `"any maskable"` 한 항목은 Chrome 경고). 로고를 바꾸면 `docs/brand/`에서 다시 복사한다. 로그인·시작 화면 로고는 `docs/brand/banban-lockup-light.svg`를 직접 불러 쓴다(`src/components/BrandLogo.tsx`)
 
 ## 데이터 모델
 

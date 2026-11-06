@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../app/auth';
 import { signInWithGoogle } from '../data/auth';
 import { StatusScreen } from '../components/StatusScreen';
+import { BrandLogo } from '../components/BrandLogo';
 import { readPendingInvite } from '../data/pendingInvite';
 import { JOIN_PATH_PREFIX } from '../lib/ledgerRules';
 
@@ -41,7 +42,7 @@ export function LoginPage() {
     <div className="shell">
       <main className="login">
         <div className="login__brand">
-          <p className="login__logo" aria-hidden="true">반반</p>
+          <BrandLogo className="login__logo" />
           <h1 className="login__title">둘이 함께 쓰는 가계부</h1>
           <p className="login__desc">함께 쓴 돈과 모은 돈을 한 곳에서 봐요.</p>
         </div>

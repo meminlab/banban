@@ -9,6 +9,10 @@
   /* design.md v1.2 토큰 이름 (값은 지금 팔레트에 맞춤 — 디자인 확정 후 값만 바꾼다) */
   --color-text-weak: #6b7280;       /* 흰 배경 대비 4.8:1 */
   --color-surface-sunken: #f1f3f5;
+  --color-border-strong: #8a929c;   /* 입력·점선 테두리 (흰 배경 3:1 이상) */
+  --color-primary-soft: #e6f2ee;
+  --color-primary-strong: #1f6f5c;  /* primary-soft 위 글자 */
+  --color-on-primary: #ffffff;
   --color-negative: var(--color-danger);
   --color-income: #1d4ed8;
   --color-delta-up: var(--color-income);
@@ -178,7 +182,9 @@ button { font: inherit; }
   padding: calc(24px + var(--safe-top)) 20px calc(32px + var(--safe-bottom));
 }
 .login__brand { margin-top: 20vh; }
-.login__logo { margin: 0 0 12px; font-size: 2.25rem; font-weight: 800; color: var(--color-primary); }
+/* 로고: 높이 44px 고정, 가로는 비율대로(늘리기·찌그러뜨리기 금지 — docs/brand/README.md) */
+.brand-logo { display: block; align-self: flex-start; height: 44px; width: auto; max-width: 100%; object-fit: contain; }
+.login__logo { margin: 0 0 16px; }
 .login__title { margin: 0 0 8px; font-size: 1.375rem; }
 .login__desc { margin: 0; color: var(--color-text-sub); line-height: 1.5; }
 
@@ -190,6 +196,7 @@ button { font: inherit; }
 .avatar--initial { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary); }
 
 /* ── 시작 화면 */
+.start__logo { margin: 8px 0 4px; }
 .start__options { display: flex; flex-direction: column; gap: 12px; }
 .option-card {
   display: flex;
@@ -760,6 +767,144 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
 .trend__month.is-selected { color: var(--color-text); font-weight: 700; }
 .trend__month:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
 .trend__note { margin: 0; color: var(--color-text-weak); font-size: 0.8125rem; }
+/* ── 카테고리 아이콘 (BANB-24, design.md 4.1 · 5.17) — 토큰만 쓴다 (테마별 값은 BANB-28에서 교체) */
+.cat-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+.cat-icon--row { width: 40px; height: 40px; }
+.cat-icon--grid { width: 48px; height: 48px; }
+.cat-icon--preview { width: 64px; height: 64px; }
+.cat-icon--inline { width: 24px; height: 24px; background: transparent; color: var(--color-text-sub); }
+.cat-icon__letter { font-size: 15px; font-weight: 600; line-height: 1; }
+.cat-icon--inline .cat-icon__letter { font-size: 12px; }
+.cat-icon--preview .cat-icon__letter { font-size: 26px; }
+.cat-icon--add { background: transparent; border: 1.5px dashed var(--color-border-strong); color: var(--color-text-sub); }
+
+/* 내역 입력의 카테고리 행 (누르면 선택 시트) */
+.category-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 8px 8px 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+.category-field:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 1px; }
+.category-field[aria-invalid='true'] { border-color: var(--color-danger); }
+.category-field__value { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.category-field__value--empty { padding-left: 4px; color: var(--color-text-sub); }
+.category-field__parent { color: var(--color-text-sub); }
+.category-field__chevron { flex: none; color: var(--color-text-sub); }
+
+/* 선택 시트: 구역 머리 + 4열 아이콘 격자 */
+.cat-picker { display: flex; flex-direction: column; gap: 20px; padding: 8px 0 4px; }
+.cat-picker__section { display: flex; flex-direction: column; gap: 10px; }
+.cat-picker__head { display: flex; align-items: center; gap: 2px; margin: 0; font-size: 13px; font-weight: 700; color: var(--color-text-sub); }
+.cat-picker__head .cat-icon--inline { width: 18px; height: 18px; }
+.cat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 4px; }
+.cat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 2px 0 4px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+.cat-cell:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 0; }
+.cat-cell__circle { position: relative; display: inline-flex; }
+.cat-cell__name {
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cat-cell.is-selected .cat-icon { background: var(--color-primary); color: var(--color-on-primary); }
+.cat-cell.is-selected .cat-cell__name { font-weight: 700; color: var(--color-primary-strong); }
+.cat-cell__check, .icon-grid__check {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+  background: var(--color-primary-strong);
+  color: var(--color-on-primary);
+}
+
+/* 추가·수정 화면 */
+.cat-editor { display: flex; flex-direction: column; gap: 16px; padding-top: 8px; }
+.cat-editor__type { margin-bottom: 0; }
+.cat-editor__preview { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cat-editor__preview .cat-icon { background: var(--color-primary); color: var(--color-on-primary); }
+.cat-editor__preview-name { font-size: 1rem; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+.cat-editor__field { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.cat-editor__field legend { margin-bottom: 8px; }
+.cat-editor__label-row { display: flex; justify-content: space-between; align-items: baseline; }
+.cat-editor__count { font-size: 0.8125rem; color: var(--color-text-sub); font-variant-numeric: tabular-nums; }
+.cat-editor__actions {
+  position: sticky;
+  bottom: calc(-24px - env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+.cat-editor__actions .form-error, .cat-editor__actions .hint { margin: 0; }
+.chip__lead { vertical-align: -3px; margin-right: 4px; }
+
+/* 아이콘 고르기: 6열 */
+.icon-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.icon-grid__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.icon-grid__item:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 1px; }
+.icon-grid__item.is-selected { background: var(--color-primary); color: var(--color-on-primary); }
+.icon-grid__check { top: -4px; right: -4px; width: 16px; height: 16px; }
+
 
 /* ── 홈 "우리집 순자산" 카드 (BANB-27, design.md 5.19 작은 추이 · 5.22 홈 2번) */
 .home-nw { display: flex; flex-direction: column; gap: 6px; min-height: 44px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
@@ -771,8 +916,10 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .home-nw__sub { color: var(--color-text-weak); font-size: 0.8125rem; }
 .home-nw__chevron { margin-left: auto; align-self: center; color: var(--color-text-weak); flex: none; }
 .home-nw__row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 8px; }
-.home-nw__main { flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.home-nw__value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; }
+/* 금액이 칸보다 넓으면(글자 크기 200% 등) 작은 추이가 다음 줄로 내려가고, 그래도 넘치면 금액이 줄바꿈된다 — 자르지 않는다 (design.md 2.2·6) */
+.home-nw__main { flex: 1 1 auto; max-width: 100%; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.home-nw__value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.home-nw .delta__value { white-space: normal; overflow-wrap: anywhere; }
 .home-nw__value--long { font-size: 1.375rem; }
 .home-nw__value--longer { font-size: 1.25rem; }
 .home-nw__value.is-negative { color: var(--color-negative); }

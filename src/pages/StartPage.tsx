@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMyProfile } from '../app/useProfile';
 import { useSignOut } from '../app/useSignOut';
 import { Avatar } from '../components/Avatar';
+import { BrandLogo } from '../components/BrandLogo';
 import { CreateLedgerForm, JoinCodeForm } from '../components/LedgerForms';
 import { memberDisplayName } from '../lib/ledgerRules';
 
@@ -19,6 +20,7 @@ export function StartPage() {
         <h1 className="topbar__title">가계부 시작하기</h1>
       </header>
       <main className="content content--no-tabbar start">
+        <BrandLogo className="start__logo" />
         <section className="profile-card" aria-label="내 계정">
           <Avatar name={profile.name} src={profile.avatarUrl} />
           <div>
