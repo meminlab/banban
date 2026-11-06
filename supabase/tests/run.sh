@@ -14,5 +14,5 @@ run() { docker exec -i "$NAME" psql -U postgres -v ON_ERROR_STOP=1 -q -X "$@"; }
 if [ "${STRICT:-}" = 1 ]; then run -v strict=1 < supabase/tests/00_supabase_stub.sql; else run < supabase/tests/00_supabase_stub.sql; fi
 for f in supabase/migrations/*.sql; do echo "▶ migrate $f"; run < "$f"; done
 echo "▶ tests"
-run -o /dev/null < supabase/tests/10_rls_test.sql
+for t in supabase/tests/[1-9]*_test.sql; do echo "  · $t"; run -o /dev/null < "$t"; done
 echo "✅ DB tests passed"

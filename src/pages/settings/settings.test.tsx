@@ -1,0 +1,333 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
+import { App } from '../../app/App';
+import { AuthProvider } from '../../app/auth';
+import type { Category, Pocket } from '../../data/types';
+
+// ── 저장소 가짜: 메모리 목록을 직접 바꿔서, 다시 불러오면 바뀐 값이 보이게 한다
+const fake = vi.hoisted(() => ({
+  categories: [] as Category[],
+  pockets: [] as Pocket[],
+  failNext: false,
+  loadFail: false,
+  seq: 0,
+}));
+
+vi.mock('../../data/auth', () => ({
+  AUTH_CALLBACK_PATH: '/login',
+  onAuthChange: (cb: (u: unknown) => void) => {
+    queueMicrotask(() => cb({ id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null }));
+    return () => {};
+  },
+  signInWithGoogle: async () => {},
+  signOut: async () => {},
+}));
+vi.mock('../../data/ledger', () => ({ getMyLedgerId: async () => 'L' }));
+vi.mock('../../data/profile', () => ({ getProfile: async () => null }));
+
+vi.mock('../../data/catalog', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../../data/catalog')>();
+  const maybeFail = () => {
+    if (fake.failNext) {
+      fake.failNext = false;
+      throw new real.CatalogError('FAILED');
+    }
+  };
+  const now = () => `2026-11-06T00:00:${String(++fake.seq).padStart(2, '0')}Z`;
+  return {
+    ...real,
+    listCategories: vi.fn(async () => {
+      if (fake.loadFail) throw new real.CatalogError('FAILED');
+      return structuredClone(fake.categories);
+    }),
+    listPockets: vi.fn(async () => {
+      if (fake.loadFail) throw new real.CatalogError('FAILED');
+      return structuredClone(fake.pockets);
+    }),
+    addParentCategory: vi.fn(async (i: { ledgerId: string; type: Category['type']; name: string; sortOrder: number }) => {
+      maybeFail();
+      const id = `new-${fake.seq + 1}`;
+      fake.categories.push({ id, ledger_id: i.ledgerId, type: i.type, parent_id: null, name: i.name, sort_order: i.sortOrder, is_hidden: false, created_at: now() });
+      fake.categories.push({ id: `${id}-c`, ledger_id: i.ledgerId, type: i.type, parent_id: id, name: i.name, sort_order: 1, is_hidden: false, created_at: now() });
+    }),
+    addChildCategory: vi.fn(async (i: { ledgerId: string; type: Category['type']; parentId: string; name: string; sortOrder: number }) => {
+      maybeFail();
+      fake.categories.push({ id: `new-${fake.seq + 1}`, ledger_id: i.ledgerId, type: i.type, parent_id: i.parentId, name: i.name, sort_order: i.sortOrder, is_hidden: false, created_at: now() });
+    }),
+    updateCategory: vi.fn(async (id: string, patch: Partial<Category>) => {
+      maybeFail();
+      Object.assign(fake.categories.find((c) => c.id === id)!, patch);
+    }),
+    addPocket: vi.fn(async (i: { ledgerId: string; name: string; scope: Pocket['scope']; sortOrder: number }) => {
+      maybeFail();
+      fake.pockets.push({ id: `p-${fake.seq + 1}`, ledger_id: i.ledgerId, name: i.name, scope: i.scope, sort_order: i.sortOrder, is_hidden: false, created_at: now() });
+    }),
+    updatePocket: vi.fn(async (id: string, patch: Partial<Pocket>) => {
+      maybeFail();
+      Object.assign(fake.pockets.find((p) => p.id === id)!, patch);
+    }),
+    saveOrder: vi.fn(async (table: 'category' | 'pocket', updates: { id: string; sort_order: number }[]) => {
+      maybeFail();
+      const list: { id: string; sort_order: number }[] = table === 'category' ? fake.categories : fake.pockets;
+      for (const u of updates) list.find((x) => x.id === u.id)!.sort_order = u.sort_order;
+    }),
+  };
+});
+
+const catalog = await import('../../data/catalog');
+
+function c(id: string, type: Category['type'], parent: string | null, name: string, sort: number, hidden = false): Category {
+  return { id, ledger_id: 'L', type, parent_id: parent, name, sort_order: sort, is_hidden: hidden, created_at: '2026-11-05T00:00:00Z' };
+}
+function p(id: string, name: string, scope: Pocket['scope'], sort: number): Pocket {
+  return { id, ledger_id: 'L', name, scope, sort_order: sort, is_hidden: false, created_at: '2026-11-05T00:00:00Z' };
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  fake.failNext = false;
+  fake.loadFail = false;
+  fake.categories = [
+    c('food', 'expense', null, '식비', 1),
+    c('grocery', 'expense', 'food', '장보기', 1),
+    c('eatout', 'expense', 'food', '외식', 2),
+    c('ins', 'expense', null, '보험', 2),
+    c('ins-c', 'expense', 'ins', '보험', 1),
+    c('salary', 'income', null, '급여', 1),
+    c('salary-c', 'income', 'salary', '급여', 1),
+  ];
+  fake.pockets = [p('p1', '공동소비', 'shared', 1), p('p2', '개인용돈', 'personal', 2), p('p3', '여행', 'shared', 3)];
+});
+
+function renderAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </MemoryRouter>,
+  );
+}
+
+const rowNames = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll('.manage-row__name')).map((e) => e.textContent);
+
+describe('설정 메뉴', () => {
+  it('카테고리 관리·주머니 관리로 들어갈 수 있다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings');
+    await user.click(await screen.findByRole('link', { name: /카테고리 관리/ }));
+    expect(await screen.findByRole('heading', { level: 1, name: '카테고리 관리' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '뒤로' }));
+    await user.click(await screen.findByRole('link', { name: /주머니 관리/ }));
+    expect(await screen.findByRole('heading', { level: 1, name: '주머니 관리' })).toBeInTheDocument();
+  });
+});
+
+describe('카테고리 관리', () => {
+  it('유형 탭별로 대분류 > 소분류를 순서대로 보여 준다', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt('/settings/categories');
+    expect(await screen.findByRole('tab', { name: '지출', selected: true })).toBeInTheDocument();
+    expect(rowNames(container)).toEqual(['식비', '장보기', '외식', '보험', '보험']);
+
+    await user.click(screen.getByRole('tab', { name: '수입' }));
+    expect(rowNames(container)).toEqual(['급여', '급여']);
+    await user.click(screen.getByRole('tab', { name: '저축' }));
+    expect(screen.getByText(/아직 저축 카테고리가 없어요/)).toBeInTheDocument();
+  });
+
+  it('소분류를 추가하면 목록 맨 뒤에 보이고 저장 완료를 알린다', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: '식비에 소분류 추가' }));
+    const dialog = screen.getByRole('dialog', { name: '식비에 소분류 추가' });
+    await user.type(within(dialog).getByLabelText('이름'), '  배달 ');
+    await user.click(within(dialog).getByRole('button', { name: '추가' }));
+
+    expect(catalog.addChildCategory).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', parentId: 'food', name: '배달', sortOrder: 3 });
+    expect(await screen.findByRole('status')).toHaveTextContent('추가했어요');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(rowNames(container).slice(0, 4)).toEqual(['식비', '장보기', '외식', '배달']);
+  });
+
+  it('대분류를 추가할 수 있다 (같은 이름 소분류 함께)', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: '+ 지출 대분류 추가' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent('같은 이름의 소분류가 함께 만들어져요');
+    await user.type(within(dialog).getByLabelText('이름'), '술');
+    await user.click(within(dialog).getByRole('button', { name: '추가' }));
+    expect(catalog.addParentCategory).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', name: '술', sortOrder: 3 });
+    await screen.findByText('추가했어요');
+    expect(rowNames(container).slice(-2)).toEqual(['술', '술']);
+  });
+
+  it.each([
+    ['   ', '이름을 입력해 주세요.'],
+    ['가'.repeat(21), '이름은 20자까지 쓸 수 있어요.'],
+  ])('이름 %j 은 저장하지 않고 안내한다', async (name, message) => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: '식비에 소분류 추가' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('이름'), name);
+    await user.click(within(dialog).getByRole('button', { name: '추가' }));
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(message);
+    expect(within(dialog).getByLabelText('이름')).toHaveAttribute('aria-invalid', 'true');
+    expect(catalog.addChildCategory).not.toHaveBeenCalled();
+  });
+
+  it('이름을 바꿀 수 있다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: /^외식/ }));
+    const dialog = screen.getByRole('dialog', { name: '소분류' });
+    const input = within(dialog).getByLabelText('이름');
+    expect(input).toHaveValue('외식');
+    await user.clear(input);
+    await user.type(input, '바깥밥');
+    await user.click(within(dialog).getByRole('button', { name: '이름 저장' }));
+    expect(catalog.updateCategory).toHaveBeenCalledWith('eatout', { name: '바깥밥' });
+    expect(await screen.findByRole('button', { name: /^바깥밥/ })).toBeInTheDocument();
+  });
+
+  it('순서를 바꿀 수 있고, 맨 위에서는 위로 버튼이 꺼진다', async () => {
+    const user = userEvent.setup();
+    const { container } = renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: /^장보기/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: '↑ 위로' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: '↓ 아래로' }));
+    expect(catalog.saveOrder).toHaveBeenCalledWith('category', [
+      { id: 'eatout', sort_order: 1 },
+      { id: 'grocery', sort_order: 2 },
+    ]);
+    expect(await screen.findByText('순서를 바꿨어요')).toBeInTheDocument();
+    expect(rowNames(container).slice(0, 3)).toEqual(['식비', '외식', '장보기']);
+    // 시트는 열린 채로 남아, 바뀐 위치 기준으로 버튼 상태가 갱신된다
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: '↓ 아래로' })).toBeDisabled();
+  });
+
+  it('숨기면 "숨김" 표시가 붙고, 다시 보이게 할 수 있다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: /^외식/ }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('숨겨도 지난 내역에는 이름이 그대로 보여요');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '숨기기' }));
+    expect(catalog.updateCategory).toHaveBeenCalledWith('eatout', { is_hidden: true });
+    const row = await screen.findByRole('button', { name: /^외식,\s*숨김$/ });
+
+    await user.click(row);
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '다시 보이기' }));
+    expect(catalog.updateCategory).toHaveBeenLastCalledWith('eatout', { is_hidden: false });
+    expect(await screen.findByRole('button', { name: '외식' })).toBeInTheDocument();
+  });
+
+  it('삭제 버튼과 "대분류로 바꾸기"는 없다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: /^외식/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: /삭제|대분류/ })).not.toBeInTheDocument();
+  });
+
+  it('저장에 실패하면 시트 안에 안내하고 다시 시도할 수 있다', async () => {
+    fake.failNext = true;
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: /^외식/ }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: '숨기기' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('저장하지 못했어요');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: '숨기기' }));
+    expect(await screen.findByText('숨겼어요')).toBeInTheDocument();
+  });
+
+  it('불러오기에 실패하면 안내하고 다시 시도할 수 있다', async () => {
+    fake.loadFail = true;
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    expect(await screen.findByRole('alert')).toHaveTextContent('카테고리를 불러오지 못했어요');
+    fake.loadFail = false;
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByRole('tab', { name: '지출' })).toBeInTheDocument();
+  });
+
+  it('Esc로 시트를 닫는다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: /^외식/ }));
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('주머니 관리', () => {
+  it('주머니를 순서대로, 공동/개인 구분과 함께 보여 준다', async () => {
+    renderAt('/settings/pockets');
+    const rows = await screen.findAllByRole('button', { name: /,\s*(공동|개인)$/ });
+    expect(rows.map((r) => r.textContent)).toEqual(['공동소비, 공동›', '개인용돈, 개인›', '여행, 공동›']);
+  });
+
+  it('구분을 골라 주머니를 추가한다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/pockets');
+    await user.click(await screen.findByRole('button', { name: '+ 주머니 추가' }));
+    const dialog = screen.getByRole('dialog', { name: '주머니 추가' });
+    await user.type(within(dialog).getByLabelText('이름'), '취미');
+    await user.click(within(dialog).getByRole('radio', { name: '개인' }));
+    await user.click(within(dialog).getByRole('button', { name: '추가' }));
+    expect(catalog.addPocket).toHaveBeenCalledWith({ ledgerId: 'L', name: '취미', scope: 'personal', sortOrder: 4 });
+    expect(await screen.findByRole('button', { name: /^취미,\s*개인$/ })).toBeInTheDocument();
+  });
+
+  it('공동/개인을 바꾸면 바로 저장되고 지난 내역도 바뀐 구분으로 집계된다고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/pockets');
+    await user.click(await screen.findByRole('button', { name: /^개인용돈/ }));
+    const dialog = screen.getByRole('dialog', { name: '주머니' });
+    expect(dialog).toHaveTextContent('지난 내역도 바뀐 구분으로 집계돼요');
+    expect(within(dialog).getByRole('radio', { name: '개인' })).toBeChecked();
+    await user.click(within(dialog).getByRole('radio', { name: '공동' }));
+    expect(catalog.updatePocket).toHaveBeenCalledWith('p2', { scope: 'shared' });
+    expect(await screen.findByRole('button', { name: /^개인용돈,\s*공동$/ })).toBeInTheDocument();
+  });
+
+  it('이름 변경·순서 변경·숨김', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/pockets');
+    await user.click(await screen.findByRole('button', { name: /^여행/ }));
+    let dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: '↓ 아래로' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: '↑ 위로' }));
+    expect(catalog.saveOrder).toHaveBeenCalledWith('pocket', [
+      { id: 'p3', sort_order: 2 },
+      { id: 'p2', sort_order: 3 },
+    ]);
+    await screen.findByText('순서를 바꿨어요');
+
+    dialog = screen.getByRole('dialog');
+    const input = within(dialog).getByLabelText('이름');
+    await user.clear(input);
+    await user.type(input, '여행비');
+    await user.click(within(dialog).getByRole('button', { name: '이름 저장' }));
+    expect(catalog.updatePocket).toHaveBeenCalledWith('p3', { name: '여행비' });
+
+    await user.click(await screen.findByRole('button', { name: /^여행비/ }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '숨기기' }));
+    expect(catalog.updatePocket).toHaveBeenLastCalledWith('p3', { is_hidden: true });
+    expect(await screen.findByRole('button', { name: /^여행비,\s*공동,\s*숨김$/ })).toBeInTheDocument();
+  });
+
+  it('주머니가 하나도 없으면 빈 화면 안내', async () => {
+    fake.pockets = [];
+    renderAt('/settings/pockets');
+    expect(await screen.findByText(/아직 주머니가 없어요/)).toBeInTheDocument();
+  });
+});

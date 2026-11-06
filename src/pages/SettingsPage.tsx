@@ -1,13 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { LEDGER_NAME_PATH, MEMBERS_PATH } from '../app/routes';
+import { CATEGORY_SETTINGS_PATH, LEDGER_NAME_PATH, MEMBERS_PATH, POCKET_SETTINGS_PATH } from '../app/routes';
 import { useLoad } from '../app/useLoad';
 import { useMyProfile } from '../app/useProfile';
 import { getLedger } from '../data/ledger';
 import { useSignOut } from '../app/useSignOut';
 import { Avatar } from '../components/Avatar';
 import { Icon } from '../components/Icon';
-import { Placeholder } from '../components/Placeholder';
 
 /** 앱 안에서 들어왔으면 이전 화면, 주소로 바로 들어왔으면 홈으로 */
 function goBack(navigate: ReturnType<typeof useNavigate>) {
@@ -58,10 +57,18 @@ export function SettingsPage() {
                 <span>멤버·초대</span>
               </Link>
             </li>
+            <li>
+              <Link to={CATEGORY_SETTINGS_PATH} className="menu-list__item">
+                <span>카테고리 관리</span>
+              </Link>
+            </li>
+            <li>
+              <Link to={POCKET_SETTINGS_PATH} className="menu-list__item">
+                <span>주머니 관리</span>
+              </Link>
+            </li>
           </ul>
         </nav>
-
-        <Placeholder title="카테고리·주머니" description="카테고리 관리, 주머니 관리가 여기에 들어옵니다. (준비 중)" />
 
         {logout.error && (
           <p className="form-error" role="alert">

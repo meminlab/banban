@@ -468,3 +468,95 @@ button { font: inherit; }
 .inline-confirm { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 12px; background: var(--color-bg); }
 .inline-confirm p { margin: 0; line-height: 1.5; }
 .members .leave { margin-top: auto; }
+/* ── 카테고리·주머니 관리 (BANB-6) */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.manage .hint { line-height: 1.5; }
+.empty { margin: 0; padding: 32px 16px; text-align: center; color: var(--color-text-sub); line-height: 1.5; }
+.manage-list { list-style: none; margin: 0; padding: 0; }
+.manage-list--children { margin-bottom: 8px; }
+.manage-group + .manage-group { border-top: 1px solid var(--color-border); padding-top: 4px; }
+.manage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.manage-row:focus-visible, .manage-add:focus-visible, .segmented__item:focus-visible,
+.segmented__item:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+.manage-row--parent { font-weight: 700; }
+.manage-row--child { padding-left: 24px; }
+.manage-row--flat { border-bottom: 1px solid var(--color-border); border-radius: 0; }
+.manage-row.is-hidden .manage-row__name { color: var(--color-text-sub); text-decoration: line-through; }
+.manage-row__name { flex: 1; min-width: 0; word-break: break-all; }
+.manage-row__chevron { color: var(--color-text-sub); font-size: 1.25rem; }
+.manage-add {
+  min-height: var(--touch);
+  padding: 0 8px 0 24px;
+  border: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+.badge { flex: none; padding: 2px 8px; border-radius: 999px; background: #e6f2ee; color: var(--color-primary); font-size: 0.75rem; font-weight: 700; }
+.badge--muted { background: var(--color-bg); color: var(--color-text-sub); }
+
+.segmented { display: grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: 4px; padding: 4px; border-radius: 12px; background: var(--color-bg); }
+.segmented__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-sub);
+  font-weight: 700;
+  cursor: pointer;
+}
+.segmented__item.is-active { background: var(--color-surface); color: var(--color-text); box-shadow: 0 1px 2px rgb(0 0 0 / 12%); }
+.scope-picker { margin: 0 0 12px; padding: 0; border: 0; min-width: 0; }
+.scope-picker:disabled { opacity: 0.6; }
+
+/* 하단 탭이 없는 설정 화면: 토스트를 화면 아래쪽에 (탭 화면의 .toast 위치는 그대로) */
+.toast.toast--no-tabbar { bottom: calc(24px + env(safe-area-inset-bottom)); }
+
+.sheet-backdrop { position: fixed; inset: 0; z-index: 10; display: flex; align-items: flex-end; justify-content: center; background: rgb(0 0 0 / 40%); }
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: 8px 16px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 20px 20px 0 0;
+  background: var(--color-surface);
+}
+.sheet:focus { outline: none; }
+.sheet__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sheet__title { margin: 0; font-size: 1.125rem; }
+.sheet__section { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; }
+.sheet__section + .sheet__section { border-top: 1px solid var(--color-border); }
+.sheet__label { margin: 0; padding: 0; font-size: 0.875rem; font-weight: 700; color: var(--color-text-sub); }
+.sheet .form-error, .sheet .hint { margin: 0; }
+.text-input {
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid #8a929c; /* 흰 배경 대비 3:1 이상 */
+  border-radius: 12px;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.text-input:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 0; }
+.text-input[aria-invalid='true'] { border-color: var(--color-danger); }
+.button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
