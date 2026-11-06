@@ -6,6 +6,7 @@ import {
   isInviteUsable,
   joinErrorMessage,
   memberDisplayName,
+  nameLength,
   normalizeInviteCode,
   parseLedgerError,
   validateLedgerName,
@@ -20,6 +21,14 @@ describe('validateLedgerName', () => {
   it('비었거나 공백만이면 안내', () => {
     expect(validateLedgerName('')).toMatch('입력해 주세요');
     expect(validateLedgerName('    ')).toMatch('입력해 주세요');
+  });
+  it('이모지는 1자로 센다 (DB char_length 와 같음)', () => {
+    expect(nameLength('😀')).toBe(1);
+    expect(nameLength('😀'.repeat(15))).toBe(15);
+    expect(validateLedgerName('😀'.repeat(15))).toBeNull();
+    expect(validateLedgerName('😀'.repeat(20))).toBeNull();
+    expect(validateLedgerName('😀'.repeat(21))).toMatch('20자');
+    expect(validateLedgerName(`우리집${'😀'.repeat(17)}`)).toBeNull();
   });
   it('21자 이상이면 안내 (앞뒤 공백은 세지 않음)', () => {
     expect(validateLedgerName('가'.repeat(21))).toMatch('20자');

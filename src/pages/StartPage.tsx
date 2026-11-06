@@ -102,7 +102,6 @@ function CreateForm({ displayName, onCancel }: { displayName: string; onCancel: 
           className="field__input"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          maxLength={LEDGER_NAME_MAX}
           placeholder="예: 우리집 가계부"
           autoFocus
           aria-invalid={error ? true : undefined}

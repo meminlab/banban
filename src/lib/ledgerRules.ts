@@ -10,12 +10,21 @@ export const INVITE_CODE_LENGTH = 8;
 /** 초대 링크 주소: /join/<코드> */
 export const JOIN_PATH_PREFIX = '/join/';
 
-/** 가계부 이름 검사: 앞뒤 공백 제거 후 1~20자. 문제없으면 null, 있으면 안내 문구 */
+/**
+ * 가계부 이름 검사: 앞뒤 공백 제거 후 1~20자. 문제없으면 null, 있으면 안내 문구
+ * 글자 수는 DB char_length 와 같은 유니코드 문자 단위로 센다 (이모지 1개 = 1자).
+ * 입력칸에 maxLength 를 두지 않는다: maxLength 는 UTF-16 단위라 이모지를 2자로 세고, 앞뒤 공백도 센다.
+ */
 export function validateLedgerName(raw: string): string | null {
   const name = raw.trim();
   if (name.length === 0) return '가계부 이름을 입력해 주세요.';
-  if ([...name].length > LEDGER_NAME_MAX) return `가계부 이름은 ${LEDGER_NAME_MAX}자까지 쓸 수 있어요.`;
+  if (nameLength(name) > LEDGER_NAME_MAX) return `가계부 이름은 ${LEDGER_NAME_MAX}자까지 쓸 수 있어요.`;
   return null;
+}
+
+/** 글자 수: 유니코드 문자(코드 포인트) 단위 = Postgres char_length */
+export function nameLength(text: string): number {
+  return [...text].length;
 }
 
 /** 입력한 초대 코드 정리: 공백·하이픈 제거, 대문자 */

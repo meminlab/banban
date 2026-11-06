@@ -52,7 +52,7 @@ function NameForm({ ledgerId, initial }: { ledgerId: string; initial: string }) 
     setError(null);
     setDone(false);
     try {
-      await renameLedger(ledgerId, name);
+      await renameLedger(ledgerId, name.trim());
       setSaved(name.trim());
       setName(name.trim());
       setDone(true);
@@ -79,7 +79,6 @@ function NameForm({ ledgerId, initial }: { ledgerId: string; initial: string }) 
             setName(e.target.value);
             setDone(false);
           }}
-          maxLength={LEDGER_NAME_MAX}
           aria-invalid={error ? true : undefined}
           aria-describedby="name-help"
         />

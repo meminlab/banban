@@ -242,6 +242,16 @@ describe('로그인했고 가계부가 없는 상태', () => {
     expect(fake.createLedger).toHaveBeenCalledWith('  반반네  ', '김반반');
   });
 
+  it('이모지 15개 이름으로도 만들 수 있다', async () => {
+    const user = userEvent.setup();
+    renderAt('/start');
+    await user.click(await screen.findByRole('button', { name: /가계부 만들기/ }));
+    await user.type(screen.getByLabelText('가계부 이름'), '😀'.repeat(15));
+    await user.click(screen.getByRole('button', { name: '만들기' }));
+    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(fake.createLedger).toHaveBeenCalledWith('😀'.repeat(15), '김반반');
+  });
+
   it('가계부 이름이 비었거나 공백뿐이면 만들지 않고 안내한다', async () => {
     const user = userEvent.setup();
     renderAt('/start');
@@ -414,7 +424,40 @@ describe('설정 > 가계부 이름', () => {
     await user.click(screen.getByRole('button', { name: '저장' }));
     expect(screen.getByRole('alert')).toHaveTextContent('가계부 이름을 입력해 주세요');
     expect(fake.renameLedger).not.toHaveBeenCalled();
-    expect(input).toHaveAttribute('maxLength', '20');
+    expect(input).not.toHaveAttribute('maxLength'); // 글자 수는 검사 함수로 판정 (이모지·앞뒤 공백)
+  });
+
+  it('이모지 15개 이름도 입력·저장된다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/name');
+    const input = await screen.findByLabelText('가계부 이름');
+    await user.clear(input);
+    await user.type(input, '😀'.repeat(15));
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('저장했어요');
+    expect(fake.renameLedger).toHaveBeenCalledWith('ledger-1', '😀'.repeat(15));
+  });
+
+  it('앞뒤 공백 + 20자도 입력되고, 공백을 뺀 20자로 저장된다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/name');
+    const input = await screen.findByLabelText('가계부 이름');
+    await user.clear(input);
+    await user.type(input, `  ${'가'.repeat(20)}  `);
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('저장했어요');
+    expect(fake.renameLedger).toHaveBeenCalledWith('ledger-1', '가'.repeat(20));
+  });
+
+  it('21자는 저장하지 않고 안내한다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/name');
+    const input = await screen.findByLabelText('가계부 이름');
+    await user.clear(input);
+    await user.type(input, '😀'.repeat(21));
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('20자까지');
+    expect(fake.renameLedger).not.toHaveBeenCalled();
   });
 
   it('저장에 실패하면 안내한다', async () => {
