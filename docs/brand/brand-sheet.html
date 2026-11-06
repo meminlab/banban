@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>반반 로고 사용 규칙</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+* { box-sizing:border-box; } body { margin:0; padding:32px; background:#ECEDEF; font-family:'Pretendard Variable',sans-serif; color:#1D1F23; word-break:keep-all; }
+h1 { font-size:26px; margin:0 0 4px; } .lead { margin:0 0 24px; color:#4A4F57; font-size:15px; }
+h2 { font-size:16px; margin:0 0 10px; } .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+.box { background:#fff; border-radius:16px; padding:20px; } .dk { background:#131416; color:#F2F4F6; }
+.row { display:flex; gap:24px; align-items:center; flex-wrap:wrap; } .cap { font-size:12px; color:#6B7079; margin-top:6px; text-align:center; }
+.dk .cap { color:#9EA3AB; }
+.cs { position:relative; display:inline-block; padding:20px; outline:1.5px dashed #E0A526; background: repeating-linear-gradient(45deg,#FFF6DC 0 6px,#fff 6px 12px); }
+.cs img { display:block; background:#fff; } .cs .lab { position:absolute; top:-1px; left:50%; transform:translate(-50%,-50%); background:#E0A526; color:#fff; font-size:11px; font-weight:700; padding:2px 6px; border-radius:6px; }
+.bad { position:relative; width:150px; height:110px; border-radius:12px; background:#F5F6F8; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.bad::after { content:"✕"; position:absolute; top:6px; right:8px; color:#B23A48; font-weight:800; font-size:16px; }
+.badcap { font-size:12px; color:#4A4F57; text-align:center; margin-top:6px; width:150px; }
+ul { margin:8px 0 0; padding-left:18px; font-size:14px; line-height:22px; }
+</style></head><body>
+<h1>반반 로고 — B-1 웃는 주머니</h1>
+<p class="lead">주머니 하나 + 웃는 입 한 획 + 반으로 나뉜 동전. "둘이 반씩 넣어 함께 모은다." 원본 SVG·PNG는 이 폴더(<b>docs/brand</b>).</p>
+<div class="grid">
+ <div class="box"><h2>기본형 (밝은 바탕)</h2><div class="row">
+  <div><img src="banban-lockup-light.svg" height="64"><div class="cap">가로 조합 · banban-lockup-light</div></div>
+  <div><img src="banban-symbol-light.svg" height="72"><div class="cap">심볼</div></div></div></div>
+ <div class="box dk"><h2>어두운 바탕</h2><div class="row">
+  <div><img src="banban-lockup-dark.svg" height="64"><div class="cap">banban-lockup-dark</div></div>
+  <div><img src="banban-symbol-dark.svg" height="72"><div class="cap">심볼</div></div></div></div>
+ <div class="box"><h2>여백 · 최소 크기</h2><div class="row">
+  <div class="cs"><span class="lab">여백 = 동전 지름의 ½</span><img src="banban-lockup-light.svg" height="64"></div></div>
+  <ul><li>로고 둘레에 <b>동전 지름의 절반</b>(심볼 높이 64 기준 10) 이상 비운다.</li>
+  <li>최소 크기: 가로 조합 <b>높이 24px</b>, 심볼 <b>16px</b>(파비콘). 그보다 작으면 심볼만 쓴다.</li>
+  <li>워드마크는 윤곽선(path)이라 글꼴이 없어도 똑같이 보인다.</li></ul></div>
+ <div class="box"><h2>앱 아이콘 · 파비콘</h2><div class="row">
+  <div><img src="png/icon-512.png" width="112" style="border-radius:24px"><div class="cap">512 · 192 (PWA, maskable)</div></div>
+  <div><img src="png/apple-touch-icon-180.png" width="72" style="border-radius:16px"><div class="cap">180 (iOS)</div></div>
+  <div><img src="png/favicon-32.png" width="32"> <img src="png/favicon-16.png" width="16"><div class="cap">파비콘 32 · 16 (실제 크기)</div></div>
+  <div><img src="banban-symbol-mono.svg" height="48" style="color:#1D1F23"> <img src="banban-symbol-mono.svg" height="48" style="color:#007F55"><div class="cap">단색 (currentColor)</div></div></div></div>
+</div>
+<div class="box" style="margin-top:16px"><h2>하지 말 것</h2><div class="row" style="align-items:flex-start">
+ <div><div class="bad"><img src="banban-symbol-light.svg" height="64" style="transform:scaleX(1.55)"></div><div class="badcap">늘리거나 찌그러뜨리기</div></div>
+ <div><div class="bad"><img src="banban-symbol-light.svg" height="64" style="transform:rotate(-18deg)"></div><div class="badcap">돌리기</div></div>
+ <div><div class="bad"><img src="banban-symbol-light.svg" height="64" style="filter:hue-rotate(150deg)"></div><div class="badcap">정해진 색 바꾸기 (테마 색으로 칠하기 포함)</div></div>
+ <div><div class="bad"><img src="banban-symbol-light.svg" height="64" style="filter:drop-shadow(3px 4px 0 #1D1F23)"></div><div class="badcap">그림자·테두리·효과 넣기</div></div>
+ <div><div class="bad" style="background:url('png/icon-512.png') center/40px, linear-gradient(135deg,#F28C6F,#5CC598)"><img src="banban-symbol-light.svg" height="64"></div><div class="badcap">복잡한 바탕 위에 올리기</div></div>
+ <div><div class="bad"><span style="font:800 30px 'Times New Roman';color:#007F55">banban</span></div><div class="badcap">워드마크를 다른 글꼴로 쓰기</div></div>
+</div></div>
+</body></html>
