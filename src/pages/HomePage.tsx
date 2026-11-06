@@ -10,7 +10,7 @@ import { getMonthSummaryData, type MonthSummaryData } from '../data/summary';
 import type { Asset, AssetBalanceHistory } from '../data/types';
 import { formatPercent, formatWon } from '../domain/format';
 import { addMonths, currentYearMonth, formatYearMonth, type YearMonth } from '../domain/month';
-import { homeNetWorth } from '../domain/netWorth';
+import { homeNetWorth, trendWindowStart } from '../domain/netWorth';
 import { computeMonthSummary, type BreakdownRow } from '../domain/summary';
 
 type LoadState =
@@ -43,24 +43,37 @@ type AssetLoadState =
   | { status: 'error' }
   | { status: 'ready'; assets: Asset[]; history: AssetBalanceHistory[] };
 
-/** 자산·잔액 이력은 가계부마다 한 번 읽고, 달을 옮기면 화면에서 다시 계산한다 */
-function useAssetData(ledgerId: string) {
-  const [state, setState] = useState<AssetLoadState>({ status: 'loading' });
+/**
+ * 자산·잔액 이력은 가계부마다 읽고, 달을 옮기면 화면에서 다시 계산한다.
+ * 이력은 범위를 정해 받는다(BANB-30): 고른 달 기준 12개월치를 받아 두면 앞으로 6개월까지 옮겨도 다시 읽지 않는다.
+ * 받은 범위로 고른 달의 6개월 추이를 계산할 수 없을 때만 그 달 기준 12개월치를 다시 받는다
+ */
+const HOME_HISTORY_MONTHS = 12;
+
+function useAssetData(ledgerId: string, month: YearMonth) {
+  const need = trendWindowStart(month);
+  const [range, setRange] = useState(() => ({ ledgerId, since: trendWindowStart(month, HOME_HISTORY_MONTHS) }));
+  if (range.ledgerId !== ledgerId || need < range.since) {
+    setRange({ ledgerId, since: trendWindowStart(month, HOME_HISTORY_MONTHS) });
+  }
+  const [loaded, setLoaded] = useState<{ range: typeof range; state: AssetLoadState }>({ range, state: { status: 'loading' } });
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
-    setState({ status: 'loading' });
-    Promise.all([listAssets(ledgerId), listBalanceHistory(ledgerId)]).then(
-      ([assets, history]) => alive && setState({ status: 'ready', assets, history }),
-      () => alive && setState({ status: 'error' }),
+    setLoaded({ range, state: { status: 'loading' } });
+    Promise.all([listAssets(range.ledgerId), listBalanceHistory(range.ledgerId, range.since)]).then(
+      ([assets, history]) => alive && setLoaded({ range, state: { status: 'ready', assets, history } }),
+      () => alive && setLoaded({ range, state: { status: 'error' } }),
     );
     return () => {
       alive = false;
     };
-  }, [ledgerId, attempt]);
+  }, [range, attempt]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  // 지금 범위로 받은 결과가 아니면(다시 받는 중) 불러오는 중으로 본다 — 잘린 이력으로 계산하지 않는다
+  const state: AssetLoadState = loaded.range === range ? loaded.state : { status: 'loading' };
   return { state, retry };
 }
 
@@ -68,7 +81,7 @@ export function HomePage() {
   const ledgerId = useLedgerId();
   const [month, setMonth] = useState<YearMonth>(() => currentYearMonth());
   const { state, retry } = useMonthSummaryData(ledgerId, month);
-  const asset = useAssetData(ledgerId);
+  const asset = useAssetData(ledgerId, month);
 
   const summary = useMemo(
     () => (state.status === 'ready' ? computeMonthSummary(state.month, state.data.transactions, state.data) : null),

@@ -18,6 +18,8 @@ const assetDb = vi.hoisted(() => ({
   fail: 0,
   calls: 0,
   pending: false,
+  /** listBalanceHistory 에 넘어온 창 시작(ms) */
+  since: [] as number[],
 }));
 vi.mock('../data/asset', () => ({
   listAssets: async () => {
@@ -29,7 +31,17 @@ vi.mock('../data/asset', () => ({
     }
     return assetDb.assets;
   },
-  listBalanceHistory: async () => assetDb.history,
+  // 서버처럼 창 시작 이후 + 자산마다 직전 1건만 돌려준다 (BANB-30)
+  listBalanceHistory: async (_l: string, since: number) => {
+    assetDb.since.push(since);
+    const before = new Map<string, AssetBalanceHistory>();
+    const after: AssetBalanceHistory[] = [];
+    for (const h of assetDb.history) {
+      if (Date.parse(h.changed_at) >= since) after.push(h);
+      else before.set(h.asset_id, h); // 오래된 순이므로 마지막 것이 직전
+    }
+    return [...before.values(), ...after];
+  },
 }));
 
 /** 홈은 링크(자산 탭·자산 추가)가 있어 라우터 안에서 그린다 */
@@ -86,6 +98,7 @@ beforeEach(() => {
   assetDb.fail = 0;
   assetDb.calls = 0;
   assetDb.pending = false;
+  assetDb.since = [];
 });
 afterEach(() => vi.useRealTimers());
 
@@ -228,6 +241,27 @@ describe('홈: 우리집 순자산 카드', () => {
     // 카드가 이번 달 요약보다 위
     const summary = await screen.findByRole('region', { name: '이번 달 요약' });
     expect(card.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('BANB-30 이력은 12개월치만 받고, 6개월 추이를 못 그리는 달로 가면 그 달 기준으로 다시 받는다', async () => {
+    seedV4();
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await nwLink();
+    expect(assetDb.since).toEqual([Date.parse(kst('2025-12-01T00:00:00'))]);
+    // 5월까지(추이 시작 12월)는 받은 범위로 계산
+    for (let i = 0; i < 6; i++) await user.click(screen.getByRole('button', { name: '이전 달' }));
+    expect(await nwLink()).toHaveTextContent('5월 말 기준');
+    expect(assetDb.calls).toBe(1);
+    // 4월(추이 시작 11월)은 다시 받는다
+    await user.click(screen.getByRole('button', { name: '이전 달' }));
+    expect(await nwLink()).toHaveTextContent('4월 말 기준');
+    expect(assetDb.since).toEqual([Date.parse(kst('2025-12-01T00:00:00')), Date.parse(kst('2025-05-01T00:00:00'))]);
+    expect(assetDb.calls).toBe(2);
+    // 이번 달로 돌아오면 넓게 받은 범위를 그대로 쓴다 — 값은 처음과 같다
+    for (let i = 0; i < 7; i++) await user.click(screen.getByRole('button', { name: '다음 달' }));
+    expect(within(await nwLink()).getByTestId('home-net-worth')).toHaveTextContent('108,700,000원');
+    expect(assetDb.calls).toBe(2);
   });
 
   it('HM-02 카드를 누르면 자산 탭으로 간다', async () => {
