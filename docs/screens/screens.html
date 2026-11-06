@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반반 화면 시안 — 로그인·시작·가계부 탭·내역 입력·설정·가계부 관리</title>
+<!-- 미리보기 전용 CDN. 앱은 npm pretendard / lucide-react 로 번들한다 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<style>
+/* 테마 토큰: docs/design.md v1.2 8절과 같은 값 (assets-home.html 과 같은 블록) */
+[data-theme="berry"]{--color-bg:#F5F6F8;--color-surface:#FFFFFF;--color-surface-sunken:#F0F1F4;--color-border:#E8EAED;--color-border-strong:#8A8F98;--color-text:#1D1F23;--color-text-sub:#5B6068;--color-text-weak:#686D76;--color-primary:#A23B72;--color-primary-pressed:#8A2D5F;--color-primary-strong:#8A2D5F;--color-primary-soft:#F9EAF2;--color-on-primary:#FFFFFF;--color-inverse-action:#F5A9D0;--color-saving:#3B7560;--color-hero-bg:#FFFFFF;--color-hero-label:#5B6068;--color-member-1:#A23B72;--color-member-2:#D98CB5;--color-member-3:#6F6A75;--color-member-4:#B9B4BE;--color-avatar-1:#F0F1F4;--color-avatar-2:#F0F1F4;--color-avatar-3:#F0F1F4;--color-avatar-4:#F0F1F4;--color-on-avatar:#1D1F23;--color-income:#3E5F9E;--color-negative:#B23A48;--card-gutter:16px;--card-radius:16px;--control-radius:12px;--card-shadow:0 1px 2px rgb(15 16 18 / 0.04);}
+[data-theme="berry"][data-mode="dark"]{--color-bg:#131416;--color-surface:#1D1E21;--color-surface-sunken:#27292D;--color-border:#34363B;--color-border-strong:#7B8089;--color-text:#F1F2F4;--color-text-sub:#B8BCC3;--color-text-weak:#989CA4;--color-primary:#F08CC0;--color-primary-pressed:#E673AE;--color-primary-strong:#F5A9D0;--color-primary-soft:#3A1F2E;--color-on-primary:#1F0F18;--color-inverse-action:#8A2D5F;--color-saving:#93C4AD;--color-hero-bg:#1D1E21;--color-hero-label:#B8BCC3;--color-member-1:#F08CC0;--color-member-2:#9C4E78;--color-member-3:#8E8994;--color-member-4:#5A5560;--color-avatar-1:#27292D;--color-avatar-2:#27292D;--color-avatar-3:#27292D;--color-avatar-4:#27292D;--color-on-avatar:#F1F2F4;--color-income:#9DB2DC;--color-negative:#EE8F99;--card-shadow:none;}
+[data-theme="clean"]{--color-bg:#F2F4F6;--color-surface:#FFFFFF;--color-surface-sunken:#F2F4F6;--color-border:#E5E8EB;--color-border-strong:#878E98;--color-text:#191C21;--color-text-sub:#5F6670;--color-text-weak:#69707A;--color-primary:#007F55;--color-primary-pressed:#006A47;--color-primary-strong:#006B47;--color-primary-soft:#E6F4EE;--color-on-primary:#FFFFFF;--color-inverse-action:#6FD3A8;--color-saving:#6B52AE;--color-hero-bg:#FFFFFF;--color-hero-label:#5F6670;--color-member-1:#007F55;--color-member-2:#5DBB92;--color-member-3:#6B727C;--color-member-4:#B8BEC6;--color-avatar-1:#F2F4F6;--color-avatar-2:#F2F4F6;--color-avatar-3:#F2F4F6;--color-avatar-4:#F2F4F6;--color-on-avatar:#191C21;--color-income:#3E5F9E;--color-negative:#B23A48;--card-gutter:0px;--card-radius:0px;--control-radius:12px;--card-shadow:none;}
+[data-theme="clean"][data-mode="dark"]{--color-bg:#101214;--color-surface:#1B1E22;--color-surface-sunken:#262A2F;--color-border:#33383E;--color-border-strong:#7A808A;--color-text:#F2F4F6;--color-text-sub:#B5BBC3;--color-text-weak:#959BA4;--color-primary:#3FC08A;--color-primary-pressed:#2FA877;--color-primary-strong:#6FD3A8;--color-primary-soft:#12301F;--color-on-primary:#04140D;--color-inverse-action:#006B47;--color-saving:#B7A6E8;--color-hero-bg:#1B1E22;--color-hero-label:#B5BBC3;--color-member-1:#3FC08A;--color-member-2:#2A7A58;--color-member-3:#8F96A0;--color-member-4:#4E555E;--color-avatar-1:#262A2F;--color-avatar-2:#262A2F;--color-avatar-3:#262A2F;--color-avatar-4:#262A2F;--color-on-avatar:#F2F4F6;--color-income:#9DB2DC;--color-negative:#EE8F99;--card-shadow:none;}
+[data-theme="cozy"]{--color-bg:#FFF7F3;--color-surface:#FFFFFF;--color-surface-sunken:#FBEDE7;--color-border:#F3DED5;--color-border-strong:#98857E;--color-text:#2B2220;--color-text-sub:#6B5A54;--color-text-weak:#76655F;--color-primary:#C44536;--color-primary-pressed:#A83A2D;--color-primary-strong:#9E3226;--color-primary-soft:#FDE8E3;--color-on-primary:#FFFFFF;--color-inverse-action:#FFB3A3;--color-saving:#3B7560;--color-hero-bg:#FDE8E3;--color-hero-label:#9E3226;--color-member-1:#F7B9A4;--color-member-2:#F6D98B;--color-member-3:#B7D3A8;--color-member-4:#C9C3EC;--color-avatar-1:#F7B9A4;--color-avatar-2:#F6D98B;--color-avatar-3:#B7D3A8;--color-avatar-4:#C9C3EC;--color-on-avatar:#2B2220;--color-income:#3E5F9E;--color-negative:#B23A48;--card-gutter:16px;--card-radius:24px;--control-radius:16px;--card-shadow:0 2px 8px rgb(120 60 40 / 0.06);}
+[data-theme="cozy"][data-mode="dark"]{--color-bg:#171312;--color-surface:#221C1A;--color-surface-sunken:#2E2624;--color-border:#3D3330;--color-border-strong:#85766F;--color-text:#F5EEEB;--color-text-sub:#C4B6B1;--color-text-weak:#A39590;--color-primary:#FF8A74;--color-primary-pressed:#F27560;--color-primary-strong:#FFB3A3;--color-primary-soft:#3D211C;--color-on-primary:#1F0E0B;--color-inverse-action:#9E3226;--color-saving:#93C4AD;--color-hero-bg:#3D211C;--color-hero-label:#FFB3A3;--color-member-1:#E89A84;--color-member-2:#D9B95F;--color-member-3:#8FB07F;--color-member-4:#9F97D6;--color-avatar-1:#E89A84;--color-avatar-2:#D9B95F;--color-avatar-3:#8FB07F;--color-avatar-4:#9F97D6;--color-on-avatar:#1F1715;--color-income:#9DB2DC;--color-negative:#EE8F99;--card-shadow:none;}
+:root { --color-danger:#B23A48; --color-on-danger:#FFFFFF; --color-danger-soft:#FBEEEF; }
+[data-mode="dark"] { --color-danger:#EE8F99; --color-on-danger:#1A1310; --color-danger-soft:#3A2226; }
+
+/* ── 보드 (앱 밖) ── */
+* { box-sizing: border-box; }
+body { margin:0; padding:28px; background:#D9DBDF; font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif; word-break:keep-all; color:#1D1F23; }
+h1.board-t { font-size:24px; margin:0 0 4px; } .lead { margin:0 0 8px; font-size:15px; color:#4A4F57; max-width:1400px; line-height:22px; }
+h2.row-t { font-size:18px; margin: 28px 0 10px; }
+.row { display:flex; gap:20px; align-items:flex-start; flex-wrap:nowrap; }
+.cap { font-size:13px; font-weight:700; line-height:18px; color:#2A2D33; margin:0 0 8px 4px; width:360px; }
+.anno { font-size:12px; color:#4A4F57; width:360px; margin:8px 4px 0; line-height:18px; }
+
+/* ── 폰 360 × 760 ── */
+.phone { width:360px; height:760px; position:relative; overflow:hidden; border-radius:28px; box-shadow:0 10px 36px rgb(0 0 0 / .18); background:var(--color-bg); color:var(--color-text); font-size:15px; }
+.phone p { margin:0; }
+.money, .num { font-variant-numeric: tabular-nums; }
+.money { white-space:nowrap; letter-spacing:-0.01em; }
+.u { font-size:.75em; font-weight:600; margin-left:1px; }
+.inc { color:var(--color-income); } .sav { color:var(--color-saving); } .neg { color:var(--color-negative); }
+svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
+.s16 svg.lucide, svg.lucide.s16 { width:16px; height:16px; }
+.s24 svg.lucide, svg.lucide.s24 { width:24px; height:24px; stroke-width:1.75; }
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.ib { width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); flex:none; }
+
+/* 헤더 */
+.hdr { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 12px; z-index:2; }
+.lsw { display:flex; align-items:center; gap:8px; height:40px; padding:0 10px 0 5px; border-radius:999px; background:var(--color-surface-sunken); font-weight:700; font-size:16px; max-width:280px; min-width:0; }
+.lsw .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.lsw svg { width:18px; height:18px; color:var(--color-text-sub); }
+.av { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:var(--color-on-avatar); border:2px solid var(--color-surface-sunken); flex:none; }
+.av + .av { margin-left:-10px; }
+.av.lg { width:40px; height:40px; font-size:15px; border:0; }
+.sub-h { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; padding:0 8px 0 4px; gap:2px; z-index:2; }
+.sub-h b { font-size:18px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sub-h .ib { color:var(--color-text); }
+
+/* 본문 */
+.scroll { position:absolute; top:56px; left:0; right:0; bottom:64px; overflow:hidden; }
+.scroll.full { bottom:0; } .scroll.foot-pad { bottom:80px; }
+.stack { padding:12px 0 24px; display:flex; flex-direction:column; gap:12px; }
+.card { margin:0 var(--card-gutter); background:var(--color-surface); border-radius:var(--card-radius); padding:20px; box-shadow:var(--card-shadow); }
+[data-mode="dark"] .card { border-top:1px solid var(--color-border); border-bottom:1px solid var(--color-border); }
+.card.tight { padding:12px 20px 4px; }
+.card.flat { padding:4px 20px; }
+.mbar { display:flex; align-items:center; justify-content:center; gap:4px; height:48px; background:var(--color-surface); font-weight:600; font-size:16px; margin:0 var(--card-gutter); border-radius:var(--card-radius); box-shadow:var(--card-shadow); }
+.mbar .ib { color:var(--color-text); }
+.sec-k { font-size:13px; font-weight:700; color:var(--color-text-sub); padding:8px calc(var(--card-gutter) + 20px) 0; }
+.ct { font-weight:700; font-size:17px; display:flex; align-items:center; justify-content:space-between; }
+.ct small { font-size:13px; font-weight:500; color:var(--color-text-sub); }
+
+/* 가계부 탭 도구줄 */
+.tools { display:flex; gap:8px; align-items:center; padding:12px 20px; background:var(--color-surface); margin:0 var(--card-gutter); border-radius:var(--card-radius); box-shadow:var(--card-shadow); flex-direction:column; }
+.tools .line { display:flex; gap:8px; width:100%; }
+.seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:4px; height:44px; flex:1; }
+.seg.l { height:48px; }
+.seg span { display:flex; align-items:center; justify-content:center; gap:4px; border-radius:calc(var(--control-radius) - 3px); font-weight:600; font-size:15px; color:var(--color-text-sub); }
+.seg.l span { font-size:16px; }
+.seg span.on { background:var(--color-surface); color:var(--color-text); box-shadow:0 1px 2px rgb(0 0 0 / .08); }
+.seg span.on.inc { color:var(--color-income); } .seg span.on.sav { color:var(--color-saving); }
+.fbtn { height:44px; padding:0 14px; border-radius:var(--control-radius); border:1px solid var(--color-border-strong); background:var(--color-surface); display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:15px; flex:none; }
+.fbtn.on { background:var(--color-primary-soft); color:var(--color-primary-strong); border-color:var(--color-primary); }
+.fbtn svg { width:16px; height:16px; }
+.msum { display:grid; grid-template-columns:repeat(3,1fr); width:100%; font-size:12px; color:var(--color-text-sub); padding:0 2px; gap:4px; }
+.msum span { display:flex; flex-direction:column; gap:1px; }
+.msum b { font-size:15px; font-weight:700; color:var(--color-text); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.msum b.inc { color:var(--color-income); } .msum b.sav { color:var(--color-saving); }
+.fband { display:flex; align-items:center; justify-content:space-between; width:100%; background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:0 4px 0 12px; height:40px; font-size:14px; font-weight:500; }
+.fband u { text-decoration:none; color:var(--color-primary); font-weight:600; padding:0 10px; height:40px; display:flex; align-items:center; }
+
+/* 내역 날짜 카드 */
+.dayh { display:flex; justify-content:space-between; font-size:13px; font-weight:600; color:var(--color-text-sub); padding:0 0 4px; }
+.dayh b { color:var(--color-text); font-weight:600; }
+.tx { display:flex; align-items:center; gap:12px; min-height:64px; padding:10px 0; }
+.ic { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); color:var(--color-text); display:flex; align-items:center; justify-content:center; flex:none; font-weight:600; font-size:15px; }
+.tx .m { flex:1; min-width:0; }
+.tx .t { font-size:15px; font-weight:600; line-height:22px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tx .s { font-size:13px; line-height:18px; color:var(--color-text-sub); display:flex; gap:4px; align-items:center; white-space:nowrap; overflow:hidden; margin-top:2px; }
+.tx .s .x { overflow:hidden; text-overflow:ellipsis; }
+.tx > .money { font-size:17px; font-weight:700; flex:none; }
+.tx.wrap { flex-wrap:wrap; } .tx.wrap > .money { width:100%; text-align:right; padding-left:52px; margin-top:-4px; }
+.badge { display:inline-flex; align-items:center; gap:2px; height:20px; padding:0 6px; border-radius:8px; font-size:12px; font-weight:600; background:var(--color-surface-sunken); color:var(--color-text-sub); flex:none; }
+.badge.p { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.badge svg { width:12px; height:12px; }
+
+/* 달력 */
+.cal { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; row-gap:2px; }
+.cal .wd { font-size:13px; font-weight:500; line-height:28px; color:var(--color-text-sub); }
+.cal .d { display:flex; flex-direction:column; align-items:center; min-height:56px; border-radius:8px; padding-top:3px; font-size:13px; font-weight:500; }
+.cal .d b { width:24px; height:24px; border-radius:999px; display:flex; align-items:center; justify-content:center; font-weight:500; font-variant-numeric:tabular-nums; }
+.cal .d i { font-style:normal; font-size:11px; font-weight:600; line-height:14px; white-space:nowrap; letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
+.cal .d i.inc { color:var(--color-income); }
+.cal .d.fut b { color:var(--color-text-weak); }
+.cal .d.today b { background:var(--color-primary); color:var(--color-on-primary); font-weight:700; }
+.cal .d.sel { background:var(--color-primary-soft); }
+.dot { width:5px; height:5px; border-radius:999px; background:var(--color-saving); margin-top:3px; display:inline-block; }
+.legend { display:flex; gap:14px; font-size:12px; color:var(--color-text-sub); margin-top:6px; align-items:center; justify-content:flex-end; }
+.legend .dot { margin:0 4px 0 0; vertical-align:middle; }
+
+/* 탭바 */
+.tabbar { position:absolute; left:0; right:0; bottom:0; height:64px; background:var(--color-surface); border-top:1px solid var(--color-border); display:flex; align-items:center; padding:0 8px; z-index:2; }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; color:var(--color-text-sub); }
+.tab .pill { width:56px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.tab.on { color:var(--color-text); font-weight:700; } .tab.on .pill { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.plus { width:52px; height:52px; border-radius:18px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; margin:0 6px; }
+
+/* 버튼·입력 */
+.btn { height:48px; padding:0 18px; border-radius:var(--control-radius); display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:600; font-size:16px; white-space:nowrap; border:1px solid transparent; }
+.btn.sm { height:44px; font-size:15px; padding:0 14px; }
+.btn.block { display:flex; width:100%; height:52px; }
+.btn.p { background:var(--color-primary); color:var(--color-on-primary); }
+.btn.s { background:var(--color-surface); border-color:var(--color-border-strong); color:var(--color-text); }
+.btn.t { color:var(--color-primary); padding:0 8px; }
+.btn.d { background:var(--color-danger); color:var(--color-on-danger); }
+.btn.do { background:var(--color-surface); border-color:var(--color-danger); color:var(--color-danger); }
+.btn.off { background:var(--color-surface-sunken); color:var(--color-text-weak); }
+.btn svg { width:18px; height:18px; }
+.foot { position:absolute; left:0; right:0; bottom:0; padding:10px 16px 16px; background:var(--color-surface); border-top:1px solid var(--color-border); display:flex; flex-direction:column; gap:8px; z-index:2; }
+.foot .r { display:flex; gap:8px; }
+.why { font-size:13px; color:var(--color-text-sub); text-align:center; }
+.err { display:flex; align-items:center; gap:4px; color:var(--color-danger); font-size:13px; font-weight:500; line-height:18px; }
+.err svg { width:16px; height:16px; }
+.form { padding:0 20px; display:flex; flex-direction:column; gap:18px; }
+.fk { font-size:13px; font-weight:500; color:var(--color-text-sub); margin-bottom:8px; display:flex; justify-content:space-between; }
+.inp { height:48px; border:1px solid var(--color-border-strong); border-radius:var(--control-radius); display:flex; align-items:center; padding:0 14px; font-size:16px; background:var(--color-surface); gap:8px; min-width:0; }
+.inp .v { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.inp.ph { color:var(--color-text-weak); }
+.inp.focus { border:2px solid var(--color-primary); padding:0 13px; }
+.inp.bad { border-color:var(--color-danger); }
+.inp.code { justify-content:center; font-size:24px; font-weight:700; letter-spacing:.2em; height:60px; font-variant-numeric:tabular-nums; }
+.help { display:flex; justify-content:space-between; font-size:13px; color:var(--color-text-weak); margin-top:6px; }
+.chips { display:flex; gap:8px; flex-wrap:wrap; }
+.chip { height:44px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center; gap:4px; font-size:15px; background:var(--color-surface); border:1px solid var(--color-border-strong); white-space:nowrap; }
+.chip.on { background:var(--color-primary-soft); color:var(--color-primary-strong); border-color:var(--color-primary); font-weight:600; }
+.chip svg { width:16px; height:16px; } .chip .sc svg { width:14px; height:14px; color:var(--color-text-sub); } .chip.on .sc svg { color:inherit; }
+.notice { background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:12px; display:flex; gap:8px; font-size:14px; font-weight:500; color:var(--color-text-sub); line-height:20px; }
+.notice svg { width:16px; height:16px; margin-top:2px; }
+.notice.bad { background:var(--color-danger-soft); color:var(--color-danger); }
+
+/* 시트·확인 창·토스트 */
+.scrim { position:absolute; inset:0; background:rgb(15 16 18 / .45); z-index:3; }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:24px 24px 0 0; z-index:4; padding-bottom:20px; }
+.grab { width:36px; height:4px; border-radius:2px; background:var(--color-border-strong); margin:8px auto 0; opacity:.6; }
+.sh-h { height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 20px; }
+.sh-h b { font-size:18px; font-weight:600; }
+.dialog { position:absolute; left:20px; right:20px; top:250px; background:var(--color-surface); border-radius:16px; padding:24px 20px 16px; z-index:4; }
+[data-mode="dark"] .dialog { border:1px solid var(--color-border); }
+.dialog b { font-size:18px; font-weight:600; display:block; } .dialog p { font-size:15px; color:var(--color-text-sub); line-height:22px; margin:8px 0 20px; }
+.dialog .r { display:flex; gap:8px; } .dialog .r .btn { flex:1; }
+.focus-ring { outline:2px solid var(--color-primary); outline-offset:2px; }
+.toast { position:absolute; left:50%; transform:translateX(-50%); bottom:80px; height:48px; border-radius:999px; background:var(--color-text); color:var(--color-surface); display:flex; align-items:center; gap:8px; padding:0 8px 0 18px; font-size:15px; font-weight:500; z-index:3; white-space:nowrap; }
+.toast svg { width:16px; height:16px; } .toast b { color:var(--color-inverse-action); font-weight:700; padding:0 10px; }
+
+/* 빈·오류·로딩 */
+.empty { display:flex; flex-direction:column; align-items:center; text-align:center; padding:28px 12px; }
+.empty .c { width:72px; height:72px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); margin-bottom:16px; }
+.empty .c svg { width:32px; height:32px; }
+.empty b { font-size:16px; font-weight:600; } .empty p { font-size:15px; color:var(--color-text-sub); margin:6px 0 16px !important; line-height:22px; }
+.sk { display:block; background:var(--color-surface-sunken); border-radius:8px; height:14px; }
+
+/* 로그인·시작 */
+.hero-wrap { position:absolute; inset:0; display:flex; flex-direction:column; padding:72px 24px 24px; background:var(--color-surface); }
+.logo { width:64px; height:64px; border-radius:18px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:20px; letter-spacing:-0.04em; position:relative; }
+.logo::after { content:'임시 로고'; position:absolute; left:72px; top:22px; font-size:11px; font-weight:600; color:var(--color-text-weak); letter-spacing:0; white-space:nowrap; }
+.big-t { font-size:26px; line-height:34px; font-weight:700; letter-spacing:-0.01em; margin-top:28px !important; }
+.lead-t { font-size:16px; line-height:24px; color:var(--color-text-sub); margin-top:8px !important; }
+.peek { margin-top:32px; border-radius:20px; background:var(--color-bg); padding:18px 20px; }
+.peek .k { font-size:13px; color:var(--color-text-sub); font-weight:500; }
+.peek .a { font-size:28px; font-weight:700; letter-spacing:-0.02em; margin-top:2px; }
+.peek .bar { display:flex; gap:3px; height:10px; margin-top:12px; } .peek .bar i { border-radius:99px; display:block; }
+.gbtn { height:52px; border-radius:var(--control-radius); border:1px solid var(--color-border-strong); background:var(--color-surface); display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:600; }
+.g { width:20px; height:20px; border-radius:999px; border:2px solid var(--color-text); display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:11px; }
+.choice { display:flex; gap:14px; align-items:center; padding:18px 16px; border:1.5px solid var(--color-border); border-radius:16px; background:var(--color-surface); }
+.choice .ibx { width:44px; height:44px; border-radius:12px; background:var(--color-primary-soft); color:var(--color-primary-strong); display:flex; align-items:center; justify-content:center; flex:none; }
+.choice b { display:block; font-size:17px; font-weight:600; } .choice span { font-size:14px; color:var(--color-text-sub); }
+.choice > svg { margin-left:auto; color:var(--color-text-weak); }
+
+/* 내역 입력 (키패드) */
+.q { font-size:15px; color:var(--color-text-sub); padding:0 20px; }
+.amt { font-size:40px; line-height:48px; font-weight:700; letter-spacing:-0.02em; padding:0 20px; display:flex; align-items:baseline; }
+.amt .caret { width:2px; height:36px; background:var(--color-primary); margin-left:2px; align-self:center; }
+.amt.zero { color:var(--color-text-weak); }
+.kor { font-size:14px; color:var(--color-text-weak); padding:0 20px; height:20px; }
+.quick { display:flex; gap:8px; padding:0 20px; }
+.quick span { height:36px; padding:0 12px; border-radius:999px; border:1px solid var(--color-border); background:var(--color-surface); font-size:14px; font-weight:600; display:inline-flex; align-items:center; }
+.sumrows { margin:0 16px; border-radius:var(--control-radius); background:var(--color-surface); border:1px solid var(--color-border); padding:0 12px; }
+.sumrows .r { height:44px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.sumrows .r + .r { border-top:1px solid var(--color-border); }
+.sumrows .k { font-size:15px; color:var(--color-text-sub); flex:none; }
+.sumrows .v { font-size:15px; font-weight:600; display:flex; align-items:center; gap:6px; min-width:0; }
+.sumrows .v .x { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sumrows .v > svg:last-child { width:16px; height:16px; color:var(--color-text-weak); }
+.sumrows .v .mi { width:24px; height:24px; border-radius:999px; background:var(--color-surface-sunken); display:inline-flex; align-items:center; justify-content:center; flex:none; } .sumrows .v .mi svg { width:14px; height:14px; }
+.sumrows .v.ph { color:var(--color-text-weak); font-weight:500; }
+.sumrows .r.bad .k { color:var(--color-danger); }
+.memo-l { padding:0 20px; font-size:14px; font-weight:600; color:var(--color-primary); display:flex; align-items:center; gap:4px; height:36px; }
+.memo-l.has { color:var(--color-text-sub); font-weight:500; } .memo-l .x { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.keypad { position:absolute; left:0; right:0; bottom:78px; display:grid; grid-template-columns:repeat(3,1fr); padding:0 12px; }
+.keypad span { height:44px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:600; border-radius:var(--control-radius); font-variant-numeric:tabular-nums; }
+.keypad span.pr { background:var(--color-surface-sunken); }
+.inputwrap { position:absolute; top:56px; left:0; right:0; bottom:0; background:var(--color-surface); display:flex; flex-direction:column; gap:8px; padding-top:8px; }
+.inputwrap .seg { margin:0 16px; flex:none; }
+
+/* 카테고리 격자 */
+.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:4px 0; padding:0 12px; }
+.tile { display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 0; font-size:13px; text-align:center; line-height:16px; }
+.tile .c { width:48px; height:48px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; color:var(--color-text); position:relative; }
+.tile.on .c { background:var(--color-primary); color:var(--color-on-primary); }
+.tile.on { font-weight:700; color:var(--color-primary-strong); }
+.tile.add .c { background:none; border:1.5px dashed var(--color-border-strong); color:var(--color-text-sub); }
+.ig { font-size:13px; font-weight:700; color:var(--color-text-sub); padding:12px 20px 4px; display:flex; align-items:center; gap:6px; }
+.ig svg { width:14px; height:14px; }
+.grid6 { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; padding:0 20px; }
+.grid6 span { height:46px; border-radius:var(--control-radius); background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; color:var(--color-text); }
+.grid6 span.on { background:var(--color-primary); color:var(--color-on-primary); }
+.prev { display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 0 4px; }
+.prev .c { width:64px; height:64px; border-radius:999px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; }
+.prev .c svg { width:30px; height:30px; }
+.prev b { font-size:17px; }
+
+/* 설정 */
+.mrow { display:flex; align-items:center; gap:12px; min-height:56px; font-size:16px; }
+.mrow > svg:first-child { color:var(--color-text-sub); }
+.mrow .nm { flex:1; min-width:0; }
+.mrow .vv { margin-left:auto; color:var(--color-text-sub); font-size:15px; display:flex; align-items:center; gap:4px; min-width:0; }
+.mrow .vv span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:150px; }
+.mrow .vv svg { width:16px; height:16px; color:var(--color-text-weak); }
+.mrow.dg, .mrow.dg > svg:first-child { color:var(--color-danger); }
+.lrow { display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 0; }
+.lrow .ini { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex:none; }
+.lrow .m { flex:1; min-width:0; }
+.lrow .m b { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:16px; font-weight:600; line-height:22px; }
+.lrow .m > span { font-size:13px; color:var(--color-text-sub); display:flex; gap:6px; align-items:center; margin-top:2px; }
+.lrow > svg:last-child { width:16px; height:16px; color:var(--color-text-weak); }
+.codebox { background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:16px; text-align:center; }
+.codebox b { display:block; font-size:28px; line-height:36px; font-weight:700; letter-spacing:.18em; font-variant-numeric:tabular-nums; }
+.codebox span { font-size:13px; color:var(--color-text-sub); }
+.thm { display:flex; gap:14px; align-items:center; padding:14px; border-radius:16px; border:1.5px solid var(--color-border); background:var(--color-surface); }
+.thm.on { border:2px solid var(--color-primary); padding:13.5px; }
+.thm .pv { width:64px; height:64px; border-radius:12px; flex:none; padding:8px; display:flex; flex-direction:column; gap:5px; }
+.thm .pv i { display:block; border-radius:4px; }
+.thm b { display:block; font-size:16px; font-weight:600; } .thm span { font-size:13px; color:var(--color-text-sub); }
+.thm > svg { margin-left:auto; color:var(--color-primary); }
+.add2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.add2 > div { border:1.5px solid var(--color-border); border-radius:16px; padding:14px; display:flex; flex-direction:column; gap:8px; }
+.add2 .ibx { width:36px; height:36px; border-radius:10px; background:var(--color-primary-soft); color:var(--color-primary-strong); display:flex; align-items:center; justify-content:center; }
+.add2 b { font-size:15px; } .add2 span { font-size:12px; color:var(--color-text-sub); line-height:16px; }
+.handle { color:var(--color-text-weak); }
+.dim { color:var(--color-text-weak); }
+</style></head><body>
+<h1 class="board-t">반반 화면 시안 — 로그인 · 시작 · 가계부 탭 · 내역 입력 · 설정 · 가계부 관리</h1>
+<p class="lead">기준: 디자인 시스템 v1.2(`docs/design.md`) · 360×760 · 기본 테마 클린(맨 아래 줄에 베리·포근·다크). 내역·금액·주머니는 샘플 가계부(BANB-23 `supabase/seed/sample_ledger.sql`)의 2026년 11월 1~6일 데이터. 사람 이름(민지·준호)은 홈·자산 시안(`assets-home.html`)과 맞춘 표시용. 로고는 BANB-22 확정 전 임시.</p>
+<div id="rows"></div>
+<script>
+/* ── 도우미 ── */
+const I = (n, c = '') => `<i data-lucide="${n}" class="${c}"></i>`;
+const fmt = v => Math.abs(v).toLocaleString('ko-KR');
+const W = (v, cls = '', sign = '') => `<span class="money ${cls}">${sign ? `<span aria-hidden="true">${sign}</span>` : ''}${sign === '−' ? '<span class="sr">지출 </span>' : ''}${fmt(v)}원</span>`;
+const LONG = '우리 가족 공동 생활비 경조사 가계부'; // 20자
+const MEMO100 = '거실 냉장고 교체. 10년 쓴 냉장고가 고장 나서 급하게 바꿨다. 카드 12개월 무이자 할부, 배송·설치비 포함, 기존 제품 무료 수거, 연장 보증 5년 추가 가입함. 다음 달부터 할부 시작'.slice(0, 100);
+const hdr = (name = '우리집 가계부') => `<div class="hdr"><div class="lsw"><span style="display:flex"><span class="av" style="background:var(--color-avatar-1)">민</span><span class="av" style="background:var(--color-avatar-2)">준</span></span><span class="nm">${name}</span>${I('chevrons-up-down')}</div><div class="ib">${I('settings')}</div></div>`;
+const sub = (t, right = '', left = 'chevron-left') => `<div class="sub-h"><div class="ib">${I(left)}</div><b>${t}</b>${right}</div>`;
+const tabbar = on => `<div class="tabbar"><div class="tab ${on==='home'?'on':''}"><span class="pill">${I('house')}</span>홈</div><div class="tab ${on==='ledger'?'on':''}"><span class="pill">${I('notebook-pen')}</span>가계부</div><div class="plus" aria-label="내역 추가">${I('plus')}</div><div class="tab ${on==='asset'?'on':''}"><span class="pill">${I('landmark')}</span>자산</div></div>`;
+const phone = inner => `<div class="phone">${inner}</div>`;
+const empty = (ic, h, p, btn = '') => `<div class="empty"><span class="c">${I(ic)}</span><b>${h}</b><p>${p}</p>${btn}</div>`;
+const errBox = (h) => empty('circle-alert', h, '인터넷 연결을 확인하고<br>다시 시도해 주세요', `<span class="btn s sm">${I('rotate-cw')}다시 시도</span>`);
+const sk = (w, h = 14) => `<span class="sk" style="width:${w};height:${h}px"></span>`;
+
+/* ── 샘플 내역 (BANB-23 · 2026년 11월) ── */
+const tx = ({ ic, t, s, v, type = 'e', fixed, wrap }) => {
+  const money = type === 'i' ? `<span class="money inc">+${fmt(v)}원</span>` : type === 's' ? W(v, 'sav') : W(v, '', '−');
+  return `<div class="tx ${wrap ? 'wrap' : ''}"><span class="ic">${I(ic)}</span><div class="m"><p class="t">${t}</p><p class="s"><span class="x">${s}</span>${fixed ? `<span class="badge">${I('repeat')}고정</span>` : ''}${type === 's' ? `<span class="badge">${I('piggy-bank')}저축</span>` : ''}</p></div>${money}</div>`;
+};
+const DAYS = {
+  6: { label: '11월 6일 (금) · 오늘', exp: 0, rows: [
+    { ic: 'piggy-bank', t: '내집마련 적금', s: '적금 · 민지', v: 500000, type: 's' },
+    { ic: 'building-complex', t: '청약', s: '청약 · 민지', v: 100000, type: 's' } ] },
+  5: { label: '11월 5일 (목)', exp: 205000, rows: [
+    { ic: 'banknote', t: '내 월급', s: '급여 · 민지', v: 3850000, type: 'i' },
+    { ic: 'building', t: '관리비', s: '주거 · 공동소비 · 민지', v: 193000, fixed: 1 },
+    { ic: 'utensils', t: '점심', s: '외식 · 개인용돈 · 준호', v: 12000 } ] },
+  4: { label: '11월 4일 (수)', exp: 54900, rows: [
+    { ic: 'bike', t: '치킨', s: '배달 · 공동소비 · 준호', v: 23000 },
+    { ic: 'tv', t: '넷플릭스', s: '구독 · 공동소비 · 민지', v: 17000, fixed: 1 },
+    { ic: 'tv', t: '유튜브 프리미엄', s: '구독 · 개인용돈 · 준호', v: 14900, fixed: 1 } ] },
+  3: { label: '11월 3일 (화)', exp: 138500, rows: [
+    { ic: 'smartphone', t: '휴대폰', s: '통신 · 개인용돈 · 민지', v: 59000, fixed: 1 },
+    { ic: 'smartphone', t: '짝꿍 휴대폰', s: '통신 · 개인용돈 · 준호', v: 45000, fixed: 1 },
+    { ic: 'wifi', t: '인터넷', s: '통신 · 공동소비 · 민지', v: 33000, fixed: 1 },
+    { ic: 'tram-front', t: '대중교통', s: '교통 · 개인용돈 · 준호', v: 1500 } ] },
+};
+const dayCard = (d, rows) => {
+  const D = DAYS[d];
+  return `<div class="card tight"><div class="dayh"><span>${D.label}</span>${D.exp ? `<b>${W(D.exp, '', '−')}</b>` : '<span>지출 없음</span>'}</div>${(rows || D.rows).map(tx).join('')}</div>`;
+};
+const mbar = (m = '2026년 11월') => `<div class="mbar"><span class="ib">${I('chevron-left')}</span>${m}<span class="ib">${I('chevron-right')}</span></div>`;
+const tools = ({ view = 'list', f = 0, band = false } = {}) => `<div class="tools"><div class="line"><div class="seg"><span class="${view==='list'?'on':''}">${I('list','s16')}목록</span><span class="${view==='cal'?'on':''}">${I('calendar-days','s16')}달력</span></div><span class="fbtn ${f?'on':''}">${I('sliders-horizontal')}필터${f?` ${f}`:''}</span></div>${band ? `<div class="fband">필터 ${f}개 적용 중 · 지출 · 준호<u>지우기</u></div>` : `<div class="msum"><span>지출<b>${fmt(1527000)}원</b></span><span>수입<b class="inc">${fmt(3850000)}원</b></span><span>저축<b class="sav">${fmt(600000)}원</b></span></div>`}</div>`;
+
+/* 달력 (2026-11-01 = 일요일) */
+const CALV = { 1: ['−91.4만'], 2: ['−21.4만'], 3: ['−13.9만'], 4: ['−5.5만'], 5: ['−20.5만', '+385만'], 6: ['', '', 1] };
+const calCard = (sel = 5) => {
+  let h = ['일','월','화','수','목','금','토'].map(w => `<span class="wd">${w}</span>`).join('');
+  for (let d = 1; d <= 30; d++) {
+    const [e = '', i = '', dot] = CALV[d] || [];
+    const cls = [d === 6 ? 'today' : '', d === sel ? 'sel' : '', d > 6 ? 'fut' : ''].join(' ');
+    h += `<span class="d ${cls}"><b>${d}</b>${e ? `<i>${e}</i>` : ''}${i ? `<i class="inc">${i}</i>` : ''}${dot ? '<span class="dot" aria-label="저축 있음"></span>' : ''}</span>`;
+  }
+  h += '<span class="d"></span>'.repeat(5);
+  return `<div class="card" style="padding:12px 10px 10px"><div class="cal">${h}</div><div class="legend"><span>−지출</span><span class="inc">+수입</span><span><span class="dot"></span>저축</span></div></div>`;
+};
+
+/* 1. 로그인 */
+const peek = `<div class="peek"><p class="k">11월 남은 돈</p><p class="a num">1,723,000<span class="u">원</span></p><div class="bar"><i style="width:58%;background:var(--color-member-1)"></i><i style="width:42%;background:var(--color-member-2)"></i></div></div>`;
+const login = (state) => phone(`<div class="hero-wrap"><div class="logo">반반</div><p class="big-t">둘이 함께 쓰는<br>우리집 가계부</p><p class="lead-t">함께 쓴 돈과 모은 돈을 한 곳에서 봐요.</p>${peek}<div style="flex:1"></div>
+  ${state === 'err' ? `<div class="notice bad" style="margin-bottom:12px">${I('circle-alert')}<span>로그인하지 못했어요. 잠시 후 다시 시도해 주세요.</span></div><div class="notice" style="margin-bottom:16px">${I('info')}<span>카카오톡에서 열었다면 오른쪽 위 ⋮ → "다른 브라우저로 열기"를 눌러 주세요.</span></div>` : ''}
+  ${state === 'busy' ? `<div class="gbtn btn off" style="border-color:transparent">${I('loader-circle','s16')}구글로 이동하는 중…</div>` : `<div class="gbtn"><span class="g">G</span>구글 계정으로 시작하기</div>`}
+  <p style="text-align:center;font-size:12px;color:var(--color-text-weak);margin-top:12px">가입하면 이용약관과 개인정보 처리방침에 동의하게 돼요.</p></div>`);
+const loading = phone(`<div class="hero-wrap" style="align-items:center;justify-content:center;padding:0"><span style="color:var(--color-primary)">${I('loader-circle','s24')}</span><p style="margin-top:12px;color:var(--color-text-sub)">불러오는 중…</p></div>`);
+
+/* 2. 시작 */
+const start = phone(`<div class="hero-wrap" style="padding-top:56px"><div class="logo">반반</div><p class="big-t">가계부를 시작해 볼까요?</p><p class="lead-t">새로 만들거나, 받은 초대코드로 함께해요.</p>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:28px"><div class="choice"><span class="ibx">${I('book-plus')}</span><div><b>새 가계부 만들기</b><span>이름만 정하면 바로 시작</span></div>${I('chevron-right')}</div>
+  <div class="choice"><span class="ibx">${I('ticket')}</span><div><b>초대코드로 참여</b><span>받은 8자리 코드나 링크로</span></div>${I('chevron-right')}</div></div>
+  <div style="flex:1"></div><p style="text-align:center;font-size:14px;color:var(--color-text-sub)">kicmi032@gmail.com · <span style="color:var(--color-primary);font-weight:600">로그아웃</span></p></div>`);
+const create = (long) => phone(`${sub('새 가계부 만들기')}<div class="scroll full" style="background:var(--color-surface)"><div class="form" style="padding-top:20px">
+  <div><div class="fk"><span>가계부 이름</span><span class="num">${long ? '20/20' : '6/20'}</span></div><div class="inp focus"><span class="v">${long ? LONG : '우리집 가계부'}</span></div>${long ? '<div class="help"><span>20자까지 쓸 수 있어요</span></div>' : '<div class="help"><span>나중에 설정에서 바꿀 수 있어요</span></div>'}</div>
+  <div><div class="fk"><span>가계부에서 쓸 내 이름</span><span class="num">2/20</span></div><div class="inp"><span class="v">민지</span></div></div>
+  <div class="notice">${I('info')}<span>만들면 기본 카테고리 43개와 주머니 4개(공동소비·개인용돈·여행·경조사비)가 함께 생겨요.</span></div></div></div>
+  <div class="foot"><span class="btn p block">만들기</span></div>`);
+const join = (state) => phone(`${sub('초대코드로 참여')}<div class="scroll full" style="background:var(--color-surface)"><div class="form" style="padding-top:20px">
+  <div><div class="fk"><span>초대 코드 8자리</span></div><div class="inp code ${state === 'err' ? 'bad' : 'focus'}">K7Q2 M9XA</div>${state === 'err' ? `<p class="err" style="margin-top:8px">${I('circle-alert')}코드가 만료됐어요. 초대한 사람에게 새 코드를 받아 주세요.</p>` : ''}</div>
+  ${state === 'full' ? `<div class="notice bad">${I('circle-alert')}<span>가계부는 최대 5개까지 참여할 수 있어요. 설정 › 가계부 관리에서 하나를 나간 뒤 다시 시도해 주세요.</span></div>` : `<div class="notice">${I('info')}<span>참여하면 함께 쓰는 사람과 같은 가계부를 보고 기록할 수 있어요.</span></div>`}</div></div>
+  <div class="foot">${state === 'busy' ? `<span class="btn off block">${I('loader-circle')}참여하는 중…</span>` : `<span class="btn p block">참여하기</span>`}</div>`);
+
+/* 3. 가계부 탭 */
+const ledgerList = phone(`${hdr()}<div class="scroll"><div class="stack">${mbar()}${tools()}${dayCard(6)}${dayCard(5)}${dayCard(4)}</div></div>${tabbar('ledger')}`);
+const ledgerCal = phone(`${hdr()}<div class="scroll"><div class="stack">${mbar()}${tools({ view: 'cal' })}${calCard(5)}${dayCard(5)}</div></div>${tabbar('ledger')}`);
+const filterSheet = phone(`${hdr()}<div class="scroll"><div class="stack">${mbar()}${tools({ f: 2, band: true })}${dayCard(4)}</div></div>${tabbar('ledger')}<div class="scrim"></div>
+  <div class="sheet"><div class="grab"></div><div class="sh-h"><b>필터</b><span class="ib">${I('x')}</span></div><div class="form" style="gap:20px;padding-bottom:20px">
+  <div><div class="fk"><span>유형</span></div><div class="chips"><span class="chip on">${I('check')}지출</span><span class="chip">수입</span><span class="chip">저축</span></div></div>
+  <div><div class="fk"><span>사람</span></div><div class="chips"><span class="chip">민지</span><span class="chip on">${I('check')}준호</span></div></div>
+  <div><div class="fk"><span>주머니 (지출)</span></div><div class="chips"><span class="chip">공동소비<span class="sc">${I('users')}</span></span><span class="chip">개인용돈<span class="sc">${I('user')}</span></span><span class="chip">여행<span class="sc">${I('users')}</span></span><span class="chip">경조사비<span class="sc">${I('users')}</span></span></div></div>
+  <p style="font-size:13px;color:var(--color-text-sub);line-height:18px">항목 안에서는 하나라도 맞으면, 항목끼리는 모두 맞는 내역만 보여요.</p></div>
+  <div style="display:flex;gap:8px;padding:0 16px"><span class="btn s" style="flex:1">모두 지우기</span><span class="btn p" style="flex:2">6건 보기</span></div></div>`);
+const ledgerEmpty = phone(`${hdr()}<div class="scroll"><div class="stack">${mbar('2026년 12월')}<div class="tools"><div class="line"><div class="seg"><span class="on">${I('list','s16')}목록</span><span>${I('calendar-days','s16')}달력</span></div><span class="fbtn">${I('sliders-horizontal')}필터</span></div><div class="msum"><span>지출<b>0원</b></span><span>수입<b>0원</b></span><span>저축<b>0원</b></span></div></div>
+  <div class="card">${empty('receipt-text', '아직 이번 달 내역이 없어요', '오늘 쓴 돈부터 가볍게 남겨 볼까요?', `<span class="btn p sm">${I('plus')}내역 추가</span>`)}</div></div></div>${tabbar('ledger')}`);
+const ledgerNoMatch = phone(`${hdr()}<div class="scroll"><div class="stack">${mbar()}${tools({ f: 2, band: true }).replace('지출 · 준호', '수입 · 준호')}<div class="card">${empty('search-x', '조건에 맞는 내역이 없어요', '필터를 바꾸거나 지워 보세요', `<span class="btn s sm">필터 지우기</span>`)}</div></div></div>${tabbar('ledger')}`);
+const ledgerErr = phone(`${hdr()}<div class="scroll"><div class="stack">${mbar()}${tools()}<div class="card">${errBox('내역을 불러오지 못했어요')}</div><div class="card tight" style="display:grid;gap:14px;padding:16px 20px">${sk('40%', 12)}${[1, 2].map(() => `<div style="display:flex;gap:12px;align-items:center"><span class="sk" style="width:40px;height:40px;border-radius:999px;flex:none"></span><div style="flex:1;display:grid;gap:6px">${sk('60%')}${sk('40%', 12)}</div>${sk('64px')}</div>`).join('')}</div></div></div>${tabbar('ledger')}`);
+const ledgerExtreme = phone(`${hdr(LONG)}<div class="scroll"><div class="stack">${mbar()}${tools()}
+  <div class="card tight"><div class="dayh"><span>11월 2일 (월)</span><b>${W(9999999999 + 0, '', '−')}</b></div>
+  ${tx({ ic: 'sofa', t: MEMO100, s: '가구/가전 · 공동소비 · 민지', v: 9999999999, wrap: 1 })}
+  ${tx({ ic: 'shopping-basket', t: '봉투값', s: '생필품 · 공동소비 · 준호', v: 100 })}
+  ${tx({ ic: 'gift', t: '대학 동기 결혼식 축의금', s: `경조사·선물 · ${LONG} · 민지`, v: 100000 })}</div></div></div>${tabbar('ledger')}`);
+
+/* 4. 내역 입력 */
+const KEYS = ['1','2','3','4','5','6','7','8','9','00','0','⌫'];
+const keypad = (pressed = '', extra = 0) => `<div class="keypad" style="bottom:${78 + extra}px">${KEYS.map(k => `<span class="${k === pressed ? 'pr' : ''}">${k === '⌫' ? I('delete', 's24') : k}</span>`).join('')}</div>`;
+const entry = ({ title = '내역 입력', type = 0, amount = 12800, kor = '만 이천팔백 원', cat = ['utensils', '외식'], pocket = '공동소비', who = '민지', date = '11월 6일 (금) · 오늘', memo = '', missing = '', saveErr = '', edit = false, pressed = '8', fixed = false } = {}) => {
+  const q = ['얼마를 썼나요?', '얼마를 받았나요?', '얼마를 모았나요?'][type];
+  const seg = `<div class="seg l">${['지출','수입','저축'].map((t, i) => `<span class="${i === type ? 'on' + (i === 1 ? ' inc' : i === 2 ? ' sav' : '') : ''}">${t}</span>`).join('')}</div>`;
+  const catV = cat ? `<span class="v"><span class="mi">${I(cat[0])}</span><span class="x">${cat[1]}</span>${I('chevron-right')}</span>` : `<span class="v ph"><span class="x">선택해 주세요</span>${I('chevron-right')}</span>`;
+  const rows = `<div class="sumrows"><div class="r ${missing === 'cat' ? 'bad' : ''}"><span class="k">카테고리</span>${catV}</div>
+    ${type === 0 ? `<div class="r"><span class="k">주머니</span><span class="v"><span class="x">${pocket}</span>${I('chevron-right')}</span></div>` : ''}
+    <div class="r"><span class="k">${type === 0 ? '쓴 사람' : type === 1 ? '받은 사람' : '모은 사람'}</span><span class="v"><span class="av" style="background:var(--color-avatar-1);width:24px;height:24px;font-size:11px;border:0">${who[0]}</span><span class="x">${who}</span>${I('chevron-right')}</span></div>
+    <div class="r"><span class="k">날짜</span><span class="v"><span class="x">${date}</span>${fixed ? `<span class="badge">${I('repeat')}고정</span>` : ''}${I('chevron-right')}</span></div></div>`;
+  const memoL = memo ? `<div class="memo-l has">${I('sticky-note','s16')}<span class="x">${memo}</span></div>` : `<div class="memo-l">${I('plus','s16')}메모 추가</div>`;
+  const disabled = !!missing;
+  const extra = (saveErr ? 26 : 0) + (missing ? 26 : 0);
+  const foot = `<div class="foot">${saveErr ? `<p class="err">${I('circle-alert')}${saveErr}</p>` : ''}${missing ? `<p class="why">${missing === 'cat' ? '카테고리를 골라 주세요' : '금액을 입력해 주세요'}</p>` : ''}<div class="r">${edit ? `<span class="btn do" style="height:52px">${I('trash-2')}삭제</span>` : ''}<span class="btn ${disabled ? 'off' : 'p'}" style="flex:1;height:52px">${saveErr ? '다시 저장' : '저장'}</span></div></div>`;
+  return phone(`${sub(title, '', 'x')}<div class="inputwrap">${seg}<p class="q" style="margin-top:4px">${q}</p>
+    <div class="amt num ${amount ? '' : 'zero'}">${fmt(amount)}<span class="u">원</span><span class="caret"></span></div>${kor && !extra ? `<p class="kor">${kor}</p>` : ''}
+    <div class="quick"><span>+1천</span><span>+1만</span><span>+5만</span><span>+10만</span></div>${rows}${memoL}</div>${keypad(pressed, extra)}${foot}`);
+};
+const catSheet = phone(`${sub('내역 입력', '', 'x')}<div class="inputwrap"><div class="seg l"><span class="on">지출</span><span>수입</span><span>저축</span></div></div><div class="scrim"></div>
+  <div class="sheet" style="top:96px"><div class="grab"></div><div class="sh-h"><b>지출 카테고리</b><span class="ib">${I('x')}</span></div>
+  <div class="ig">최근 쓴 것</div><div class="grid4">${[['utensils','외식',1],['shopping-cart','장보기'],['bike','배달'],['coffee','카페/간식']].map(([i, n, on]) => `<div class="tile ${on ? 'on' : ''}"><span class="c">${I(i)}</span>${n}</div>`).join('')}</div>
+  <div class="ig">${I('utensils-crossed')}식비</div><div class="grid4">${[['shopping-cart','장보기'],['utensils','외식',1],['bike','배달'],['coffee','카페/간식']].map(([i, n, on]) => `<div class="tile ${on ? 'on' : ''}"><span class="c">${I(i)}</span>${n}</div>`).join('')}</div>
+  <div class="ig">${I('house')}주거</div><div class="grid4">${[['key-round','월세'],['building','관리비'],['zap','공과금']].map(([i, n]) => `<div class="tile"><span class="c">${I(i)}</span>${n}</div>`).join('')}<div class="tile add"><span class="c">${I('plus')}</span>추가</div></div>
+  <div class="ig">${I('smartphone')}통신</div><div class="grid4">${[['smartphone','휴대폰'],['wifi','인터넷'],['tv','구독']].map(([i, n]) => `<div class="tile"><span class="c">${I(i)}</span>${n}</div>`).join('')}</div></div>`);
+const memoSheet = phone(`${entry({ amount: 2890000, kor: '이백팔십구만 원', cat: ['sofa', '가구/가전'], memo: MEMO100, pressed: '' }).replace(/^<div class="phone">|<\/div>$/g, '')}<div class="scrim"></div>
+  <div class="sheet"><div class="grab"></div><div class="sh-h"><b>메모</b><span class="ib">${I('x')}</span></div><div class="form" style="padding-bottom:16px">
+  <div><div class="inp focus" style="height:auto;min-height:96px;align-items:flex-start;padding:12px 13px;line-height:22px">${MEMO100}</div><div class="help"><span>목록에서는 한 줄로 줄여 보여요</span><span class="num">100/100</span></div></div></div>
+  <div style="padding:0 16px"><span class="btn p block">완료</span></div></div>`);
+const dateSheet = phone(`${entry({ amount: 193000, kor: '십구만 삼천 원', cat: ['building', '관리비'], date: '11월 5일 (목)', fixed: true, pressed: '' }).replace(/^<div class="phone">|<\/div>$/g, '')}<div class="scrim"></div>
+  <div class="sheet"><div class="grab"></div><div class="sh-h"><b>날짜</b><span class="ib">${I('x')}</span></div><div style="padding:0 10px">${calCard(5).replace('class="card"', 'class=""').replace(/<div class="legend">.*?<\/div><\/div>$/, '</div>')}</div>
+  <div class="form" style="padding-top:4px;padding-bottom:12px"><label style="display:flex;align-items:center;gap:10px;height:44px;font-size:16px"><span style="width:22px;height:22px;border-radius:6px;background:var(--color-primary);color:var(--color-on-primary);display:flex;align-items:center;justify-content:center">${I('check','s16')}</span>매달 나가는 돈 (고정지출)</label></div>
+  <div style="padding:0 16px"><span class="btn p block">완료</span></div></div>`);
+const deleteConfirm = phone(`${entry({ title: '내역 수정', amount: 23000, kor: '이만 삼천 원', cat: ['bike', '배달'], who: '준호', date: '11월 4일 (수)', memo: '치킨', edit: true, pressed: '' }).replace(/^<div class="phone">|<\/div>$/g, '')}<div class="scrim"></div>
+  <div class="dialog"><b>이 내역을 삭제할까요?</b><p>삭제하면 다른 멤버 화면에서도 사라지고 되돌릴 수 없어요.</p><div class="r"><span class="btn s focus-ring">취소</span><span class="btn d">삭제하기</span></div></div>`);
+
+/* 5. 설정 */
+const mrow = (ic, nm, v = '', cls = '') => `<div class="mrow ${cls}">${I(ic)}<span class="nm">${nm}</span><span class="vv">${v ? `<span>${v}</span>` : ''}${cls ? '' : I('chevron-right')}</span></div>`;
+const settings = (name = '우리집 가계부') => phone(`${sub('설정')}<div class="scroll full"><div class="stack">
+  <p class="sec-k">가계부</p><div class="card flat">${mrow('notebook-tabs', '가계부 관리', '2개')}</div>
+  <p class="sec-k" style="display:flex;gap:4px;min-width:0"><span style="flex:none">지금 보는 가계부:</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text)">${name}</span></p>
+  <div class="card flat">${mrow('pencil', '가계부 이름', name)}${mrow('user-round', '이 가계부에서 내 이름', '민지')}${mrow('users', '멤버·초대', '2명')}${mrow('tag', '카테고리 관리', '43개')}${mrow('wallet', '주머니 관리', '4개')}</div>
+  <p class="sec-k">내 설정</p><div class="card flat">${mrow('palette', '화면 테마', '클린')}</div>
+  <p class="sec-k">계정</p><div class="card flat"><div class="mrow"><span class="av lg" style="background:var(--color-avatar-1);width:36px;height:36px;font-size:14px">민</span><span class="nm" style="font-size:15px">kicmi032@gmail.com<br><span style="font-size:13px;color:var(--color-text-sub)">구글 계정</span></span><span class="btn s sm">로그아웃</span></div></div>
+  </div></div>`);
+const theme = phone(`${sub('화면 테마')}<div class="scroll full"><div class="stack"><div class="card" style="display:grid;gap:10px">
+  ${[['클린', '깔끔한 흰 화면', '#F2F4F6', '#FFFFFF', '#007F55', 1], ['베리', '차분한 무채색 화면', '#F5F6F8', '#FFFFFF', '#A23B72'], ['포근', '둘이 쓰는 따뜻한 화면', '#FFF7F3', '#FDE8E3', '#C44536']].map(([n, d, bg, hero, p, on]) =>
+    `<div class="thm ${on ? 'on' : ''}" role="radio" aria-checked="${on ? 'true' : 'false'}"><span class="pv" style="background:${bg}"><i style="height:22px;background:${hero};box-shadow:0 0 0 1px rgb(0 0 0 / .05)"></i><i style="height:8px;width:70%;background:${p}"></i><i style="height:8px;width:45%;background:${p};opacity:.35"></i></span><div><b>${n}${on ? ' <span class="badge p" style="vertical-align:2px">기본</span>' : ''}</b><span>${d}</span></div>${on ? I('circle-check') : ''}</div>`).join('')}
+  <p style="font-size:13px;color:var(--color-text-sub);line-height:18px;margin-top:4px">누르면 바로 바뀌어요. 테마는 나에게만 적용되고, 함께 쓰는 사람의 화면은 그대로예요. 밝기(다크 모드)는 기기 설정을 따라요.</p></div></div></div>
+  <div class="toast" style="bottom:24px">${I('circle-check')}테마를 바꿨어요</div>`);
+const members = phone(`${sub('멤버·초대')}<div class="scroll full"><div class="stack">
+  <div class="card flat">${[['민지', '대표', 1], ['준호', '11월 1일 참여', 2]].map(([n, s, a]) => `<div class="lrow"><span class="av lg" style="background:var(--color-avatar-${a})">${n[0]}</span><div class="m"><b>${n}${a === 1 ? ' <span class="badge p" style="vertical-align:2px">나</span>' : ''}</b><span>${s}</span></div></div>`).join('')}</div>
+  <div class="card" style="display:grid;gap:12px"><div class="ct">초대하기 <small>최대 4명 · 2자리 남음</small></div><p style="font-size:14px;color:var(--color-text-sub)">링크나 코드를 함께 쓸 사람에게 보내 주세요.</p>
+  <div class="codebox"><b>K7Q2M9XA</b><span>11월 13일까지 쓸 수 있어요</span></div><div style="display:flex;gap:8px"><span class="btn s" style="flex:1">${I('copy')}코드 복사</span><span class="btn p" style="flex:1">${I('share-2')}링크 공유</span></div>
+  <p style="text-align:center"><span class="btn t sm">새 코드 발급</span></p></div>
+  <div class="card flat">${mrow('log-out', '이 가계부에서 나가기', '', 'dg')}</div></div></div>
+  <div class="toast" style="bottom:24px">${I('circle-check')}코드를 복사했어요</div>`);
+const membersErr = phone(`${sub('멤버·초대')}<div class="scroll full"><div class="stack"><div class="card">${errBox('멤버를 불러오지 못했어요')}</div><div class="card" style="display:grid;gap:12px">${sk('30%')}${sk('100%', 68)}<div class="notice">${I('info')}<span>코드가 만료됐어요. 새 코드를 만들어 주세요.</span></div><span class="btn p block">초대 코드 만들기</span></div></div></div>`);
+const catManage = phone(`${sub('카테고리 관리', `<span class="btn t sm">${I('plus')}추가</span>`)}<div class="scroll full"><div class="stack">
+  <div class="card" style="padding:12px 20px"><div class="seg"><span class="on">지출</span><span>수입</span><span>저축</span></div><p style="font-size:13px;color:var(--color-text-sub);line-height:18px;margin-top:10px">누르면 이름·아이콘을 바꾸거나 숨길 수 있어요. 숨긴 항목은 입력에서 빠지고, 지난 내역에는 그대로 보여요.</p></div>
+  <div class="card flat">${[['utensils-crossed', '식비', '장보기 · 외식 · 배달 · 카페/간식'], ['house', '주거', '월세 · 관리비 · 공과금'], ['smartphone', '통신', '휴대폰 · 인터넷 · 구독'], ['bus', '교통', '대중교통 · 주유 · 주차 · 택시'], ['shopping-basket', '생활', '생필품 · 가구/가전']].map(([i, n, s]) => `<div class="lrow"><span class="ic">${I(i)}</span><div class="m"><b>${n}</b><span>${s}</span></div>${I('chevron-right')}</div>`).join('')}
+  <div class="lrow dim"><span class="ic">${I('baby')}</span><div class="m"><b>육아</b><span><span class="badge">${I('eye-off')}숨김</span></span></div>${I('chevron-right')}</div>
+  <div class="lrow"><span class="ic">우</span><div class="m"><b>${LONG}</b><span>직접 만든 대분류 · 아이콘 없음(첫 글자)</span></div>${I('chevron-right')}</div></div></div></div>`);
+const ICONS = ['utensils','coffee','pizza','wine','cake','shopping-cart','shopping-bag','shirt','scissors','gem','sofa','spray-can','house','key-round','zap','wifi','smartphone','laptop','bus','car','train-front','plane','fuel','bike','heart-pulse','pill','dumbbell','stethoscope','baby','dog','cat','paw-print','gift','heart','users','church'];
+const catAdd = phone(`${sub('카테고리 추가', '', 'x')}<div class="scroll foot-pad" style="background:var(--color-surface)"><div class="prev"><span class="c">${I('dog')}</span><b>강아지 미용</b></div>
+  <div class="form" style="gap:14px;margin-top:8px"><div><div class="fk"><span>이름</span><span class="num">6/20</span></div><div class="inp focus"><span class="v">강아지 미용</span></div></div>
+  <div><div class="fk"><span>어디에 넣을까요</span></div><div class="chips"><span class="chip">쇼핑</span><span class="chip">건강</span><span class="chip on">${I('check')}반려동물</span><span class="chip">${I('plus')}새 대분류</span></div></div>
+  <div class="fk" style="margin:0">아이콘</div></div><div class="grid6">${ICONS.slice(0, 30).map(i => `<span class="${i === 'dog' ? 'on' : ''}">${I(i)}</span>`).join('')}</div></div>
+  <div class="foot"><span class="btn p block">추가하기</span></div>`);
+const pockets = phone(`${sub('주머니 관리', `<span class="btn t sm">${I('plus')}추가</span>`)}<div class="scroll full"><div class="stack">
+  <div class="card flat">${[['users', '공동소비', '공동 · 함께 쓰는 생활비'], ['user', '개인용돈', '개인 · 각자 쓰는 돈'], ['users', '여행', '공동'], ['users', '경조사비', '공동']].map(([i, n, s]) => `<div class="lrow"><span class="ic">${I(i)}</span><div class="m"><b>${n}</b><span>${s}</span></div>${I('chevron-right')}</div>`).join('')}</div>
+  <div class="card" style="display:grid;gap:12px"><div class="ct">새 주머니</div><div class="inp ph"><span class="v">예: 명절 비용</span></div><div class="seg"><span class="on">${I('users','s16')}공동</span><span>${I('user','s16')}개인</span></div><span class="btn p">주머니 추가</span></div>
+  </div></div>`);
+const pocketsEmpty = phone(`${sub('주머니 관리')}<div class="scroll full"><div class="stack"><div class="card">${empty('wallet', '아직 주머니가 없어요', '공동 생활비, 개인 용돈처럼<br>돈을 나눠 담아 보세요')}</div>
+  <div class="card" style="display:grid;gap:12px"><div class="ct">새 주머니</div><div class="inp focus"><span class="v">공동 생활비랑 경조사 같이 쓰는 주머니</span></div><p class="err">${I('circle-alert')}주머니 이름은 20자까지 쓸 수 있어요</p><div class="seg"><span class="on">${I('users','s16')}공동</span><span>${I('user','s16')}개인</span></div><span class="btn off">주머니 추가</span></div></div></div>`);
+
+/* 6. 가계부 관리 */
+const LEDGERS = [['우리집 가계부', '멤버 2명 · 내가 만듦', 1], ['샘플 가계부', '멤버 1명 · 내가 만듦']];
+const lrows = (list) => list.map(([n, s, cur]) => `<div class="lrow"><span class="ini">${n[0]}</span><div class="m"><b>${n}</b><span>${s}${cur ? '<span class="badge p">지금 보는 중</span>' : ''}</span></div>${I('chevron-right')}</div>`).join('');
+const manage = (list, full) => phone(`${sub('가계부 관리')}<div class="scroll full"><div class="stack">
+  <div class="card flat"><div class="ct" style="padding-top:12px">내 가계부 <small class="num">${list.length}/5</small></div>${lrows(list)}</div>
+  <div class="card" style="display:grid;gap:12px"><div style="display:flex;gap:8px"><span class="btn ${full ? 'off' : 's'}" style="flex:1">${I('book-plus')}새로 만들기</span><span class="btn ${full ? 'off' : 's'}" style="flex:1">${I('ticket')}코드로 참여</span></div>
+  <p style="font-size:13px;color:var(--color-text-sub);line-height:18px">${full ? '가계부는 최대 5개까지 참여할 수 있어요. 새로 만들려면 하나를 나가 주세요.' : '가계부는 1인 최대 5개. 나가기는 각 가계부를 눌러서.'}</p></div></div></div>`);
+const FIVE = [[LONG, '멤버 4명 · 참여함', 1], ['우리집 가계부', '멤버 2명 · 내가 만듦'], ['샘플 가계부', '멤버 1명 · 내가 만듦'], ['부모님 생활비', '멤버 3명 · 참여함'], ['제주 여행 모임 2027', '멤버 4명 · 참여함']];
+const ledgerDetail = (dialog) => phone(`${sub('우리집 가계부')}<div class="scroll full"><div class="stack">
+  <div class="card" style="display:grid;gap:14px"><div style="display:flex;gap:12px;align-items:center"><span class="ini" style="width:52px;height:52px;border-radius:999px;background:var(--color-surface-sunken);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px">우</span><div><b style="font-size:18px">우리집 가계부</b><p style="font-size:13px;color:var(--color-text-sub);margin-top:2px">멤버 2명 · 2026년 9월 1일에 만듦</p></div></div>
+  <span class="btn p block">${I('arrow-left-right')}이 가계부로 전환</span></div>
+  <div class="card flat">${mrow('pencil', '이름 바꾸기')}${mrow('users', '멤버·초대', '2명')}</div>
+  <div class="card flat">${mrow('log-out', '가계부 나가기', '', 'dg')}</div></div></div>
+  ${dialog ? `<div class="scrim"></div><div class="dialog"><b>'우리집 가계부'에서 나갈까요?</b><p>나가면 이 가계부의 내역·자산을 볼 수 없어요. 다시 들어오려면 새 초대코드가 필요해요.</p><div class="r"><span class="btn s focus-ring">취소</span><span class="btn d">나가기</span></div></div>` : ''}`);
+const manageErr = phone(`${sub('가계부 관리')}<div class="scroll full"><div class="stack"><div class="card">${errBox('가계부 목록을 불러오지 못했어요')}</div></div></div>`);
+
+/* ── 배치 ── */
+const ROWS = [
+  ['1. 로그인', [
+    ['L1 기본', login(), '앱 이름(임시 로고) → 한 줄 소개 → 앱 화면 맛보기 카드(정적 그림) → 구글 버튼 1개. 버튼은 엄지가 닿는 아래.'],
+    ['L2 처리 중', login('busy'), '누르면 비활성 + 문구 유지("구글로 이동하는 중…"), 중복 누름 막기.'],
+    ['L3 오류 · 카카오톡 인앱', login('err'), '실패는 빨간 상자(위험 연한 바탕), 인앱 브라우저 안내는 회색 안내 상자. 둘 다 버튼 위.'],
+    ['L4 로그인 확인 중 (앱 첫 로딩)', loading, '가운데 LoaderCircle(primary) + "불러오는 중…". 0.3초 안에 끝나면 안 보이게.'],
+  ]],
+  ['2. 시작 (가계부 없음) · 만들기 · 초대코드', [
+    ['S1 시작: 두 갈래 카드', start, '가계부 0개일 때만. 카드 모양은 전환 시트의 "가계부 추가" 카드와 같은 아이콘(BookPlus·Ticket).'],
+    ['S2 만들기 · 20자 이름', create(true), '글자 수 20/20. 내 이름 칸은 현재 앱에 있으면 유지, 없으면 빼도 됨(구현 판단).'],
+    ['S3 초대코드 · 만료 오류', join('err'), '코드는 4자씩 띄어 보여 주되 값은 8자. 오류는 입력 아래 문장 + 빨간 테두리.'],
+    ['S4 초대코드 · 5개 상한', join('full'), '1인 5개 상한에 걸리면 이유와 갈 곳(설정 › 가계부 관리)을 함께 알려 준다.'],
+    ['S5 참여 처리 중', join('busy'), ''],
+  ]],
+  ['3. 가계부 탭 — 목록 · 달력 · 필터', [
+    ['B1 목록 (기본)', ledgerList, '월 이동 줄(홈과 같음) → 도구 카드(목록/달력 + 필터 + 이달 합계 3개) → 날짜별 카드. 날짜 머리는 카드 안. 저축만 있는 날은 "지출 없음".'],
+    ['B2 달력 · 선택한 날 아래 내역', ledgerCal, '오늘 = 포인트 원, 선택한 날 = 연한 포인트 바탕. 칸 금액은 만 단위. 저축은 금액 대신 점(저축 색) — 6일처럼 저축만 있는 날도 표시된다.'],
+    ['B3 필터 시트', filterSheet, '칩을 누르면 바로 걸리고(지금 동작 유지), 아래 "6건 보기"는 결과 수를 보여 주며 닫기. 도구 카드에 "필터 2개 적용 중 · 지우기" 띠.'],
+    ['B4 빈 화면 (이달 0건)', ledgerEmpty, ''],
+    ['B5 필터 결과 0건', ledgerNoMatch, ''],
+  ]],
+  ['3-2. 가계부 탭 — 오류 · 긴 이름 · 큰 금액', [
+    ['B6 불러오기 실패 + 스켈레톤', ledgerErr, '실패는 카드 안 빈 화면 형식. 첫 로딩은 0.3초 뒤부터 스켈레톤.'],
+    ['B7 메모 100자 · 9,999,999,999원 · 20자 이름', ledgerExtreme, '헤더 가계부 이름은 한 줄 말줄임. 내역 제목·보조 줄은 한 줄 말줄임(자산 행과 다름). 금액이 길면 금액만 다음 줄 오른쪽(D-1).'],
+  ]],
+  ['4. 내역 입력 (키패드) · 수정', [
+    ['E1 입력 (기본)', entry(), '열리면 금액 0 + 키패드. 카테고리·주머니는 이 사람이 마지막에 쓴 값, 사람 = 나, 날짜 = 오늘 → 보통 금액만 누르고 저장.'],
+    ['E2 카테고리 시트', catSheet, '종류별 제목, 최근 쓴 것 4개 → 대분류 구역별 아이콘 격자(5.17). 고르면 닫히고 키패드로.'],
+    ['E3 빠진 것 있음 (저장 비활성)', entry({ amount: 0, kor: '', cat: null, missing: 'cat', pressed: '' }), '금액 0 또는 카테고리 없음이면 저장 비활성 + 무엇이 빠졌는지 버튼 위 한 줄.'],
+    ['E4 메모 100자 시트', memoSheet, '메모는 "메모 추가" → 한 줄 시트. 입력 화면에는 한 줄 말줄임으로만.'],
+    ['E5 날짜 시트 · 고정지출', dateSheet, '고정지출 체크는 날짜 시트 안. 켜면 날짜 행에 "고정" 배지.'],
+  ]],
+  ['4-2. 내역 입력 — 수입 · 큰 금액 · 저장 실패 · 수정·삭제', [
+    ['E6 수입 (짝꿍 월급)', entry({ type: 1, amount: 3200000, kor: '삼백이십만 원', cat: ['banknote', '급여'], who: '준호', memo: '짝꿍 월급', pressed: '0' }), '수입·저축은 주머니 행이 없다. 사람 행 이름이 "받은 사람 / 모은 사람"으로 바뀜.'],
+    ['E7 9,999,999,999원 (최대)', entry({ amount: 9999999999, kor: '구십구억 구천구백구십구만 구천구백구십구 원', cat: ['sofa', '가구/가전'], memo: MEMO100, pressed: '9' }), '최대 10자리. 넘는 키 입력은 무시 + 짧게 흔들림 + 화면낭독 "최대 금액이에요". 40px에서 360px 폭 안에 들어간다.'],
+    ['E8 수정 화면 · 저장 실패', entry({ title: '내역 수정', amount: 23000, kor: '이만 삼천 원', cat: ['bike', '배달'], who: '준호', date: '11월 4일 (수)', memo: '치킨', edit: true, pressed: '', saveErr: '저장하지 못했어요. 입력한 내용은 그대로 있어요.' }), '같은 화면, 제목만 "내역 수정", 저장 왼쪽에 위험 외곽 "삭제". 저장 실패는 버튼 위 문장(토스트만으로 알리지 않음). 문장이 붙으면 한글 읽기 줄을 숨겨 키패드를 가리지 않는다.'],
+    ['E9 삭제 확인', deleteConfirm, '첫 포커스 = 취소. 같은 화면에 주 버튼과 위험 버튼을 나란히 두지 않는다(포근 테마 코랄 주의).'],
+  ]],
+  ['5. 설정 · 테마 · 멤버·초대', [
+    ['T1 설정 (긴 가계부 이름)', settings(LONG), '첫 묶음 "가계부 관리". 둘째 묶음 제목에 "지금 보는 가계부: 이름"을 밝힌다. 내 설정에 "화면 테마"(5.16, 개발 별도 이슈).'],
+    ['T2 화면 테마', theme, '라디오 카드 3장, 누르면 즉시 적용 + 토스트. 사용자별 저장. 다크는 기기 설정.'],
+    ['T3 멤버·초대 · 코드 복사', members, '나 = 주 배지. 초대 코드 + 복사/공유. "나가기"는 맨 아래 따로(위험 글자).'],
+    ['T4 멤버 불러오기 실패 · 코드 만료', membersErr, ''],
+  ]],
+  ['5-2. 카테고리 · 주머니', [
+    ['T5 카테고리 관리', catManage, '종류 세그먼트 → 대분류 목록(아이콘 원 + 소분류 이름 나열). 숨김은 흐린 글자 + "숨김" 배지. 직접 만든 대분류는 아이콘 없으면 첫 글자.'],
+    ['T6 카테고리 추가 (아이콘 고르기)', catAdd, '미리보기 → 이름(20자) → 넣을 대분류 칩 → 아이콘 6열 격자(70개 중 앞부분). BANB-24 아이콘 저장과 함께 개발.'],
+    ['T7 주머니 관리', pockets, '공동·개인은 아이콘(Users/User) + 글자로 구분. 추가는 이름 + 공동/개인 세그먼트.'],
+    ['T8 주머니 없음 · 긴 이름 오류', pocketsEmpty, '주머니를 모두 숨기거나 지웠을 때. 20자 넘으면 입력 아래 오류 + 추가 비활성.'],
+  ]],
+  ['6. 가계부 관리 (설정 › 가계부 관리)', [
+    ['G1 목록 2개', manage(LEDGERS), '"내 가계부 2/5" → 행(첫 글자 원 + 이름 + 멤버 수·내가 만듦/참여함). 지금 보는 것은 주 배지.'],
+    ['G2 5개 꽉 참 · 20자 이름', manage(FIVE, true), '5개면 추가 버튼 비활성 + 이유. 20자 이름은 두 줄까지.'],
+    ['G3 가계부 상세', ledgerDetail(false), '이름·멤버 수·만든 날 → "이 가계부로 전환"(주) → 이름·멤버 → 나가기(위험 글자).'],
+    ['G4 나가기 확인', ledgerDetail(true), '첫 포커스 = 취소. 마지막 멤버면 문구를 "나가면 가계부가 보관되고 아무도 볼 수 없어요"로.'],
+    ['G5 불러오기 실패', manageErr, ''],
+  ]],
+];
+const THEMED = [
+  ['B1 베리', 'berry', '', ledgerList], ['E1 베리', 'berry', '', entry()],
+  ['B2 포근', 'cozy', '', ledgerCal], ['E1 포근', 'cozy', '', entry()],
+  ['B1 클린 다크', 'clean', 'dark', ledgerList], ['T1 포근 다크', 'cozy', 'dark', settings()],
+];
+const only = new URLSearchParams(location.search).get('r');
+let html = '';
+ROWS.forEach(([t, frames], idx) => {
+  if (only && only !== String(idx)) return;
+  html += `<section data-r="${idx}"><h2 class="row-t">${t}</h2><div class="row">` + frames.map(([c, f, n]) => `<div><p class="cap">${c}</p><div data-theme="clean">${f}</div>${n ? `<p class="anno">${n}</p>` : ''}</div>`).join('') + `</div></section>`;
+});
+if (!only || only === 'themes') {
+  html += `<section data-r="themes"><h2 class="row-t">7. 테마·다크 — 구조는 같고 토큰만 바뀜</h2><div class="row">` + THEMED.map(([c, th, md, f]) => `<div><p class="cap">${c}</p><div data-theme="${th}" ${md ? 'data-mode="dark"' : ''}>${f}</div></div>`).join('') + `</div></section>`;
+}
+document.getElementById('rows').innerHTML = html;
+lucide.createIcons();
+</script>
+</body></html>
