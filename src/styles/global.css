@@ -162,6 +162,14 @@ button { font: inherit; }
 .login__logo { margin: 0 0 12px; font-size: 2.25rem; font-weight: 800; color: var(--color-primary); }
 .login__title { margin: 0 0 8px; font-size: 1.375rem; }
 .login__desc { margin: 0; color: var(--color-text-sub); line-height: 1.5; }
+/* 카카오톡 인앱 브라우저 안내 */
+.login__actions--kakao { display: flex; flex-direction: column; gap: 12px; }
+.login__notice { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--color-bg); color: var(--color-text); line-height: 1.5; word-break: keep-all; }
+.login__fallback { word-break: keep-all; }
+.login__copy-status { margin: 0; min-height: 1.25em; color: var(--color-text-sub); font-size: 0.875rem; text-align: center; word-break: keep-all; }
+.login__copy-status:empty { min-height: 0; }
+.login__copy-failed .form-error { margin: 0 0 8px; }
+.login__url { margin: 0; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; font-size: 0.875rem; overflow-wrap: anywhere; user-select: all; -webkit-user-select: all; }
 
 /* ── 프로필 */
 .profile-card { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; }
