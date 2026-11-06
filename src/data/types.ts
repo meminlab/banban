@@ -4,7 +4,20 @@ export type TransactionType = 'expense' | 'income' | 'saving';
 export type PocketScope = 'shared' | 'personal';
 export type MemberRole = 'owner' | 'member';
 export type TransactionSource = 'manual' | 'excel' | 'sync';
-export type AssetKind = 'checking' | 'installment_saving' | 'deposit' | 'investment' | 'cash' | 'other';
+/** 자산 9종 + 부채 3종(loan / card_payable / other_liability). 금액은 모두 양수, 부채는 계산할 때 뺀다 */
+export type AssetKind =
+  | 'checking'
+  | 'installment_saving'
+  | 'deposit'
+  | 'investment'
+  | 'pension'
+  | 'cash'
+  | 'real_estate'
+  | 'vehicle'
+  | 'other'
+  | 'loan'
+  | 'card_payable'
+  | 'other_liability';
 
 /** 사용자 프로필 — 구글 계정에서 가져와 DB 트리거가 저장. 화면은 읽기만 */
 export interface Profile {
@@ -89,8 +102,20 @@ export interface Asset {
   owner_id: string | null; // member id, null = 공동
   balance: number; // 원, 정수 0 ~ 9,999,999,999
   memo: string | null;
+  /** 보관 시각(서버가 정함). null = 사용 중. 삭제 대신 보관 */
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** 잔액 이력 — 자산을 만들거나 잔액이 바뀔 때 DB 트리거가 1행 기록. 화면은 읽기만 */
+export interface AssetBalanceHistory {
+  id: number; // 같은 시각이면 큰 쪽이 나중
+  asset_id: string;
+  ledger_id: string;
+  balance: number;
+  changed_by: string | null; // member id. null = 마이그레이션이 채운 행
+  changed_at: string;
 }
 
 /** 마지막으로 본 가계부 (본인만 읽음, 쓰기는 set_last_ledger RPC) */

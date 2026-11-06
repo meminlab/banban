@@ -36,6 +36,16 @@ export function ledgerReturnPath(state: unknown): string {
   const returnTo = (state as TransactionFormState | null)?.returnTo;
   return typeof returnTo === 'string' && /^\/ledger(\?[^#]*)?$/.test(returnTo) ? returnTo : LEDGER_PATH;
 }
+/** 자산 탭 */
+export const ASSETS_PATH = '/assets';
+/** 자산 추가 */
+export const ASSET_NEW_PATH = '/assets/new';
+/** 자산 수정 */
+export const assetPath = (id: string) => `/assets/${id}`;
+/** 보관한 자산 */
+export const ASSETS_ARCHIVED_PATH = '/assets/archived';
+/** 자산 추가·수정·보관 화면을 닫고 자산 탭으로 돌아갈 때 알려 줄 결과 (location.state.flash) */
+export type AssetFlash = { kind: 'saved' } | { kind: 'archived'; id: string; name: string } | { kind: 'gone' };
 /** 설정 > 가계부 이름 */
 export const LEDGER_NAME_PATH = '/settings/name';
 /** 설정 > 멤버·초대 */

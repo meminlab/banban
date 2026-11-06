@@ -225,8 +225,9 @@ select test.expect_count($$select * from public.transaction where ledger_id in (
 do $$ declare v bigint; begin
   update public.transaction set amount = 1 where ledger_id in (test.id('L1'), test.id('L3')); get diagnostics v = row_count;
   if v <> 0 then raise exception 'TEST FAILED: T updated other ledger transactions (%)', v; end if;
-  delete from public.asset where ledger_id in (test.id('L1'), test.id('L3')); get diagnostics v = row_count;
-  if v <> 0 then raise exception 'TEST FAILED: T deleted other ledger assets (%)', v; end if;
+  -- BANB-25부터 자산은 삭제 대신 보관(delete 권한 없음) → 보관 시도로 확인
+  update public.asset set archived_at = now() where ledger_id in (test.id('L1'), test.id('L3')); get diagnostics v = row_count;
+  if v <> 0 then raise exception 'TEST FAILED: T archived other ledger assets (%)', v; end if;
 end $$;
 select test.expect_error($$insert into public.asset (ledger_id, name, kind) values (test.id('L1'), '몰래', 'cash')$$, 'row-level security');
 select test.expect_error($$select public.set_last_ledger(test.id('L1'))$$, 'NOT_IN_LEDGER');

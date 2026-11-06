@@ -1,5 +1,5 @@
 -- 마이그레이션 적용 확인 (읽기 전용). Supabase SQL Editor에서 실행.
--- 기대 결과: 9행 모두 rls_enabled = true, anon_select = false, authenticated_select = true,
+-- 기대 결과: 10행 모두 rls_enabled = true, anon_select = false, authenticated_select = true,
 --           policies: ledger 2 / member 2 / invite 3 / 나머지 1, rpc = true,
 --           profile_sync = true (20261106000000 마이그레이션: 프로필 테이블·트리거)
 --           invite_rules = true (20261105010000 마이그레이션 적용 여부)
@@ -7,6 +7,8 @@
 --           n1_rule = true (20261106130000 마이그레이션: 내역에 쓰인 소분류는 대분류로 못 바꿈)
 --           member_limit_4 = true (20261106140000 마이그레이션: 기본 상한 4, 기존 가계부 모두 4, 멤버는 못 바꿈)
 --           multi_ledger = true (20261106150000 마이그레이션: 1인 1가계부 제거, 1인 상한 5, 마지막으로 본 가계부, leave_ledger(uuid))
+--           asset_net_worth = true (20261106160000 마이그레이션: 자산 종류 12개, 보관, 잔액 이력 트리거, 이력 직접 쓰기·자산 삭제 불가)
+--           (asset_balance_history 행이 추가되어 10행. 이력 테이블 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -34,11 +36,24 @@ select c.relname                                          as table_name,
         and to_regprocedure('public.set_last_ledger(uuid)') is not null
         and (select public.user_ledger_limit()) = 5
         and exists (select 1 from pg_trigger t where t.tgrelid = 'public.member'::regclass
-                     and t.tgname = 'member_enforce_user_ledger_limit')) as multi_ledger
+                     and t.tgname = 'member_enforce_user_ledger_limit')) as multi_ledger,
+       (to_regclass('public.asset_balance_history') is not null
+        and exists (select 1 from information_schema.columns
+                     where table_schema = 'public' and table_name = 'asset' and column_name = 'archived_at')
+        and (select pg_get_constraintdef(oid) like '%other_liability%' from pg_constraint
+              where conrelid = 'public.asset'::regclass and conname = 'asset_kind_check')
+        and exists (select 1 from pg_trigger t where t.tgrelid = 'public.asset'::regclass and t.tgname = 'asset_record_balance')
+        and exists (select 1 from pg_trigger t where t.tgrelid = 'public.asset'::regclass and t.tgname = 'asset_before_write')
+        and not has_table_privilege('authenticated', 'public.asset', 'delete')
+        and not has_table_privilege('authenticated', 'public.asset_balance_history', 'insert')
+        and not has_table_privilege('authenticated', 'public.asset_balance_history', 'update')
+        and not has_table_privilege('authenticated', 'public.asset_balance_history', 'delete')
+        and not exists (select 1 from public.asset a
+                         where not exists (select 1 from public.asset_balance_history h where h.asset_id = a.id))) as asset_net_worth
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)

@@ -1,5 +1,15 @@
 import type { Asset, Member } from '../data/types';
-import { formatUpdatedAt, ownerLabel, sortAssets, summarizeAssets, validateAssetForm, type AssetFormValues } from './asset';
+import {
+  ASSET_KINDS,
+  daysSinceKST,
+  formatDateKST,
+  ownerLabel,
+  ownerOptions,
+  sortAssets,
+  updatedAgo,
+  validateAssetForm,
+  type AssetFormValues,
+} from './asset';
 
 const member = (id: string, name: string, joined: string, left: string | null = null): Member => ({
   id,
@@ -18,6 +28,7 @@ const asset = (id: string, owner: string | null, balance: number, name = id): As
   owner_id: owner,
   balance,
   memo: null,
+  archived_at: null,
   created_at: '2026-11-01T00:00:00Z',
   updated_at: '2026-11-01T00:00:00Z',
 });
@@ -34,45 +45,27 @@ describe('ownerLabel', () => {
   });
 });
 
-describe('summarizeAssets', () => {
-  it('자산이 없으면 전체 0원, 현재 멤버와 공동이 0원으로 보인다', () => {
-    const s = summarizeAssets([], [B, A]);
-    expect(s.total).toBe(0);
-    expect(s.byOwner.map((o) => [o.label, o.total])).toEqual([
-      ['민지', 0],
-      ['준호', 0],
-      ['공동', 0],
+describe('ASSET_KINDS', () => {
+  it('자산 9종 + 부채 3종, 코드 이름 고정', () => {
+    expect(ASSET_KINDS.filter((k) => k.group === 'asset').map((k) => k.value)).toEqual([
+      'checking', 'installment_saving', 'deposit', 'investment', 'pension', 'cash', 'real_estate', 'vehicle', 'other',
+    ]);
+    expect(ASSET_KINDS.filter((k) => k.group === 'liability').map((k) => k.value)).toEqual([
+      'loan', 'card_payable', 'other_liability',
     ]);
   });
+});
 
-  it('전체·소유자별(공동 포함) 합계', () => {
-    const s = summarizeAssets(
-      [asset('1', 'ma', 1_000_000), asset('2', 'ma', 500), asset('3', null, 300_000), asset('4', 'mb', 2_000)],
-      [A, B],
-    );
-    expect(s.total).toBe(1_302_500);
-    expect(s.byOwner.map((o) => [o.label, o.total, o.count])).toEqual([
-      ['민지', 1_000_500, 2],
-      ['준호', 2_000, 1],
-      ['공동', 300_000, 1],
+describe('ownerOptions (사람별 칩)', () => {
+  it('현재 멤버(참여 순) → 공동 → 자산이 있는 나간 멤버', () => {
+    expect(ownerOptions([], [B, A, GONE]).map((o) => o.label)).toEqual(['민지', '준호', '공동']);
+    const opts = ownerOptions([asset('1', 'mc', 1)], [B, A, GONE]);
+    expect(opts.map((o) => [o.label, o.left])).toEqual([
+      ['민지', false],
+      ['준호', false],
+      ['공동', false],
+      ['하늘', true],
     ]);
-    expect(s.byOwner.reduce((sum, o) => sum + o.total, 0)).toBe(s.total);
-  });
-
-  it('나간 멤버는 자산이 있을 때만 (나감) 표시로 뒤에 붙는다', () => {
-    expect(summarizeAssets([], [A, GONE]).byOwner.map((o) => o.label)).toEqual(['민지', '공동']);
-    const s = summarizeAssets([asset('1', 'mc', 700)], [A, GONE]);
-    expect(s.byOwner.map((o) => [o.label, o.total])).toEqual([
-      ['민지', 0],
-      ['공동', 0],
-      ['하늘 (나감)', 700],
-    ]);
-    expect(s.total).toBe(700);
-  });
-
-  it('상한 금액을 여러 개 더해도 정확하다', () => {
-    const s = summarizeAssets([asset('1', null, 9_999_999_999), asset('2', null, 9_999_999_999)], [A]);
-    expect(s.total).toBe(19_999_999_998);
   });
 });
 
@@ -116,12 +109,23 @@ describe('validateAssetForm', () => {
   });
 });
 
-describe('formatUpdatedAt', () => {
-  const now = new Date('2026-11-06T03:00:00Z');
-  it('올해는 월·일·시각 (KST)', () => {
-    expect(formatUpdatedAt('2026-11-05T15:30:00Z', now)).toBe('11월 6일 00:30');
+describe('updatedAgo / daysSinceKST', () => {
+  const now = new Date('2026-11-06T03:00:00Z'); // KST 11-06 12:00
+  it('KST 달력 날짜 기준', () => {
+    expect(daysSinceKST('2026-11-05T15:30:00Z', now)).toBe(0); // KST 11-06 00:30
+    expect(daysSinceKST('2026-11-05T14:59:59Z', now)).toBe(1); // KST 11-05 23:59
   });
-  it('지난해는 연·월·일', () => {
-    expect(formatUpdatedAt('2025-03-01T00:00:00Z', now)).toBe('2025년 3월 1일');
+  it('오늘 / n일 전, 30일 넘으면 강조 (AS-19)', () => {
+    expect(updatedAgo('2026-11-06T00:00:00Z', now)).toEqual({ text: '오늘 수정', stale: false });
+    expect(updatedAgo('2026-10-07T03:00:00Z', now)).toEqual({ text: '30일 전 수정', stale: false });
+    expect(updatedAgo('2026-10-06T03:00:00Z', now)).toEqual({ text: '31일 전 수정', stale: true });
+  });
+});
+
+describe('formatDateKST', () => {
+  const now = new Date('2026-11-06T03:00:00Z');
+  it('올해는 월·일, 지난해는 연·월·일 (KST)', () => {
+    expect(formatDateKST('2026-11-05T15:30:00Z', now)).toBe('11월 6일');
+    expect(formatDateKST('2025-03-01T00:00:00Z', now)).toBe('2025년 3월 1일');
   });
 });

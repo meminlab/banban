@@ -47,7 +47,7 @@ npm run dev                  # http://localhost:5173
 | `npm run test:db` | 스키마·권한 규칙 테스트 (Docker 필요. Postgres 컨테이너를 띄워 마이그레이션 적용 후 검사하고 지움). `STRICT=1`이면 테이블 자동 노출을 끈 프로젝트 조건으로 검사 |
 | `SUPABASE_URL=… SUPABASE_KEY=… npx vitest run src/data/catalog.integration.test.ts` | 카테고리·주머니 저장소 함수를 실제 Supabase API로 확인 (두 멤버 간 변경 반영, 숨김 후 지난 내역 이름, N1 거부). **로컬 Supabase 전용**. 환경변수가 없으면 `npm test`에서 건너뛴다 |
 | `node supabase/tests/api_flow.mjs` | 가입 → 가계부 생성 → 초대 → 참여 흐름을 실제 Supabase API로 확인. **로컬 Supabase(`npx supabase start`) 전용** — 테스트 계정을 만들므로 운영 프로젝트에는 돌리지 않는다. `SUPABASE_URL`, `SUPABASE_KEY`(publishable) 필요 |
-| `node supabase/tests/asset_flow.mjs` | 자산 추가·수정·삭제·값 검증·외부인 차단을 실제 Supabase API로 확인. **로컬 Supabase 전용**, 환경변수는 위와 같음 |
+| `node supabase/tests/asset_flow.mjs` | 자산 추가·수정·보관·되살리기·잔액 이력·값 검증·외부인 차단을 실제 Supabase API로 확인. **로컬 Supabase 전용**, 환경변수는 위와 같음 |
 | `node supabase/tests/transaction_flow.mjs` | 내역 입력 → 다른 멤버가 수정(마지막 수정자 바뀜) → 삭제 → 삭제된 내역 저장 시 0행 흐름을 실제 Supabase API로 확인. 로컬 Supabase 전용, 환경변수는 위와 같음 |
 
 ### 환경변수
@@ -70,9 +70,12 @@ npm run dev                  # http://localhost:5173
       - `20261106120000_ledger_leave_rejoin.sql` — 가계부 나가기(owner 자동 승계·보관), 다시 참여 시 예전 멤버 연결, 보관된 가계부 초대 무효
       - `20261106130000_category_in_use_stays_child.sql` — 내역에 쓰인 소분류는 대분류로 바꿀 수 없게 (적용 전 대분류를 가리키는 내역이 있으면 멈춤)
       - `20261106140000_member_limit_four.sql` — 가계부 인원 상한 2명 → 4명 (기본값 + 기존 가계부 모두)
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 9행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+      - `20261106150000_multi_ledger.sql` — 여러 가계부·1인 5개 상한·마지막으로 본 가계부
+      - `20261106160000_asset_net_worth.sql` — 자산 종류 12개(부채 3종 포함), 삭제 대신 보관(`archived_at`, 서버 시각), 잔액 이력(`asset_balance_history`, 트리거 기록·직접 쓰기 불가). 기존 자산은 적용 시각에 현재 잔액으로 이력 1행씩 채움
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
+   5. `supabase/tests/30_multi_ledger_test.sql`, `supabase/tests/40_asset_net_worth_test.sql` — 여러 가계부 / 자산 이력·보관·권한 테스트 (같은 방식)
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
 3. 프로젝트 설정 → API Keys에서 URL, publishable key를 복사해 `.env.local`과 호스팅 환경변수에 넣기
 4. 구글 로그인 설정 — 아래 "구글 로그인 설정" 참고
@@ -100,6 +103,11 @@ npm run dev                  # http://localhost:5173
 - 로그인 안 했으면 모든 화면이 `/login`으로 간다. 로그인 후 참여한 가계부가 있으면 홈, 없으면 `/start`(가계부 만들기 / 초대코드 입력)
 - 로그아웃은 설정(또는 `/start`) 맨 아래. 이 기기에서만 로그아웃된다
 - 구글 이름·프로필 이미지는 로그인할 때마다 DB 트리거가 `profile` 테이블에 저장한다(화면은 읽기만)
+
+## QA 기준 데이터 (자산 1단계, 테스트 DB 전용)
+
+`supabase/seed/qa_assets_v4.sql` — QA 테스트 케이스 v4 "기준 데이터"(9~11월 잔액 이력, 보관 자산)를 만든다. 이력 시각을 관리자 권한으로 직접 넣으므로 **운영 DB에서는 실행하지 않는다**. 설정(`banban.qa_seed = 'test-db-only'`)이 없으면 `QA_SEED_NOT_ALLOWED`로 멈춘다. 계정 이메일은 파일 위쪽 `c_email_a/b/c`를 바꾼다. 실행법은 파일 머리말 참고.
+로컬 확인(Docker): `bash supabase/seed/check_qa_assets_v4.sh` — 기존 자산 이력 채우기, check_applied, 설정 없을 때 거부, v4 기대값(월말·현재 순자산, 사람별)을 SQL로 계산해 비교.
 
 ## 샘플 가계부 (화면 확인용 데이터)
 

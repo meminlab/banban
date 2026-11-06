@@ -1,4 +1,4 @@
-// 자산(BANB-7) 추가·수정·삭제를 실제 Supabase API로 확인한다. 쿼리 모양은 src/data/asset.ts 와 같다.
+// 자산(BANB-7, BANB-25) 추가·수정·보관·되살리기·잔액 이력을 실제 Supabase API로 확인한다. 쿼리 모양은 src/data/asset.ts 와 같다.
 // ⚠️ 로컬 Supabase(`supabase start`) 전용. 테스트 계정을 실제로 만들기 때문에 운영 프로젝트에 돌리지 않는다.
 //   SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_KEY=<publishable key> node supabase/tests/asset_flow.mjs
 import { createClient } from '@supabase/supabase-js';
@@ -11,7 +11,7 @@ if (!/127\.0\.0\.1|localhost/.test(url)) throw new Error('로컬 Supabase에서�
 
 const run = Date.now();
 const opts = { auth: { persistSession: false, autoRefreshToken: false } };
-const COLUMNS = 'id, ledger_id, name, kind, owner_id, balance, memo, created_at, updated_at';
+const COLUMNS = 'id, ledger_id, name, kind, owner_id, balance, memo, archived_at, created_at, updated_at';
 const step = (msg) => console.log(`✔ ${msg}`);
 
 async function signUp(name) {
@@ -94,15 +94,29 @@ const { error: xIns } = await ins(X, { name: '몰래', kind: 'cash', owner_id: n
 assert.ok(xIns);
 step('외부인은 조회·수정·추가 불가');
 
-// 삭제 → 합계 반영. 삭제된 자산 수정 시 0행 (화면은 "삭제된 자산" 안내)
+// BANB-25: 삭제는 권한 없음 → 보관. 보관 시각은 서버가 정함. 보관하면 합계(보관 제외)에서 빠지고 되살리면 돌아온다
 const { error: e5 } = await A.from('asset').delete().eq('id', r2.data.id);
-assert.equal(e5, null, e5?.message);
-rows = await list(B);
-assert.equal(rows.length, 2);
+assert.ok(e5, '자산 삭제가 막혀야 한다');
+const { data: arch, error: e6 } = await A.from('asset').update({ archived_at: '2000-01-01T00:00:00Z' }).eq('id', r2.data.id).select(COLUMNS);
+assert.equal(e6, null, e6?.message);
+assert.ok(new Date(arch[0].archived_at).getFullYear() >= 2026, '보관 시각은 서버 시각');
+rows = (await list(B)).filter((r) => r.archived_at === null);
 assert.equal(sum(rows), 1_500_000);
-const { data: gone, error: e6 } = await B.from('asset').update({ balance: 1 }).eq('id', r2.data.id).select(COLUMNS);
-assert.equal(e6, null);
-assert.equal(gone.length, 0);
-step('A 삭제 → B 합계 반영, 삭제된 자산 수정은 0행');
+const { error: e7 } = await B.from('asset').update({ archived_at: null }).eq('id', r2.data.id);
+assert.equal(e7, null, e7?.message);
+rows = (await list(B)).filter((r) => r.archived_at === null);
+assert.equal(rows.length, 3);
+step('삭제 불가 → 보관(서버 시각) → B 되살리기');
+
+// 잔액 이력: 트리거가 기록, 바꾼 사람 = 로그인한 사람, 직접 쓰기 불가, 외부인 0건
+const { data: hist, error: e8 } = await B.from('asset_balance_history').select('asset_id, balance, changed_by').eq('ledger_id', ledgerId);
+assert.equal(e8, null, e8?.message);
+assert.ok(hist.length >= 3);
+assert.ok(hist.some((h) => h.changed_by === mB.id), 'B가 고친 잔액은 바꾼 사람 = B');
+const { error: e9 } = await A.from('asset_balance_history').insert({ asset_id: r1.data.id, ledger_id: ledgerId, balance: 1, changed_by: mB.id });
+assert.ok(e9, '이력 직접 쓰기는 막혀야 한다');
+const { data: xHist } = await X.from('asset_balance_history').select('*').eq('ledger_id', ledgerId);
+assert.equal(xHist.length, 0);
+step('잔액 이력: 바꾼 사람 서버 기록, 직접 쓰기 불가, 외부인 0건');
 
 console.log('✅ asset flow passed');
