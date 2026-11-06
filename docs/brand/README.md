@@ -39,6 +39,11 @@ BANB-22에서 7회 탐색 끝에 확정(2026-11-06, 클라이언트 결정). 탐
 - **앱 안에서**: 시작·로그인 화면은 가로 조합(높이 40–48px). 헤더는 가계부 전환 알약이 주인공이라 로고를 넣지 않는 것을 기본으로 하고, 넣는다면 심볼 24–28px만(가로 조합 금지).
 - **하지 말 것**: 늘리기·찌그러뜨리기, 돌리기, 색 바꾸기(테마 색으로 칠하기 포함), 그림자·테두리·효과, 복잡한 사진·패턴 위, 워드마크를 다른 글꼴로 다시 쓰기, 동전을 떼거나 주머니 안에 넣기, 눈 추가하기.
 
+### 개발 참고
+
+- 웃는 입은 SVG `mask`라서, **한 화면에 로고 SVG를 인라인으로 여러 번 넣으면 mask `id`를 인스턴스마다 다르게** 해야 한다(같은 id면 첫 번째를 참조해서, 첫 번째가 숨겨진 화면에 있으면 입이 사라짐 — 화면 시안에서 실제로 겪음). `<img src="…svg">`로 쓰면 상관없다.
+- manifest 예: `{"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"}`, 512도 같게. `<link rel="icon" href="/favicon.svg" type="image/svg+xml">` + `<link rel="alternate icon" href="/favicon.ico">` + `<link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">`.
+
 ### 확인
 
 - 헤드리스 Chrome으로 SVG를 각 크기 그대로 렌더링해 PNG를 만들고 눈으로 확인했다(16px 포함).
