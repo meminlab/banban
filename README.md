@@ -21,6 +21,7 @@ src/
   components/   공통 UI (상단바·하단 탭·아이콘)
   pages/        화면 (홈 / 가계부 / 자산 / 설정)
   data/         저장소 접근은 여기서만 (supabase 클라이언트, DB 행 타입)
+  domain/       집계·계산 순수 함수 (월 요약, 월 계산 KST, 금액 표시) — 단위 테스트 동반
 supabase/
   migrations/   DB 스키마·권한 규칙 (SQL)
   tests/        스키마·권한 규칙 테스트 (Docker로 실행)
