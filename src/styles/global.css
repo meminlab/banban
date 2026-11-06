@@ -249,8 +249,8 @@ button { font: inherit; }
 .assets { display: flex; flex-direction: column; gap: 16px; }
 .asset-total { padding: 20px; border-radius: 16px; background: var(--color-primary); color: #fff; }
 .asset-total__label { margin: 0; font-size: 0.9375rem; opacity: 0.9; }
-/* 금액은 숫자+"원" 한 덩어리 (BANB-10 D-1). 360px에서 18자(-999,999,999,999원)까지 한 줄.
-   합계는 여러 자산의 합이라 그보다 길 수 있어, 그때만 글자를 줄인다 */
+/* 금액은 숫자+"원" 한 덩어리 (BANB-10 D-1). 28px로는 360px에서 16자(999,999,999,999원)까지 여유 있게 한 줄.
+   합계는 여러 자산의 합이라 그보다 길 수 있어, 17자 이상(-999,999,999,999원·1조원 이상)이면 글자를 줄인다 */
 .asset-total__total { margin: 4px 0 12px; font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .asset-total__total--long { font-size: 1.375rem; }
 .owner-totals { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid rgb(255 255 255 / 0.3); display: flex; flex-direction: column; gap: 6px; }

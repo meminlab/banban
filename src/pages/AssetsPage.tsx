@@ -103,7 +103,7 @@ export function AssetsPage() {
         <p id="asset-total-label" className="asset-total__label">
           전체 자산
         </p>
-        <p className={`asset-total__total${totalText.length > 18 ? ' asset-total__total--long' : ''}`}>{totalText}</p>
+        <p className={`asset-total__total${totalText.length > 16 ? ' asset-total__total--long' : ''}`}>{totalText}</p>
         <ul className="owner-totals" aria-label="소유자별 합계">
           {summary.byOwner.map((o) => (
             <li key={o.ownerId ?? 'shared'} className="owner-totals__row">
