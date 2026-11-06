@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="clean">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- 브라우저 막대·홈 화면 앱 상태 표시줄 색: 흰 상단바와 이어지게 흰색 -->
-    <meta name="theme-color" content="#ffffff" />
+    <!-- 브라우저 막대·홈 화면 앱 상태 표시줄 색 = 헤더 surface (design.md 1.4). 라이트는 세 테마 공통, 다크는 클린 고정
+         (테마 고르기 기능이 생기면 다크 값을 JS로 갈아 끼운다) -->
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1B1E22" media="(prefers-color-scheme: dark)" />
     <title>반반 가계부</title>
 
     <!-- 홈 화면에 추가 (전체 화면 실행) -->

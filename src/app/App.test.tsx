@@ -182,11 +182,14 @@ describe('로그인하지 않은 상태', () => {
 });
 
 describe('로그인했고 가계부가 있는 상태', () => {
-  it('하단 탭 3개가 순서대로 보인다', async () => {
+  it('하단 탭: 홈 · 가계부 · [＋ 내역 추가] · 자산 순서 (design.md 5.7)', async () => {
     renderAt('/');
     const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
-    const labels = Array.from(nav.querySelectorAll('a')).map((a) => a.textContent);
-    expect(labels).toEqual(['홈', '가계부', '자산']);
+    const names = within(nav)
+      .getAllByRole('link')
+      .map((a) => a.getAttribute('aria-label') ?? a.textContent);
+    expect(names).toEqual(['홈', '가계부', '내역 추가', '자산']);
+    expect(within(nav).getByRole('link', { name: '홈' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('탭을 누르면 화면이 바뀌고 현재 탭이 표시된다', async () => {

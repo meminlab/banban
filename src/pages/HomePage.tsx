@@ -5,6 +5,7 @@ import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_PATH } from '../app/routes';
 import { Delta, deltaSpeech, signedWon } from '../components/NetWorthDelta';
 import { MiniNetWorthTrend } from '../components/NetWorthTrend';
+import { WonText } from '../components/WonText';
 import { listAssets, listBalanceHistory } from '../data/asset';
 import { getMonthSummaryData, type MonthSummaryData } from '../data/summary';
 import type { Asset, AssetBalanceHistory } from '../data/types';
@@ -127,7 +128,7 @@ export function HomePage() {
               <SummaryItem label="수입" amount={summary.income} />
               <SummaryItem label="지출" amount={summary.expense} />
               <SummaryItem label="저축" amount={summary.saving} />
-              <SummaryItem label="남은 돈" amount={summary.remaining} emphasize />
+              <SummaryItem label="남은 돈" amount={summary.remaining} />
             </dl>
             <p className="hint">남은 돈 = 수입 − 지출 − 저축</p>
             {summary.count === 0 && <p className="home__empty">이 달에 입력한 내역이 없어요.</p>}
@@ -155,12 +156,14 @@ export function HomePage() {
   );
 }
 
-function SummaryItem({ label, amount, emphasize }: { label: string; amount: number; emphasize?: boolean }) {
+function SummaryItem({ label, amount }: { label: string; amount: number }) {
   const negative = amount < 0;
   return (
-    <div className={`summary-item${emphasize ? ' summary-item--emphasize' : ''}`}>
+    <div className="summary-item">
       <dt>{label}</dt>
-      <dd className={negative ? 'is-negative' : undefined}>{formatWon(amount)}</dd>
+      <dd className={negative ? 'is-negative' : undefined}>
+        <WonText amount={amount} />
+      </dd>
     </div>
   );
 }

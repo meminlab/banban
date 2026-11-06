@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react';
-import { formatWon, formatWonKorean } from '../domain/money';
+import { formatWonKorean } from '../domain/money';
 import { trendRatio, trendScale, trendSegments, type TrendPoint } from '../domain/netWorth';
+import { WonText } from './WonText';
 
 /**
  * 자산 탭 "월별 추이" — 최근 6개월 월말 순자산 선 그래프 (design.md 5.19)
@@ -9,7 +10,6 @@ import { trendRatio, trendScale, trendSegments, type TrendPoint } from '../domai
  */
 
 const monthNo = (ym: string) => Number(ym.slice(5));
-const signedWon = (n: number) => (n < 0 ? `−${formatWon(-n)}` : formatWon(n));
 
 export function NetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
   const last = points.length - 1;
@@ -57,7 +57,7 @@ export function NetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
         <span className="trend__cap-label">
           {monthNo(selected.ym)}월{sel === last ? ' (지금)' : ' 말'}
         </span>
-        <span className={`trend__cap-value money${selNet < 0 ? ' is-negative' : ''}`}>{signedWon(selNet)}원</span>
+        <span className={`trend__cap-value money${selNet < 0 ? ' is-negative' : ''}`}><WonText amount={selNet} /></span>
       </p>
 
       <div className="trend__plot" role="img" aria-label={summary}>

@@ -137,7 +137,7 @@ async function sheetOptions(user: ReturnType<typeof userEvent.setup>) {
 async function openNewForm() {
   const user = userEvent.setup();
   renderAt('/ledger');
-  await user.click(await screen.findByRole('link', { name: '내역 입력' }));
+  await user.click(await screen.findByRole('link', { name: '내역 추가' }));
   await screen.findByRole('heading', { level: 1, name: '내역 입력' });
   return user;
 }

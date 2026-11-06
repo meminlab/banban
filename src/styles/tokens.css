@@ -1,0 +1,284 @@
+/*
+ * 디자인 토큰 — docs/design.md v1.2 8절을 그대로 옮겼다 (1절 색·1.4 다크·1.5 강조 표현, 2절 글자, 3절 간격·모서리·움직임·레이아웃).
+ * 컴포넌트 CSS는 이 토큰만 쓴다. 테마 이름으로 분기하는 CSS(`[data-theme="cozy"] .x`)는 쓰지 않는다 (1.0).
+ * 테마는 <html data-theme="clean|berry|cozy">. 값이 없으면 clean. 라이트/다크는 기기 설정(prefers-color-scheme).
+ * 값을 바꿀 때는 design.md를 먼저 고친다 (10절).
+ */
+:root {
+  /* 공통 의미 색 — 라이트 */
+  --color-income: #3E5F9E;
+  --color-negative: #B23A48;
+  --color-danger: #B23A48;
+  --color-on-danger: #FFFFFF;
+  --color-danger-soft: #FBEEEF;
+  --color-scrim: rgb(15 16 18 / 0.45);
+
+  /* 테마 토큰에서 끌어오는 별칭 */
+  --color-expense: var(--color-text);
+  --color-focus: var(--color-primary);
+  --color-chart-bar: var(--color-primary);
+  --color-chart-track: var(--color-surface-sunken);
+  --color-chart-line: var(--color-primary);
+  --color-chart-grid: var(--color-border);
+  --color-chart-zero: var(--color-border-strong);
+  --color-delta-up: var(--color-income);
+  --color-delta-down: var(--color-text-sub);
+  --color-inverse-surface: var(--color-text);
+  --color-on-inverse: var(--color-surface);
+
+  /* 글자 */
+  --font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
+    'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  --font-amount-input: 700 2.5rem/3rem var(--font-family);      /* 40/48 v1.2 입력 금액 */
+  --font-amount-hero: 700 2.25rem/2.75rem var(--font-family);   /* 36/44 */
+  --font-amount-xl: 700 1.75rem/2.25rem var(--font-family);     /* 28/36 */
+  --font-amount-lg: 700 1.5rem/2rem var(--font-family);         /* 24/32 */
+  --font-title-lg: 600 1.375rem/1.875rem var(--font-family);    /* 22/30 */
+  --font-title: 600 1.125rem/1.625rem var(--font-family);       /* 18/26 */
+  --font-amount-md: 700 1.0625rem/1.5rem var(--font-family);    /* 17/24 */
+  --font-body-lg: 400 1.0625rem/1.625rem var(--font-family);    /* 17/26 */
+  --font-body: 400 1rem/1.5rem var(--font-family);              /* 16/24 */
+  --font-body-sm: 400 0.9375rem/1.375rem var(--font-family);    /* 15/22 */
+  --font-caption: 500 0.8125rem/1.125rem var(--font-family);    /* 13/18 */
+  --font-micro: 600 0.6875rem/0.875rem var(--font-family);      /* 11/14 */
+
+  /* 간격 */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+
+  /* 모서리 (테마 공통) */
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px; --radius-full: 999px;
+
+  /* 그림자 (시트·토스트용, 테마 공통) */
+  --shadow-sm: 0 1px 2px rgb(15 16 18 / 0.04);
+  --shadow-md: 0 4px 12px rgb(15 16 18 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(15 16 18 / 0.14);
+  --card-border: none;
+
+  /* 움직임 */
+  --motion-fast: 120ms ease-out;
+  --motion-base: 200ms cubic-bezier(0.2, 0, 0, 1);
+  --motion-slow: 300ms cubic-bezier(0.2, 0, 0, 1);
+
+  /* 레이아웃 */
+  --layout-min-width: 360px;
+  --layout-max-width: 480px;
+  --layout-gutter: 20px;
+  --topbar-height: 56px;
+  --tabbar-height: 64px;
+  --touch: 44px;
+  --touch-lg: 48px;
+  --fab-size: 52px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-income: #9DB2DC;
+    --color-negative: #EE8F99;
+    --color-danger: #EE8F99;
+    --color-on-danger: #1A1310;
+    --color-danger-soft: #3A2226;
+    --color-scrim: rgb(0 0 0 / 0.6);
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --card-border: 1px solid var(--color-border);
+  }
+}
+
+/* ── 테마 (기본 clean: data-theme 없을 때도 clean 값이 들어가도록 앱에서 루트에 항상 붙인다) ── */
+[data-theme="berry"] {  /* 베리 (A) */
+  --color-bg: #F5F6F8;
+  --color-surface: #FFFFFF;
+  --color-surface-sunken: #F0F1F4;
+  --color-border: #E8EAED;
+  --color-border-strong: #8A8F98;
+  --color-text: #1D1F23;
+  --color-text-sub: #5B6068;
+  --color-text-weak: #686D76;
+  --color-primary: #A23B72;
+  --color-primary-pressed: #8A2D5F;
+  --color-primary-strong: #8A2D5F;
+  --color-primary-soft: #F9EAF2;
+  --color-on-primary: #FFFFFF;
+  --color-inverse-action: #F5A9D0;
+  --color-saving: #3B7560;
+  --color-hero-bg: #FFFFFF;
+  --color-hero-label: #5B6068;
+  --color-member-1: #A23B72;
+  --color-member-2: #D98CB5;
+  --color-member-3: #6F6A75;
+  --color-member-4: #B9B4BE;
+  --color-avatar-1: #F0F1F4;
+  --color-avatar-2: #F0F1F4;
+  --color-avatar-3: #F0F1F4;
+  --color-avatar-4: #F0F1F4;
+  --color-on-avatar: #1D1F23;
+  --card-gutter: 16px;
+  --card-radius: 16px;
+  --control-radius: 12px;
+  --card-shadow: 0 1px 2px rgb(15 16 18 / 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="berry"] {
+    --color-bg: #131416;
+    --color-surface: #1D1E21;
+    --color-surface-sunken: #27292D;
+    --color-border: #34363B;
+    --color-border-strong: #7B8089;
+    --color-text: #F1F2F4;
+    --color-text-sub: #B8BCC3;
+    --color-text-weak: #989CA4;
+    --color-primary: #F08CC0;
+    --color-primary-pressed: #E673AE;
+    --color-primary-strong: #F5A9D0;
+    --color-primary-soft: #3A1F2E;
+    --color-on-primary: #1F0F18;
+    --color-inverse-action: #8A2D5F;
+    --color-saving: #93C4AD;
+    --color-hero-bg: #1D1E21;
+    --color-hero-label: #B8BCC3;
+    --color-member-1: #F08CC0;
+    --color-member-2: #9C4E78;
+    --color-member-3: #8E8994;
+    --color-member-4: #5A5560;
+    --color-avatar-1: #27292D;
+    --color-avatar-2: #27292D;
+    --color-avatar-3: #27292D;
+    --color-avatar-4: #27292D;
+    --color-on-avatar: #F1F2F4;
+    --card-shadow: none;
+  }
+}
+:root:not([data-theme]), [data-theme="clean"] {  /* 클린 (B) — 기본 */
+  --color-bg: #F2F4F6;
+  --color-surface: #FFFFFF;
+  --color-surface-sunken: #F2F4F6;
+  --color-border: #E5E8EB;
+  --color-border-strong: #878E98;
+  --color-text: #191C21;
+  --color-text-sub: #5F6670;
+  --color-text-weak: #69707A;
+  --color-primary: #007F55;
+  --color-primary-pressed: #006A47;
+  --color-primary-strong: #006B47;
+  --color-primary-soft: #E6F4EE;
+  --color-on-primary: #FFFFFF;
+  --color-inverse-action: #6FD3A8;
+  --color-saving: #6B52AE;
+  --color-hero-bg: #FFFFFF;
+  --color-hero-label: #5F6670;
+  --color-member-1: #007F55;
+  --color-member-2: #5DBB92;
+  --color-member-3: #6B727C;
+  --color-member-4: #B8BEC6;
+  --color-avatar-1: #F2F4F6;
+  --color-avatar-2: #F2F4F6;
+  --color-avatar-3: #F2F4F6;
+  --color-avatar-4: #F2F4F6;
+  --color-on-avatar: #191C21;
+  --card-gutter: 0px;
+  --card-radius: 0px;
+  --control-radius: 12px;
+  --card-shadow: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]), [data-theme="clean"] {
+    --color-bg: #101214;
+    --color-surface: #1B1E22;
+    --color-surface-sunken: #262A2F;
+    --color-border: #33383E;
+    --color-border-strong: #7A808A;
+    --color-text: #F2F4F6;
+    --color-text-sub: #B5BBC3;
+    --color-text-weak: #959BA4;
+    --color-primary: #3FC08A;
+    --color-primary-pressed: #2FA877;
+    --color-primary-strong: #6FD3A8;
+    --color-primary-soft: #12301F;
+    --color-on-primary: #04140D;
+    --color-inverse-action: #006B47;
+    --color-saving: #B7A6E8;
+    --color-hero-bg: #1B1E22;
+    --color-hero-label: #B5BBC3;
+    --color-member-1: #3FC08A;
+    --color-member-2: #2A7A58;
+    --color-member-3: #8F96A0;
+    --color-member-4: #4E555E;
+    --color-avatar-1: #262A2F;
+    --color-avatar-2: #262A2F;
+    --color-avatar-3: #262A2F;
+    --color-avatar-4: #262A2F;
+    --color-on-avatar: #F2F4F6;
+    --card-shadow: none;
+  }
+}
+[data-theme="cozy"] {  /* 포근 (C) */
+  --color-bg: #FFF7F3;
+  --color-surface: #FFFFFF;
+  --color-surface-sunken: #FBEDE7;
+  --color-border: #F3DED5;
+  --color-border-strong: #98857E;
+  --color-text: #2B2220;
+  --color-text-sub: #6B5A54;
+  --color-text-weak: #76655F;
+  --color-primary: #C44536;
+  --color-primary-pressed: #A83A2D;
+  --color-primary-strong: #9E3226;
+  --color-primary-soft: #FDE8E3;
+  --color-on-primary: #FFFFFF;
+  --color-inverse-action: #FFB3A3;
+  --color-saving: #3B7560;
+  --color-hero-bg: #FDE8E3;
+  --color-hero-label: #9E3226;
+  --color-member-1: #F7B9A4;
+  --color-member-2: #F6D98B;
+  --color-member-3: #B7D3A8;
+  --color-member-4: #C9C3EC;
+  --color-avatar-1: #F7B9A4;
+  --color-avatar-2: #F6D98B;
+  --color-avatar-3: #B7D3A8;
+  --color-avatar-4: #C9C3EC;
+  --color-on-avatar: #2B2220;
+  --card-gutter: 16px;
+  --card-radius: 24px;
+  --control-radius: 16px;
+  --card-shadow: 0 2px 8px rgb(120 60 40 / 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="cozy"] {
+    --color-bg: #171312;
+    --color-surface: #221C1A;
+    --color-surface-sunken: #2E2624;
+    --color-border: #3D3330;
+    --color-border-strong: #85766F;
+    --color-text: #F5EEEB;
+    --color-text-sub: #C4B6B1;
+    --color-text-weak: #A39590;
+    --color-primary: #FF8A74;
+    --color-primary-pressed: #F27560;
+    --color-primary-strong: #FFB3A3;
+    --color-primary-soft: #3D211C;
+    --color-on-primary: #1F0E0B;
+    --color-inverse-action: #9E3226;
+    --color-saving: #93C4AD;
+    --color-hero-bg: #3D211C;
+    --color-hero-label: #FFB3A3;
+    --color-member-1: #E89A84;
+    --color-member-2: #D9B95F;
+    --color-member-3: #8FB07F;
+    --color-member-4: #9F97D6;
+    --color-avatar-1: #E89A84;
+    --color-avatar-2: #D9B95F;
+    --color-avatar-3: #8FB07F;
+    --color-avatar-4: #9F97D6;
+    --color-on-avatar: #1F1715;
+    --card-shadow: none;
+  }
+}

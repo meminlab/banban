@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import {
-  TRANSACTION_NEW_PATH,
   transactionPath,
   type LedgerFlash,
   type TransactionFormState,
@@ -178,10 +177,6 @@ export function LedgerPage() {
           </button>
         </p>
       )}
-
-      <Link to={TRANSACTION_NEW_PATH} state={returnState} className="fab" aria-label="내역 입력">
-        <span aria-hidden="true">＋</span>
-      </Link>
 
       {state.status === 'loading' && (
         <p className="list-status" role="status">

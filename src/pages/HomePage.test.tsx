@@ -113,7 +113,8 @@ describe('홈: 월 요약', () => {
     expect(amountOf('수입')).toHaveTextContent('1,000,000원');
     expect(amountOf('지출')).toHaveTextContent('1,000,000원');
     expect(amountOf('저축')).toHaveTextContent('500,000원');
-    expect(amountOf('남은 돈')).toHaveTextContent('-500,000원');
+    expect(amountOf('남은 돈')).toHaveTextContent('\u2212500,000원'); // − (U+2212)
+    expect(amountOf('남은 돈')).toHaveTextContent('마이너스 500,000원'); // 화면낭독
     expect(amountOf('남은 돈')).toHaveClass('is-negative');
 
     const people = screen.getByRole('list', { name: '사람별' });

@@ -31,10 +31,14 @@ export type LedgerFlash = 'saved' | 'deleted';
 export interface TransactionFormState {
   returnTo?: string;
 }
-/** 입력·수정 화면을 닫을 때 돌아갈 주소. 가계부 탭 주소(/ledger 또는 /ledger?...)만 받는다 */
+/**
+ * 입력·수정 화면을 닫을 때 돌아갈 주소. 탭바 가운데 ＋는 모든 탭에 있으므로(design.md 5.7)
+ * 가계부 탭 주소(/ledger 또는 /ledger?...)와 홈(/)·자산 탭(/assets)만 받는다. 그 밖은 가계부 탭.
+ */
 export function ledgerReturnPath(state: unknown): string {
   const returnTo = (state as TransactionFormState | null)?.returnTo;
-  return typeof returnTo === 'string' && /^\/ledger(\?[^#]*)?$/.test(returnTo) ? returnTo : LEDGER_PATH;
+  if (typeof returnTo !== 'string') return LEDGER_PATH;
+  return /^\/ledger(\?[^#]*)?$/.test(returnTo) || returnTo === '/' || returnTo === '/assets' ? returnTo : LEDGER_PATH;
 }
 /** 자산 탭 */
 export const ASSETS_PATH = '/assets';
