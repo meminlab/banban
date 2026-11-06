@@ -3,35 +3,37 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>반반 디자인 시스템 v1 미리보기</title>
+<title>반반 디자인 시스템 v1.1 미리보기</title>
 <!-- 미리보기 전용. 앱은 npm pretendard / lucide-react 로 번들한다 (docs/design.md 2·4절) -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
 <script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
 <style>
-/* docs/design.md 8절 토큰 (미리보기에서는 라이트/다크를 나란히 보이려고 .dark 클래스로 덮어씀) */
+/* docs/design.md v1.1 8절 토큰 (미리보기에서는 라이트/다크를 나란히 보이려고 .dark 클래스로 덮어씀) */
 .theme {
-  --color-bg:#FBF8F3; --color-surface:#FFFFFF; --color-surface-sunken:#F4EFE7; --color-border:#EAE3D8; --color-border-strong:#8E8579;
-  --color-text:#2A2420; --color-text-sub:#615850; --color-text-weak:#7A7066;
+  --color-bg:#F5F6F8; --color-surface:#FFFFFF; --color-surface-sunken:#F0F1F4; --color-border:#E8EAED; --color-border-strong:#8A8F98;
+  --color-text:#1D1F23; --color-text-sub:#5B6068; --color-text-weak:#686D76;
   --color-primary:#BF4D1B; --color-primary-pressed:#A23F14; --color-primary-strong:#A3401A; --color-primary-soft:#FCEDE5; --color-on-primary:#FFFFFF;
-  --color-focus:#BF4D1B; --color-scrim:rgb(23 20 18 / .45); --color-inverse-surface:#2A2420; --color-on-inverse:#FFFFFF; --color-inverse-action:#F7A27C;
-  --color-expense:#2A2420; --color-income:#2459D6; --color-income-soft:#EAF0FD; --color-saving:#13795B; --color-saving-soft:#E3F3EC;
-  --color-negative:#C8283C; --color-negative-soft:#FDECEE; --color-danger:#C8283C; --color-on-danger:#FFFFFF; --color-danger-soft:#FDECEE;
-  --color-success:#1E7A46; --color-notice-bg:#FFF3D6; --color-notice-text:#7A4B00; --color-chart-bar:#BF4D1B; --color-chart-track:#F4EFE7;
-  --shadow-sm:0 1px 2px rgb(42 36 32 / .06); --shadow-md:0 4px 12px rgb(42 36 32 / .08); --shadow-lg:0 8px 24px rgb(42 36 32 / .16);
+  --color-focus:#BF4D1B; --color-scrim:rgb(15 16 18 / .45); --color-inverse-surface:#1D1F23; --color-on-inverse:#FFFFFF; --color-inverse-action:#F7A27C;
+  --color-expense:#1D1F23; --color-income:#3E5F9E; --color-saving:#3B7560;
+  --color-negative:#B23A48; --color-danger:#B23A48; --color-on-danger:#FFFFFF; --color-danger-soft:#FBEEEF;
+  --color-chart-bar:#BF4D1B; --color-chart-track:#F0F1F4;
+  --shadow-sm:0 1px 2px rgb(15 16 18 / .04); --shadow-md:0 4px 12px rgb(15 16 18 / .08); --shadow-lg:0 8px 24px rgb(15 16 18 / .14);
+  --card-border:none;
   --font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
 }
 .theme.dark {
-  --color-bg:#171412; --color-surface:#221E1B; --color-surface-sunken:#2C2723; --color-border:#3A342E; --color-border-strong:#7D7368;
-  --color-text:#F4EFE9; --color-text-sub:#C2B8AD; --color-text-weak:#9E9388;
+  --color-bg:#131416; --color-surface:#1D1E21; --color-surface-sunken:#27292D; --color-border:#34363B; --color-border-strong:#7B8089;
+  --color-text:#F1F2F4; --color-text-sub:#B8BCC3; --color-text-weak:#989CA4;
   --color-primary:#F0895A; --color-primary-pressed:#E07444; --color-primary-strong:#F7A27C; --color-primary-soft:#3A2519; --color-on-primary:#1A1310;
-  --color-focus:#F0895A; --color-scrim:rgb(0 0 0 / .6); --color-inverse-surface:#F4EFE9; --color-on-inverse:#171412; --color-inverse-action:#A3401A;
-  --color-expense:#F4EFE9; --color-income:#8AAEFF; --color-income-soft:#1E2A44; --color-saving:#5CC99E; --color-saving-soft:#17332A;
-  --color-negative:#FF7B88; --color-negative-soft:#3D1D22; --color-danger:#FF7B88; --color-on-danger:#1A1310; --color-danger-soft:#3D1D22;
-  --color-success:#66CF8F; --color-notice-bg:#3A2E14; --color-notice-text:#F5C56B; --color-chart-bar:#F0895A; --color-chart-track:#2C2723;
+  --color-focus:#F0895A; --color-scrim:rgb(0 0 0 / .6); --color-inverse-surface:#F1F2F4; --color-on-inverse:#131416; --color-inverse-action:#A3401A;
+  --color-expense:#F1F2F4; --color-income:#9DB2DC; --color-saving:#93C4AD;
+  --color-negative:#EE8F99; --color-danger:#EE8F99; --color-on-danger:#1A1310; --color-danger-soft:#3A2226;
+  --color-chart-bar:#F0895A; --color-chart-track:#27292D;
   --shadow-sm:none; --shadow-md:none; --shadow-lg:none;
+  --card-border:1px solid var(--color-border);
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: #d9d4cc; font-family: 'Pretendard Variable', Pretendard, sans-serif; }
+body { margin: 0; background: #d5d7db; font-family: 'Pretendard Variable', Pretendard, sans-serif; }
 .wrap { display: flex; gap: 32px; padding: 32px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
 .theme { width: 375px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-family); border-radius: 28px; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / .18); }
 .cap { font: 600 13px/18px var(--font-family); color: var(--color-text-sub); margin: 24px 20px 8px; letter-spacing: .02em; }
@@ -41,22 +43,23 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
 .i16 svg.lucide { width: 16px; height: 16px; }
 
 /* 헤더 */
-.topbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 12px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.topbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 12px; background: var(--color-surface); }
 .switch { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--color-text); font: 600 18px/26px var(--font-family); border-radius: 12px; }
-.initial { width: 28px; height: 28px; border-radius: 999px; background: var(--color-primary-soft); color: var(--color-primary-strong); display: inline-flex; align-items: center; justify-content: center; font: 700 14px var(--font-family); }
+.initial { width: 28px; height: 28px; border-radius: 999px; background: var(--color-surface-sunken); color: var(--color-text); display: inline-flex; align-items: center; justify-content: center; font: 700 14px var(--font-family); }
 .initial.lg { width: 40px; height: 40px; font-size: 16px; }
 .switch svg { color: var(--color-text-sub); }
 .iconbtn { width: 44px; height: 44px; border: 0; background: none; color: var(--color-text); display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; }
 
 /* 요약 카드 */
-.card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 24px; padding: 20px; box-shadow: var(--shadow-sm); }
+.card { background: var(--color-surface); border: var(--card-border); border-radius: 24px; padding: 24px; box-shadow: var(--shadow-sm); }
+.label-lg { font: 500 15px/22px var(--font-family); color: var(--color-text-sub); margin: 0; }
 .label { font: 500 13px/18px var(--font-family); color: var(--color-text-sub); margin: 0; }
 .money { white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; font-weight: 700; }
 .money__unit { font-size: .75em; font-weight: 600; margin-left: 1px; }
-.hero { font-size: 32px; line-height: 40px; margin: 4px 0 16px; display: block; }
+.hero { font-size: 36px; line-height: 44px; margin: 4px 0 24px; display: block; }
 .md { font-size: 17px; line-height: 24px; }
 .neg { color: var(--color-negative); } .inc { color: var(--color-income); } .sav { color: var(--color-saving); }
-.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .three div { display: flex; flex-direction: column; gap: 2px; }
 .formula { font: 400 13px/18px var(--font-family); color: var(--color-text-weak); margin: 12px 0 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -94,21 +97,16 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
 .chip .scope svg.lucide { width: 14px; height: 14px; color: var(--color-text-sub); }
 
 /* 목록 */
-.list { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 0 16px; }
-.dayhead { display: flex; justify-content: space-between; font: 600 13px/18px var(--font-family); color: var(--color-text-sub); margin: 0 4px 8px; }
+.list { background: var(--color-surface); border: var(--card-border); border-radius: 16px; padding: 8px 20px; box-shadow: var(--shadow-sm); }
+.dayhead { display: flex; justify-content: space-between; font: 600 13px/18px var(--font-family); color: var(--color-text-sub); margin: 0 4px 12px; }
 .dayhead b { color: var(--color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0; }
-.row + .row { border-top: 1px solid var(--color-border); margin-left: 52px; padding-left: 0; }
-.row + .row .ic { margin-left: -52px; }
-.ic { width: 40px; height: 40px; border-radius: 999px; background: var(--color-surface-sunken); color: var(--color-text-sub); display: flex; align-items: center; justify-content: center; flex: none; }
-.ic.inc { background: var(--color-income-soft); color: var(--color-income); }
-.ic.sav { background: var(--color-saving-soft); color: var(--color-saving); }
+.ic { width: 40px; height: 40px; border-radius: 999px; background: var(--color-surface-sunken); color: var(--color-text); display: flex; align-items: center; justify-content: center; flex: none; }
 .rmain { flex: 1; min-width: 0; }
 .rtitle { font: 600 15px/22px var(--font-family); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rsub { font: 400 13px/18px var(--font-family); color: var(--color-text-sub); margin: 2px 0 0; display: flex; gap: 4px; align-items: center; white-space: nowrap; overflow: hidden; }
 .badge { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 6px; border-radius: 8px; font: 600 12px var(--font-family); }
-.badge.fixed { background: var(--color-notice-bg); color: var(--color-notice-text); }
-.badge.sav { background: var(--color-saving-soft); color: var(--color-saving); }
+.badge { background: var(--color-surface-sunken); color: var(--color-text-sub); }
 .badge svg.lucide { width: 12px; height: 12px; }
 
 /* 탭바 */
@@ -133,7 +131,7 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
 .sep { height: 1px; background: var(--color-border); margin: 8px 0; }
 
 /* 확인 창 · 토스트 */
-.dialog { background: var(--color-surface); border-radius: 16px; padding: 24px 20px 16px; box-shadow: var(--shadow-lg); margin: 0 20px; border: 1px solid var(--color-border); }
+.dialog { background: var(--color-surface); border-radius: 16px; padding: 24px 20px 16px; box-shadow: var(--shadow-lg); margin: 0 20px; border: var(--card-border); }
 .dialog h4 { margin: 0 0 8px; font: 600 18px var(--font-family); }
 .dialog p { margin: 0 0 20px; font: 400 15px/22px var(--font-family); color: var(--color-text-sub); }
 .toast { display: inline-flex; align-items: center; gap: 8px; background: var(--color-inverse-surface); color: var(--color-on-inverse); padding: 12px 20px; border-radius: 999px; font: 500 15px var(--font-family); box-shadow: var(--shadow-md); }
@@ -146,7 +144,7 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
 .empty h4 { margin: 0 0 4px; font: 600 16px var(--font-family); }
 .empty p { margin: 0 0 16px; font: 400 15px/22px var(--font-family); color: var(--color-text-sub); }
 .sk { background: var(--color-surface-sunken); border-radius: 8px; height: 14px; }
-.notice { background: var(--color-notice-bg); color: var(--color-notice-text); border-radius: 12px; padding: 12px; font: 500 14px/20px var(--font-family); display: flex; gap: 8px; }
+.notice { background: var(--color-surface-sunken); color: var(--color-text-sub); border-radius: 12px; padding: 12px; font: 500 14px/20px var(--font-family); display: flex; gap: 8px; }
 .bar { height: 6px; border-radius: 3px; background: var(--color-chart-track); overflow: hidden; margin-top: 6px; }
 .bar span { display: block; height: 100%; background: var(--color-chart-bar); }
 .brow { display: grid; grid-template-columns: 1fr auto 3em; gap: 8px; align-items: baseline; font: 400 15px var(--font-family); margin-bottom: 12px; }
@@ -154,6 +152,16 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
 
 .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .sw div { height: 44px; border-radius: 10px; border: 1px solid var(--color-border); display: flex; align-items: flex-end; padding: 4px; font: 600 9px var(--font-family); }
+/* 달력 */
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; row-gap: 6px; }
+.cal .wd { font: 500 13px/18px var(--font-family); color: var(--color-text-sub); }
+.cal .d { font: 500 13px/24px var(--font-family); color: var(--color-text); display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 52px; border-radius: 8px; padding-top: 4px; font-variant-numeric: tabular-nums; }
+.cal .d i { font: 600 11px/14px var(--font-family); font-style: normal; white-space: nowrap; }
+.cal .d i.inc { color: var(--color-income); }
+.cal .today b { width: 24px; height: 24px; border-radius: 999px; background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; }
+.cal .sel { background: var(--color-primary-soft); }
+.cal b { display: inline-flex; align-items: center; justify-content: center; font-weight: 500; }
+.section-title { font: 700 17px/24px var(--font-family); margin: 0 0 12px; }
 </style>
 </head>
 <body>
@@ -172,17 +180,17 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
     <div style="background:var(--color-primary);color:var(--color-on-primary)">primary</div>
     <div style="background:var(--color-primary-soft);color:var(--color-primary-strong)">soft</div>
     <div style="background:var(--color-text);color:var(--color-bg)">text</div>
+    <div style="background:var(--color-surface);color:var(--color-text-sub)">surface</div>
     <div style="background:var(--color-income);color:var(--color-surface)">수입</div>
     <div style="background:var(--color-saving);color:var(--color-surface)">저축</div>
     <div style="background:var(--color-negative);color:var(--color-surface)">음수</div>
-    <div style="background:var(--color-success);color:var(--color-surface)">성공</div>
-    <div style="background:var(--color-notice-bg);color:var(--color-notice-text)">안내</div>
+    <div style="background:var(--color-text-sub);color:var(--color-surface)">sub</div>
   </div>
 
   <p class="cap">금액 표시 · 요약 카드</p>
   <div class="pad">
     <div class="card">
-      <p class="label">11월 남은 돈</p>
+      <p class="label-lg">11월 남은 돈</p>
       <span class="money hero neg"><span aria-hidden="true">−</span><span class="sr">마이너스 </span>52,000<span class="money__unit">원</span></span>
       <div class="three">
         <div><span class="label">수입</span><span class="money md inc">4,200,000원</span></div>
@@ -194,19 +202,27 @@ svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
   </div>
 
   <p class="cap">나눠 보기 막대</p>
-  <div class="pad">
+  <div class="pad"><div class="card" style="padding:20px 20px 8px">
     <div class="brow"><span>민지<div class="bar"><span style="width:62%"></span></div></span><span class="money md">2,326,000원</span><span class="pct">62%</span></div>
     <div class="brow"><span>준호<div class="bar"><span style="width:38%"></span></div></span><span class="money md">1,426,000원</span><span class="pct">38%</span></div>
-  </div>
+  </div></div>
+
+  <p class="cap">달력 (토·일 무채색, 오늘만 포인트 색)</p>
+  <div class="pad"><div class="card" style="padding:16px 12px">
+    <div class="cal">
+      <span class="wd">일</span><span class="wd">월</span><span class="wd">화</span><span class="wd">수</span><span class="wd">목</span><span class="wd">금</span><span class="wd">토</span>
+      <span class="d"><b>2</b></span><span class="d"><b>3</b><i>−1.2만</i></span><span class="d"><b>4</b></span><span class="d sel"><b>5</b><i>−4.6만</i></span><span class="d today"><b>6</b><i>−5.8만</i></span><span class="d"><b>7</b></span><span class="d"><b>8</b><i class="inc">+300만</i></span>
+    </div>
+  </div></div>
 
   <p class="cap">내역 목록</p>
   <div class="pad">
     <p class="dayhead">11월 6일 (목) <b>−58,500원</b></p>
     <div class="list">
       <div class="row"><span class="ic"><i data-lucide="utensils-crossed"></i></span><div class="rmain"><p class="rtitle">저녁 장보기</p><p class="rsub">식비 · 공동소비 · 민지</p></div><span class="money md">−46,500원</span></div>
-      <div class="row"><span class="ic"><i data-lucide="smartphone"></i></span><div class="rmain"><p class="rtitle">휴대폰 요금</p><p class="rsub">통신 · 준호 <span class="badge fixed"><i data-lucide="repeat"></i>고정</span></p></div><span class="money md">−12,000원</span></div>
-      <div class="row"><span class="ic inc"><i data-lucide="banknote"></i></span><div class="rmain"><p class="rtitle">11월 급여</p><p class="rsub">급여 · 민지</p></div><span class="money md inc">+3,000,000원</span></div>
-      <div class="row"><span class="ic sav"><i data-lucide="piggy-bank"></i></span><div class="rmain"><p class="rtitle">청약 납입</p><p class="rsub">청약 · 준호 <span class="badge sav">저축</span></p></div><span class="money md sav">100,000원</span></div>
+      <div class="row"><span class="ic"><i data-lucide="smartphone"></i></span><div class="rmain"><p class="rtitle">휴대폰 요금</p><p class="rsub">통신 · 준호 <span class="badge"><i data-lucide="repeat"></i>고정</span></p></div><span class="money md">−12,000원</span></div>
+      <div class="row"><span class="ic"><i data-lucide="banknote"></i></span><div class="rmain"><p class="rtitle">11월 급여</p><p class="rsub">급여 · 민지</p></div><span class="money md inc">+3,000,000원</span></div>
+      <div class="row"><span class="ic"><i data-lucide="piggy-bank"></i></span><div class="rmain"><p class="rtitle">청약 납입</p><p class="rsub">청약 · 준호 <span class="badge"><i data-lucide="piggy-bank"></i>저축</span></p></div><span class="money md sav">100,000원</span></div>
     </div>
   </div>
 
