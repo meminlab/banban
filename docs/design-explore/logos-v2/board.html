@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>반반 로고 시안 보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+* { box-sizing: border-box; }
+body { margin:0; padding: 28px; background:#E6E7EA; font-family:'Pretendard Variable',sans-serif; color:#1D1F23; word-break: keep-all; }
+h1 { font-size: 22px; margin: 0 0 4px; } .sub { margin: 0 0 18px; color:#4A4F57; font-size: 14px; }
+.grid { display:grid; grid-template-columns: 180px 150px 150px 250px 190px 130px; gap: 10px; align-items: stretch; }
+.h { font-size: 12px; font-weight: 700; color:#5B6068; padding: 0 4px; }
+.cell { border-radius: 14px; display:flex; align-items:center; justify-content:center; height: 150px; }
+.w { background:#fff; } .d { background:#131416; }
+.name { display:flex; flex-direction:column; justify-content:center; padding: 0 8px; background: transparent; align-items:flex-start; }
+.name b { font-size: 18px; } .name span { font-size: 13px; color:#4A4F57; margin-top: 6px; line-height: 19px; }
+.lock { display:flex; align-items:center; gap: 10px; font-weight: 800; font-size: 34px; letter-spacing: -0.04em; }
+.icons { gap: 14px; }
+.fav { flex-direction: column; gap: 10px; }
+.fav div { display:flex; gap: 10px; align-items:center; padding: 6px 10px; border-radius: 6px; }
+</style></head><body>
+<h1>반반 로고 2차 시안 6종 (가계부 느낌)</h1>
+<p class="sub">1차 후보 1·3·5를 장부·영수증·원화·계산 모티프로 각 2가지 변형 · 워드마크는 Pretendard 800 소문자(OFL) · SVG 원본은 같은 폴더</p>
+<div class="grid" id="g">
+<div class="h">시안</div><div class="h">밝은 바탕</div><div class="h">어두운 바탕</div><div class="h">심볼 + 워드마크</div><div class="h">앱 아이콘 96 · 48</div><div class="h">파비콘 32 · 16</div>
+</div>
+<script>
+const L = [
+ ['1a-coin-ledger','1a. 장부 동전','반쪽은 동전, 반쪽은 줄 친 장부. "돈 + 기록"','#1E6B4F'],
+ ['1b-coin-equal','1b. 같은 몫 동전','두 줄이 동전을 가로질러 = (똑같이 반반)이자 ₩의 두 획','#22346B'],
+ ['3a-pocket-receipt','3a. 영수증 주머니','반반 주머니에 영수증이 꽂힌 순간. 쓰고 기록한다','#C44536'],
+ ['3b-pocket-ledger','3b. 장부 주머니','주머니 반쪽이 줄 노트. 동전이 장부로 들어감','#2F5D50'],
+ ['5a-receipt-face','5a. 영수증 친구','웃는 영수증. 두 눈 = 두 사람, 가장 친근함','#A23B72'],
+ ['5b-plus-bowl','5b. 하나 더하기 하나','두 사람 + 더하기 = 한 그릇. 계산하는 가계부','#4B3F8F'],
+];
+const g = document.getElementById('g');
+for (const [k,n,desc,ink] of L) {
+  g.insertAdjacentHTML('beforeend', `
+  <div class="cell name"><b>${n}</b><span>${desc}</span></div>
+  <div class="cell w"><img src="logo-${k}.svg" width="96" height="96"></div>
+  <div class="cell d"><img src="logo-${k}-dark.svg" width="96" height="96"></div>
+  <div class="cell w"><span class="lock" style="color:${ink}"><img src="logo-${k}.svg" width="52" height="52">banban</span></div>
+  <div class="cell w icons"><img src="logo-${k}-appicon.svg" width="96" height="96"><img src="logo-${k}-appicon.svg" width="48" height="48"></div>
+  <div class="cell w fav"><div style="background:#F0F1F4"><img src="logo-${k}.svg" width="32" height="32"><img src="logo-${k}.svg" width="16" height="16"></div><div style="background:#2A2C30"><img src="logo-${k}-dark.svg" width="32" height="32"><img src="logo-${k}-dark.svg" width="16" height="16"></div></div>`);
+}
+</script>
+</body></html>
