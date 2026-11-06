@@ -9,6 +9,7 @@
 --           multi_ledger = true (20261106150000 마이그레이션: 1인 1가계부 제거, 1인 상한 5, 마지막으로 본 가계부, leave_ledger(uuid))
 --           asset_net_worth = true (20261106160000 마이그레이션: 자산 종류 12개, 보관, 잔액 이력 트리거, 이력 직접 쓰기·자산 삭제 불가)
 --           category_icon = true (20261106170000 마이그레이션: category.icon 컬럼·기본 매핑 함수, 새 가계부 기본값에 아이콘)
+--           history_window = true (20261106180000 마이그레이션: 잔액 이력 범위 조회 함수, 로그인 사용자만 실행·권한 규칙 그대로)
 --           (asset_balance_history 행이 추가되어 10행. 이력 테이블 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
@@ -56,7 +57,12 @@ select c.relname                                          as table_name,
         and to_regprocedure('public.default_category_icon(text,text,text)') is not null
         and (select prosrc like '%default_category_icon%' from pg_proc
               where oid = 'public.seed_ledger_defaults(uuid)'::regprocedure)
-        and not has_function_privilege('authenticated', 'public.default_category_icon(text,text,text)', 'execute')) as category_icon
+        and not has_function_privilege('authenticated', 'public.default_category_icon(text,text,text)', 'execute')) as category_icon,
+       (to_regprocedure('public.asset_balance_history_window(uuid,timestamptz)') is not null
+        and has_function_privilege('authenticated', 'public.asset_balance_history_window(uuid,timestamptz)', 'execute')
+        and not has_function_privilege('anon', 'public.asset_balance_history_window(uuid,timestamptz)', 'execute')
+        and not (select prosecdef from pg_proc
+                  where oid = 'public.asset_balance_history_window(uuid,timestamptz)'::regprocedure)) as history_window
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
