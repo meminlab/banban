@@ -46,6 +46,7 @@ function JoinConfirm({ code }: { code: string }) {
     setBusy(true);
     setError(null);
     try {
+      // 참여하면(이미 멤버면 그대로) 서버가 이 가계부를 마지막으로 본 가계부로 기록 → 홈이 이 가계부로 열린다
       await joinLedger(code, memberDisplayName(profile.name));
       navigate('/', { replace: true });
     } catch (err) {
@@ -88,7 +89,7 @@ function JoinConfirm({ code }: { code: string }) {
               className="button button--secondary button--block"
               onClick={() => navigate('/', { replace: true })}
             >
-              {error?.code === 'ALREADY_IN_LEDGER' ? '내 가계부로 가기' : '처음 화면으로'}
+              {error?.code === 'LEDGER_LIMIT_REACHED' ? '내 가계부로 가기' : '처음 화면으로'}
             </button>
           )}
         </section>

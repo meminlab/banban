@@ -93,10 +93,20 @@ export interface Asset {
   updated_at: string;
 }
 
-/** create_ledger / join_ledger / leave_ledger RPC가 던지는 오류 코드 (MEMBER_LIMIT_REACHED 는 details 에 상한 값) */
+/** 마지막으로 본 가계부 (본인만 읽음, 쓰기는 set_last_ledger RPC) */
+export interface UserPreference {
+  user_id: string;
+  last_ledger_id: string | null;
+  updated_at: string;
+}
+
+/**
+ * create_ledger / join_ledger / leave_ledger / set_last_ledger RPC가 던지는 오류 코드
+ * MEMBER_LIMIT_REACHED(가계부 인원 상한)·LEDGER_LIMIT_REACHED(1인 가계부 상한)는 details 에 상한 값
+ */
 export type LedgerRpcError =
   | 'NOT_AUTHENTICATED'
-  | 'ALREADY_IN_LEDGER'
+  | 'LEDGER_LIMIT_REACHED'
   | 'INVITE_NOT_FOUND'
   | 'INVITE_EXPIRED'
   | 'MEMBER_LIMIT_REACHED'

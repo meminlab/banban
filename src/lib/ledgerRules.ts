@@ -6,6 +6,11 @@ import type { LedgerRpcError } from '../data/types';
  */
 
 export const LEDGER_NAME_MAX = 20;
+/**
+ * 1인당 참여할 수 있는 가계부 수. 실제 상한은 DB(public.user_ledger_limit())가 정하고 오류 detail 로 알려 준다.
+ * 이 값은 detail 이 없을 때 안내 문구에만 쓴다.
+ */
+export const USER_LEDGER_LIMIT_FALLBACK = 5;
 export const INVITE_CODE_LENGTH = 8;
 /** 초대 링크 주소: /join/<코드> */
 export const JOIN_PATH_PREFIX = '/join/';
@@ -76,7 +81,7 @@ export type LedgerErrorCode = LedgerRpcError | 'UNKNOWN';
 
 const KNOWN: readonly LedgerRpcError[] = [
   'NOT_AUTHENTICATED',
-  'ALREADY_IN_LEDGER',
+  'LEDGER_LIMIT_REACHED',
   'INVITE_NOT_FOUND',
   'INVITE_EXPIRED',
   'MEMBER_LIMIT_REACHED',
@@ -88,7 +93,8 @@ export function parseLedgerError(error: unknown): { code: LedgerErrorCode; limit
   const e = (error ?? {}) as { message?: unknown; details?: unknown };
   const message = typeof e.message === 'string' ? e.message : '';
   const code: LedgerErrorCode = KNOWN.find((k) => message.includes(k)) ?? 'UNKNOWN';
-  const limit = code === 'MEMBER_LIMIT_REACHED' && typeof e.details === 'string' && /^\d+$/.test(e.details)
+  const hasLimit = code === 'MEMBER_LIMIT_REACHED' || code === 'LEDGER_LIMIT_REACHED';
+  const limit = hasLimit && typeof e.details === 'string' && /^\d+$/.test(e.details)
     ? Number(e.details)
     : null;
   return { code, limit };
@@ -103,8 +109,8 @@ export function joinErrorMessage(code: LedgerErrorCode, limit: number | null): s
       return '초대 코드가 만료됐어요. 초대한 사람에게 새 코드를 받아 주세요.';
     case 'INVITE_NOT_FOUND':
       return '쓸 수 없는 초대 코드예요. 코드를 다시 확인하거나 새 코드를 받아 주세요.';
-    case 'ALREADY_IN_LEDGER':
-      return '이미 다른 가계부에 참여하고 있어요. 가계부는 한 개만 쓸 수 있어요.';
+    case 'LEDGER_LIMIT_REACHED':
+      return ledgerLimitMessage(limit);
     case 'NOT_AUTHENTICATED':
       return '로그인이 풀렸어요. 다시 로그인해 주세요.';
     default:
@@ -112,9 +118,14 @@ export function joinErrorMessage(code: LedgerErrorCode, limit: number | null): s
   }
 }
 
+/** 1인 가계부 상한 안내 (만들기·참여 공통) */
+export function ledgerLimitMessage(limit: number | null): string {
+  return `가계부는 최대 ${limit ?? USER_LEDGER_LIMIT_FALLBACK}개까지 참여할 수 있어요.`;
+}
+
 /** 가계부 만들기 실패 안내 문구 */
-export function createErrorMessage(code: LedgerErrorCode): string {
-  if (code === 'ALREADY_IN_LEDGER') return joinErrorMessage(code, null);
+export function createErrorMessage(code: LedgerErrorCode, limit: number | null = null): string {
+  if (code === 'LEDGER_LIMIT_REACHED') return ledgerLimitMessage(limit);
   if (code === 'NOT_AUTHENTICATED') return joinErrorMessage(code, null);
   return '가계부를 만들지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.';
 }

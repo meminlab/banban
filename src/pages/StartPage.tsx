@@ -1,20 +1,9 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useMyProfile } from '../app/useProfile';
 import { useSignOut } from '../app/useSignOut';
 import { Avatar } from '../components/Avatar';
-import { createLedger, joinLedger } from '../data/ledger';
-import {
-  INVITE_CODE_LENGTH,
-  LEDGER_NAME_MAX,
-  createErrorMessage,
-  isInviteCodeFormat,
-  joinErrorMessage,
-  memberDisplayName,
-  normalizeInviteCode,
-  parseLedgerError,
-  validateLedgerName,
-} from '../lib/ledgerRules';
+import { CreateLedgerForm, JoinCodeForm } from '../components/LedgerForms';
+import { memberDisplayName } from '../lib/ledgerRules';
 
 type Mode = 'menu' | 'create' | 'join';
 
@@ -50,7 +39,7 @@ export function StartPage() {
             </button>
           </div>
         )}
-        {mode === 'create' && <CreateForm displayName={memberDisplayName(profile.name)} onCancel={() => setMode('menu')} />}
+        {mode === 'create' && <CreateLedgerForm displayName={memberDisplayName(profile.name)} onCancel={() => setMode('menu')} />}
         {mode === 'join' && <JoinCodeForm displayName={memberDisplayName(profile.name)} onCancel={() => setMode('menu')} />}
 
         {logout.error && (
@@ -63,130 +52,5 @@ export function StartPage() {
         </button>
       </main>
     </div>
-  );
-}
-
-function CreateForm({ displayName, onCancel }: { displayName: string; onCancel: () => void }) {
-  const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const invalid = validateLedgerName(name);
-    if (invalid) {
-      setError(invalid);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      await createLedger(name, displayName);
-      navigate('/', { replace: true });
-    } catch (err) {
-      setError(createErrorMessage(parseLedgerError(err).code));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form className="form-card" onSubmit={submit} noValidate>
-      <h2 className="form-card__title">가계부 만들기</h2>
-      <div className="field">
-        <label htmlFor="create-name" className="field__label">
-          가계부 이름
-        </label>
-        <input
-          id="create-name"
-          className="field__input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="예: 우리집 가계부"
-          autoFocus
-          aria-invalid={error ? true : undefined}
-          aria-describedby="create-help"
-        />
-        <span id="create-help" className="hint">
-          {LEDGER_NAME_MAX}자까지. 나중에 설정에서 바꿀 수 있어요.
-        </span>
-      </div>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="form-card__actions">
-        <button type="button" className="button button--secondary" onClick={onCancel} disabled={busy}>
-          취소
-        </button>
-        <button type="submit" className="button button--primary" disabled={busy}>
-          {busy ? '만드는 중…' : '만들기'}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function JoinCodeForm({ displayName, onCancel }: { displayName: string; onCancel: () => void }) {
-  const navigate = useNavigate();
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    const normalized = normalizeInviteCode(code);
-    if (!isInviteCodeFormat(normalized)) {
-      setError(`초대 코드 ${INVITE_CODE_LENGTH}자리를 입력해 주세요.`);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      await joinLedger(normalized, displayName);
-      navigate('/', { replace: true });
-    } catch (err) {
-      const { code: errCode, limit } = parseLedgerError(err);
-      setError(joinErrorMessage(errCode, limit));
-      setBusy(false);
-    }
-  }
-
-  return (
-    <form className="form-card" onSubmit={submit} noValidate>
-      <h2 className="form-card__title">초대코드 입력</h2>
-      <div className="field">
-        <label htmlFor="join-code" className="field__label">
-          초대 코드 8자리
-        </label>
-        <input
-          id="join-code"
-          className="field__input field__input--code"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          maxLength={12}
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="ABCD2345"
-          autoFocus
-          aria-invalid={error ? true : undefined}
-        />
-      </div>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="form-card__actions">
-        <button type="button" className="button button--secondary" onClick={onCancel} disabled={busy}>
-          취소
-        </button>
-        <button type="submit" className="button button--primary" disabled={busy}>
-          {busy ? '참여하는 중…' : '참여하기'}
-        </button>
-      </div>
-    </form>
   );
 }

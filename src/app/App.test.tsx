@@ -10,7 +10,10 @@ import { AuthProvider } from './auth';
 const fake = vi.hoisted(() => ({
   listener: null as ((u: unknown) => void) | null,
   initialUser: null as unknown,
-  ledgerId: null as string | null,
+  /** 내가 참여 중인 가계부 (서버 상태 흉내) */
+  ledgers: [] as Array<{ id: string; name: string; memberCount: number; joinedAt: string }>,
+  /** 서버에 저장된 마지막으로 본 가계부 */
+  lastId: null as string | null,
   ledgerError: false,
   signIn: vi.fn(async () => {}),
   signOut: vi.fn(async () => {}),
@@ -20,7 +23,9 @@ const fake = vi.hoisted(() => ({
   invite: null as Record<string, unknown> | null,
   createLedger: vi.fn(async (_name: string, _displayName: string) => 'ledger-new'),
   joinLedger: vi.fn(async (_code: string, _displayName: string) => 'ledger-joined'),
-  leaveLedger: vi.fn(async () => {}),
+  leaveLedger: vi.fn(async (_id: string) => {}),
+  rememberLedger: vi.fn(async (_id: string) => {}),
+  summaryFor: vi.fn((_id: string) => {}),
   renameLedger: vi.fn(async (_id: string, _name: string) => {}),
   issueInvite: vi.fn(async () => ({}) as Record<string, unknown>),
 }));
@@ -38,25 +43,44 @@ vi.mock('../data/auth', () => ({
   signOut: () => fake.signOut(),
 }));
 vi.mock('../data/ledger', () => ({
-  getMyLedgerId: async () => {
+  listMyLedgers: async () => {
     if (fake.ledgerError) throw new Error('network');
-    return fake.ledgerId;
+    return structuredClone(fake.ledgers);
   },
-  getLedger: async (id: string) => ({ id, name: fake.ledgerName, member_limit: fake.memberLimit, created_by: 'u1', created_at: '' }),
+  getLastLedgerId: async () => {
+    if (fake.ledgerError) throw new Error('network');
+    return fake.lastId;
+  },
+  rememberLedger: async (id: string) => {
+    await fake.rememberLedger(id);
+    fake.lastId = id;
+  },
+  getLedger: async (id: string) => ({
+    id,
+    name: fake.ledgers.find((l) => l.id === id)?.name ?? fake.ledgerName,
+    member_limit: fake.memberLimit,
+    created_by: 'u1',
+    created_at: '',
+  }),
   renameLedger: (id: string, name: string) => fake.renameLedger(id, name),
+  // 서버처럼: 만들거나 참여한 가계부를 목록에 넣고 마지막으로 본 가계부로 기록
   createLedger: async (name: string, displayName: string) => {
     const id = await fake.createLedger(name, displayName);
-    fake.ledgerId = id;
+    fake.ledgers.push({ id, name: name.trim(), memberCount: 1, joinedAt: new Date().toISOString() });
+    fake.lastId = id;
     return id;
   },
   joinLedger: async (code: string, displayName: string) => {
     const id = await fake.joinLedger(code, displayName);
-    fake.ledgerId = id;
+    if (!fake.ledgers.some((l) => l.id === id))
+      fake.ledgers.push({ id, name: '참여한 가계부', memberCount: 2, joinedAt: new Date().toISOString() });
+    fake.lastId = id;
     return id;
   },
-  leaveLedger: async () => {
-    await fake.leaveLedger();
-    fake.ledgerId = null;
+  leaveLedger: async (id: string) => {
+    await fake.leaveLedger(id);
+    fake.ledgers = fake.ledgers.filter((l) => l.id !== id);
+    if (fake.lastId === id) fake.lastId = null;
   },
   listMembers: async () => fake.members,
   getCurrentInvite: async () => fake.invite,
@@ -67,7 +91,10 @@ vi.mock('../data/ledger', () => ({
   },
 }));
 vi.mock('../data/summary', () => ({
-  getMonthSummaryData: async () => ({ transactions: [], members: [], pockets: [], categories: [] }),
+  getMonthSummaryData: async (id: string) => {
+    fake.summaryFor(id);
+    return { transactions: [], members: [], pockets: [], categories: [] };
+  },
 }));
 vi.mock('../data/profile', () => ({
   getProfile: async (id: string) => ({ id, display_name: '김반반', avatar_url: null, updated_at: '' }),
@@ -92,6 +119,7 @@ const member = (id: string, user_id: string, display_name: string, extra: Record
 const invite = (code: string, extra: Record<string, unknown> = {}) => ({
   id: `inv-${code}`, ledger_id: 'ledger-1', code, expires_at: FUTURE, is_revoked: false, created_by: 'm1', created_at: '', ...extra,
 });
+const ledgerRow = (id: string, name: string, memberCount = 1, joinedAt = '2026-11-01T00:00:00Z') => ({ id, name, memberCount, joinedAt });
 /** RPC 오류 흉내 (supabase PostgrestError 형태) */
 const rpcError = (message: string, details: string | null = null) => Object.assign(new Error(message), { details });
 
@@ -105,10 +133,13 @@ beforeEach(() => {
   fake.joinLedger.mockReset();
   fake.joinLedger.mockImplementation(async () => 'ledger-joined');
   fake.leaveLedger.mockReset();
+  fake.rememberLedger.mockReset();
+  fake.summaryFor.mockReset();
   fake.renameLedger.mockReset();
   fake.issueInvite.mockReset();
   fake.initialUser = USER;
-  fake.ledgerId = 'ledger-1';
+  fake.ledgers = [ledgerRow('ledger-1', '우리집')];
+  fake.lastId = 'ledger-1';
   fake.ledgerError = false;
   fake.signIn.mockClear();
   fake.signOut.mockReset();
@@ -220,7 +251,8 @@ describe('로그인했고 가계부가 있는 상태', () => {
 
 describe('로그인했고 가계부가 없는 상태', () => {
   beforeEach(() => {
-    fake.ledgerId = null;
+    fake.ledgers = [];
+    fake.lastId = null;
   });
 
   it.each(['/', '/ledger', '/assets', '/settings', '/settings/members'])('%s 로 들어오면 가계부 시작 화면으로 간다', async (path) => {
@@ -288,7 +320,7 @@ describe('로그인했고 가계부가 없는 상태', () => {
     ['MEMBER_LIMIT_REACHED', '3', '현재 최대 3명까지 참여할 수 있어요'],
     ['INVITE_EXPIRED', null, '초대 코드가 만료됐어요'],
     ['INVITE_NOT_FOUND', null, '쓸 수 없는 초대 코드예요'],
-    ['ALREADY_IN_LEDGER', null, '이미 다른 가계부에 참여하고 있어요'],
+    ['LEDGER_LIMIT_REACHED', '5', '가계부는 최대 5개까지 참여할 수 있어요'],
   ])('참여가 막히면(%s) 안내하고 시작 화면에 남는다', async (code, details, text) => {
     fake.joinLedger.mockRejectedValueOnce(rpcError(code, details));
     const user = userEvent.setup();
@@ -342,7 +374,8 @@ describe('로그인 상태 변화', () => {
 
 describe('초대 링크 (/join/코드)', () => {
   beforeEach(() => {
-    fake.ledgerId = null;
+    fake.ledgers = [];
+    fake.lastId = null;
   });
 
   it('로그인 전이면 로그인 화면으로 가고, 로그인 후 참여 화면으로 이어진다', async () => {
@@ -371,15 +404,39 @@ describe('초대 링크 (/join/코드)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '가계부 시작하기' })).toBeInTheDocument();
   });
 
-  it('이미 다른 가계부에 참여한 사람은 안내 후 내 가계부로 갈 수 있다', async () => {
-    fake.ledgerId = 'ledger-mine';
-    fake.joinLedger.mockRejectedValueOnce(rpcError('ALREADY_IN_LEDGER'));
+  it('가계부가 이미 5개면 안내 후 내 가계부로 갈 수 있다', async () => {
+    fake.ledgers = [ledgerRow('ledger-mine', '내 가계부')];
+    fake.lastId = 'ledger-mine';
+    fake.joinLedger.mockRejectedValueOnce(rpcError('LEDGER_LIMIT_REACHED', '5'));
     const user = userEvent.setup();
     renderAt('/join/ABCD2345');
     await user.click(await screen.findByRole('button', { name: '참여하기' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('이미 다른 가계부에 참여하고 있어요');
+    expect(await screen.findByRole('alert')).toHaveTextContent('가계부는 최대 5개까지 참여할 수 있어요.');
     await user.click(screen.getByRole('button', { name: '내 가계부로 가기' }));
     expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /지금 보는 가계부: 내 가계부/ })).toBeInTheDocument();
+  });
+
+  it('다른 가계부가 있어도 참여하고, 참여한 가계부로 열린다', async () => {
+    fake.ledgers = [ledgerRow('ledger-mine', '내 가계부')];
+    fake.lastId = 'ledger-mine';
+    fake.joinLedger.mockImplementationOnce(async () => 'ledger-parents');
+    const user = userEvent.setup();
+    renderAt('/join/ABCD2345');
+    await user.click(await screen.findByRole('button', { name: '참여하기' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 참여한 가계부/ })).toBeInTheDocument();
+    expect(fake.ledgers.map((l) => l.id)).toEqual(['ledger-mine', 'ledger-parents']);
+  });
+
+  it('이미 멤버인 가계부의 링크면 중복 없이 그 가계부로 전환만 된다', async () => {
+    fake.ledgers = [ledgerRow('ledger-a', '부부 공동'), ledgerRow('ledger-b', '부모님')];
+    fake.lastId = 'ledger-a';
+    fake.joinLedger.mockImplementationOnce(async () => 'ledger-b');
+    const user = userEvent.setup();
+    renderAt('/join/ABCD2345');
+    await user.click(await screen.findByRole('button', { name: '참여하기' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 부모님/ })).toBeInTheDocument();
+    expect(fake.ledgers).toHaveLength(2);
   });
 
   it('네트워크 오류면 다시 시도할 수 있다', async () => {
@@ -535,7 +592,7 @@ describe('설정 > 멤버·초대', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('초대 코드를 만들지 못했어요');
   });
 
-  it('나가기는 확인 후 진행하고 시작 화면으로 간다 (마지막 멤버면 보관 안내)', async () => {
+  it('나가기는 확인 후 진행하고, 남은 가계부가 없으면 시작 화면으로 간다 (마지막 멤버면 보관 안내)', async () => {
     const user = userEvent.setup();
     renderAt('/settings/members');
     await user.click(await screen.findByRole('button', { name: '가계부 나가기' }));
@@ -543,6 +600,24 @@ describe('설정 > 멤버·초대', () => {
     await user.click(within(screen.getByRole('group', { name: '나가기 확인' })).getByRole('button', { name: '나가기' }));
     expect(await screen.findByRole('heading', { level: 1, name: '가계부 시작하기' })).toBeInTheDocument();
     expect(fake.leaveLedger).toHaveBeenCalledTimes(1);
+    expect(fake.leaveLedger).toHaveBeenCalledWith('ledger-1');
+  });
+
+  it('지금 보는 가계부에서 나가면 남은 가계부 중 가장 최근에 참여한 곳으로 전환된다', async () => {
+    fake.ledgers = [
+      ledgerRow('ledger-old', '오래된 곳', 2, '2026-10-01T00:00:00Z'),
+      ledgerRow('ledger-1', '우리집', 1, '2026-11-01T00:00:00Z'),
+      ledgerRow('ledger-new', '최근 참여', 3, '2026-11-05T00:00:00Z'),
+    ];
+    fake.lastId = 'ledger-1';
+    const user = userEvent.setup();
+    renderAt('/settings/members');
+    await user.click(await screen.findByRole('button', { name: '가계부 나가기' }));
+    await user.click(within(screen.getByRole('group', { name: '나가기 확인' })).getByRole('button', { name: '나가기' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 최근 참여/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(fake.leaveLedger).toHaveBeenCalledWith('ledger-1');
+    expect(fake.rememberLedger).toHaveBeenLastCalledWith('ledger-new');
   });
 
   it('나가기에 실패하면 안내하고 화면에 남는다', async () => {
@@ -555,5 +630,116 @@ describe('설정 > 멤버·초대', () => {
     await user.click(within(screen.getByRole('group', { name: '나가기 확인' })).getByRole('button', { name: '나가기' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('나가지 못했어요');
     expect(screen.getByRole('heading', { level: 1, name: '멤버·초대' })).toBeInTheDocument();
+  });
+});
+
+describe('여러 가계부 전환 (BANB-17)', () => {
+  beforeEach(() => {
+    fake.ledgers = [
+      ledgerRow('ledger-a', '부부 공동', 2, '2026-11-01T00:00:00Z'),
+      ledgerRow('ledger-b', '개인', 1, '2026-11-02T00:00:00Z'),
+      ledgerRow('ledger-c', '부모님', 3, '2026-11-03T00:00:00Z'),
+    ];
+    fake.lastId = 'ledger-a';
+  });
+
+  it('헤더 왼쪽에 지금 가계부 이름이 보이고, 누르면 목록(이름·멤버 수·현재 표시)과 만들기·참여가 올라온다', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    const switcher = await screen.findByRole('button', { name: '가계부 전환, 지금 보는 가계부: 부부 공동' });
+    expect(switcher).toHaveTextContent('부부 공동');
+    await user.click(switcher);
+    const sheet = screen.getByRole('dialog', { name: '가계부' });
+    const items = within(within(sheet).getByRole('list', { name: '내 가계부' })).getAllByRole('button');
+    expect(items.map((b) => b.textContent)).toEqual(['부부 공동멤버 2명지금 보는 중', '개인멤버 1명', '부모님멤버 3명']);
+    expect(items[0]).toHaveAttribute('aria-current', 'true');
+    expect(within(sheet).getByRole('button', { name: '새 가계부 만들기' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('button', { name: '초대코드로 참여' })).toBeInTheDocument();
+  });
+
+  it('다른 가계부를 고르면 화면이 그 가계부 기준으로 바뀌고 서버에 기록된다 (탭은 그대로)', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: /지금 보는 가계부: 부부 공동/ }));
+    expect(fake.summaryFor).toHaveBeenLastCalledWith('ledger-a');
+    await user.click(within(screen.getByRole('dialog', { name: '가계부' })).getByRole('button', { name: /부모님/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 부모님/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(fake.rememberLedger).toHaveBeenCalledWith('ledger-c');
+    await vi.waitFor(() => expect(fake.summaryFor).toHaveBeenLastCalledWith('ledger-c'));
+
+    // 설정도 바뀐 가계부 기준
+    await user.click(screen.getByRole('link', { name: '설정' }));
+    expect(await screen.findByText('부모님')).toBeInTheDocument();
+  });
+
+  it('지금 보는 가계부를 다시 고르면 그대로 닫힌다', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: /지금 보는 가계부: 부부 공동/ }));
+    await user.click(within(screen.getByRole('dialog', { name: '가계부' })).getByRole('button', { name: /부부 공동/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(fake.rememberLedger).not.toHaveBeenCalled();
+  });
+
+  it('앱을 열면 서버에 저장된 마지막으로 본 가계부가 열린다', async () => {
+    fake.lastId = 'ledger-b';
+    renderAt('/');
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 개인/ })).toBeInTheDocument();
+    expect(fake.rememberLedger).not.toHaveBeenCalled();
+  });
+
+  it('마지막으로 본 가계부의 멤버가 아니게 되었으면 가장 최근에 참여한 가계부가 열리고, 그 값으로 기록된다', async () => {
+    fake.lastId = 'ledger-gone';
+    renderAt('/');
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 부모님/ })).toBeInTheDocument();
+    expect(fake.rememberLedger).toHaveBeenCalledWith('ledger-c');
+  });
+
+  it('목록에서 새 가계부를 만들면 바로 그 가계부로 전환된다', async () => {
+    fake.createLedger.mockImplementationOnce(async () => 'ledger-new');
+    const user = userEvent.setup();
+    renderAt('/ledger');
+    await user.click(await screen.findByRole('button', { name: /지금 보는 가계부: 부부 공동/ }));
+    await user.click(within(screen.getByRole('dialog', { name: '가계부' })).getByRole('button', { name: '새 가계부 만들기' }));
+    expect(await screen.findByRole('heading', { level: 1, name: '새 가계부 만들기' })).toBeInTheDocument();
+    await user.type(screen.getByLabelText('가계부 이름'), '여행 모임');
+    await user.click(screen.getByRole('button', { name: '만들기' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 여행 모임/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(fake.createLedger).toHaveBeenCalledWith('여행 모임', '김반반');
+  });
+
+  it('6번째 가계부는 만들지 않고 안내한다', async () => {
+    fake.createLedger.mockRejectedValueOnce(rpcError('LEDGER_LIMIT_REACHED', '5'));
+    const user = userEvent.setup();
+    renderAt('/ledgers/new');
+    await user.type(await screen.findByLabelText('가계부 이름'), '여섯째');
+    await user.click(screen.getByRole('button', { name: '만들기' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('가계부는 최대 5개까지 참여할 수 있어요.');
+    expect(screen.getByRole('heading', { level: 1, name: '새 가계부 만들기' })).toBeInTheDocument();
+    expect(fake.ledgers).toHaveLength(3);
+  });
+
+  it('목록에서 초대코드로 참여하면 그 가계부로 전환된다', async () => {
+    fake.joinLedger.mockImplementationOnce(async () => 'ledger-joined');
+    const user = userEvent.setup();
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: /지금 보는 가계부: 부부 공동/ }));
+    await user.click(within(screen.getByRole('dialog', { name: '가계부' })).getByRole('button', { name: '초대코드로 참여' }));
+    await user.type(await screen.findByLabelText('초대 코드 8자리'), 'ABCD2345');
+    await user.click(screen.getByRole('button', { name: '참여하기' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 참여한 가계부/ })).toBeInTheDocument();
+  });
+
+  it('가계부 추가 화면에서 취소하면 돌아간다', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: /지금 보는 가계부: 부부 공동/ }));
+    await user.click(within(screen.getByRole('dialog', { name: '가계부' })).getByRole('button', { name: '새 가계부 만들기' }));
+    await user.click(await screen.findByRole('button', { name: '취소' }));
+    expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(fake.createLedger).not.toHaveBeenCalled();
   });
 });
