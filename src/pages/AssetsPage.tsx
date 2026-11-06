@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_ARCHIVED_PATH, assetPath, type AssetFlash } from '../app/routes';
 import { AssetKindIcon } from '../components/AssetKindIcon';
+import { Delta, signedWon } from '../components/NetWorthDelta';
 import { NetWorthTrend } from '../components/NetWorthTrend';
 import { listAssets, listBalanceHistory, restoreAsset } from '../data/asset';
 import { listMembers } from '../data/member';
@@ -37,11 +38,6 @@ type LoadState =
   | { status: 'ready'; assets: Asset[]; history: AssetBalanceHistory[]; members: Member[] };
 
 type Notice = { text: string; undo?: () => void } | null;
-
-/** 순자산 등 부호 있는 금액: 음수는 U+2212 "−" (design.md 2.3) */
-function signedWon(n: number): string {
-  return n < 0 ? `−${formatWon(-n)}` : formatWon(n);
-}
 
 const FLASH_TEXT: Record<Exclude<AssetFlash['kind'], 'archived'>, string> = {
   saved: '저장했어요',
@@ -326,34 +322,6 @@ function NetWorthCard({
         </div>
       </dl>
     </section>
-  );
-}
-
-/** 증감 ▲▼ (design.md 5.21): 늘면 delta-up, 줄면 delta-down(회색), 이력 없으면 "–" */
-function Delta({ value, label }: { value: number | null; label: string }) {
-  // 보이는 글자는 aria-hidden, 화면낭독은 sr-only 문장으로 (역할 없는 요소의 aria-label은 읽히지 않을 수 있음)
-  if (value === null)
-    return (
-      <p className="delta">
-        <span aria-hidden="true">{label} –</span>
-        <span className="sr-only">{label} 기록이 없어요</span>
-      </p>
-    );
-  if (value === 0) return <p className="delta">{label} 변동 없음</p>;
-  const up = value > 0;
-  const amount = `${formatWon(Math.abs(value))}원`;
-  return (
-    <p className={`delta ${up ? 'delta--up' : 'delta--down'}`}>
-      <span aria-hidden="true">
-        <span className="delta__label">{label}</span>{' '}
-        <span className="delta__value money">
-          <span className="delta__arrow">{up ? '▲' : '▼'}</span> {amount}
-        </span>
-      </span>
-      <span className="sr-only">
-        {label} {amount} {up ? '늘었어요' : '줄었어요'}
-      </span>
-    </p>
   );
 }
 

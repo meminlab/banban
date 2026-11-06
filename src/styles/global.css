@@ -904,3 +904,30 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
 .icon-grid__item:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 1px; }
 .icon-grid__item.is-selected { background: var(--color-primary); color: var(--color-on-primary); }
 .icon-grid__check { top: -4px; right: -4px; width: 16px; height: 16px; }
+
+
+/* ── 홈 "우리집 순자산" 카드 (BANB-27, design.md 5.19 작은 추이 · 5.22 홈 2번) */
+.home-nw { display: flex; flex-direction: column; gap: 6px; min-height: 44px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.home-nw--status { align-items: flex-start; gap: 8px; }
+.home-nw--status .hint { margin: 0; }
+.home-nw__head { display: flex; align-items: baseline; gap: 6px; }
+.home-nw__label { color: var(--color-text-sub); font-size: 0.9375rem; }
+.home-nw__sub { color: var(--color-text-weak); font-size: 0.8125rem; }
+.home-nw__chevron { margin-left: auto; align-self: center; color: var(--color-text-weak); flex: none; }
+.home-nw__row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 8px; }
+/* 금액이 칸보다 넓으면(글자 크기 200% 등) 작은 추이가 다음 줄로 내려가고, 그래도 넘치면 금액이 줄바꿈된다 — 자르지 않는다 (design.md 2.2·6) */
+.home-nw__main { flex: 1 1 auto; max-width: 100%; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.home-nw__value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+.home-nw .delta__value { white-space: normal; overflow-wrap: anywhere; }
+.home-nw__value--long { font-size: 1.375rem; }
+.home-nw__value--longer { font-size: 1.25rem; }
+.home-nw__value.is-negative { color: var(--color-negative); }
+.mini-trend { flex: none; margin-left: auto; overflow: visible; }
+.mini-trend polyline { stroke: var(--color-chart-line); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
+.mini-trend circle { fill: var(--color-chart-line); stroke: var(--color-surface); stroke-width: 2px; }
+.home-nw--empty { flex-direction: row; align-items: center; gap: 12px; }
+.home-nw__empty-icon { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--color-surface-sunken); }
+.home-nw__empty-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.home-nw__empty-title { font-weight: 700; }
+.home-nw__empty-desc { color: var(--color-text-sub); font-size: 0.8125rem; word-break: keep-all; }

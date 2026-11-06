@@ -1,14 +1,49 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { vi } from 'vitest';
 import type { MonthSummaryData } from '../data/summary';
-import { HomePage } from './HomePage';
+import type { Asset, AssetBalanceHistory, AssetKind } from '../data/types';
+import { HomePage as HomePageInner } from './HomePage';
 
 const fake = vi.hoisted(() => ({
   get: vi.fn<(ledgerId: string, month: string) => Promise<MonthSummaryData>>(),
 }));
 vi.mock('../data/summary', () => ({ getMonthSummaryData: (l: string, m: string) => fake.get(l, m) }));
 vi.mock('../app/guards', () => ({ useLedgerId: () => 'ledger-1' }));
+
+const assetDb = vi.hoisted(() => ({
+  assets: [] as Asset[],
+  history: [] as AssetBalanceHistory[],
+  fail: 0,
+  calls: 0,
+  pending: false,
+}));
+vi.mock('../data/asset', () => ({
+  listAssets: async () => {
+    assetDb.calls += 1;
+    if (assetDb.pending) return new Promise(() => {});
+    if (assetDb.fail > 0) {
+      assetDb.fail -= 1;
+      throw new Error('network');
+    }
+    return assetDb.assets;
+  },
+  listBalanceHistory: async () => assetDb.history,
+}));
+
+/** 홈은 링크(자산 탭·자산 추가)가 있어 라우터 안에서 그린다 */
+function HomePage() {
+  return (
+    <MemoryRouter initialEntries={['/']}>
+      <Routes>
+        <Route path="/" element={<HomePageInner />} />
+        <Route path="/assets" element={<p>자산 탭 화면</p>} />
+        <Route path="/assets/new" element={<p>자산 추가 화면</p>} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
 
 const REFS = {
   members: [
@@ -46,6 +81,11 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-11-06T03:00:00Z'));
   fake.get.mockReset();
+  assetDb.assets = [];
+  assetDb.history = [];
+  assetDb.fail = 0;
+  assetDb.calls = 0;
+  assetDb.pending = false;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -126,5 +166,164 @@ describe('홈: 월 요약', () => {
     fake.get.mockReturnValue(new Promise(() => {}));
     render(<HomePage />);
     expect(screen.getByRole('status')).toHaveTextContent('불러오고 있어요');
+  });
+});
+
+// ── 우리집 순자산 카드 (BANB-27, QA v4 HM). 기준 데이터 = QA v4 (오늘 2026-11-06 KST)
+const kst = (t: string) => new Date(`${t}+09:00`).toISOString();
+function seedV4() {
+  let hid = 0;
+  const assets: Asset[] = [];
+  const history: AssetBalanceHistory[] = [];
+  const mk = (id: string, kind: AssetKind, owner: string | null, hist: [string, number][], archived: string | null = null) => {
+    for (const [at, balance] of hist) history.push({ id: ++hid, asset_id: id, ledger_id: 'ledger-1', balance, changed_by: 'mA', changed_at: kst(at) });
+    assets.push({
+      id,
+      ledger_id: 'ledger-1',
+      name: id,
+      kind,
+      owner_id: owner,
+      balance: hist[hist.length - 1][1],
+      memo: null,
+      archived_at: archived ? kst(archived) : null,
+      created_at: kst(hist[0][0]),
+      updated_at: kst(hist[hist.length - 1][0]),
+    });
+  };
+  mk('A통장', 'checking', 'mA', [
+    ['2026-09-15T09:00:00', 3_000_000],
+    ['2026-10-10T09:00:00', 2_000_000],
+    ['2026-11-05T10:00:00', 2_500_000],
+    ['2026-11-05T18:00:00', 2_700_000],
+  ]);
+  mk('B적금', 'installment_saving', 'mB', [
+    ['2026-09-15T09:00:00', 5_000_000],
+    ['2026-10-31T23:59:59', 6_000_000],
+  ]);
+  mk('우리집', 'real_estate', null, [['2026-09-15T09:00:00', 300_000_000]]);
+  mk('주담대', 'loan', null, [
+    ['2026-09-15T09:00:00', 200_000_000],
+    ['2026-11-01T00:00:00', 199_000_000],
+  ]);
+  mk('A카드', 'card_payable', 'mA', [['2026-10-10T09:00:00', 1_000_000]]);
+  mk('B차', 'vehicle', 'mB', [['2026-09-15T09:00:00', 20_000_000]], '2026-11-06T00:00:01');
+  assetDb.assets = assets;
+  assetDb.history = history;
+}
+
+const nwLink = () => screen.findByRole('link', { name: /^우리집 순자산/ });
+
+describe('홈: 우리집 순자산 카드', () => {
+  beforeEach(() => fake.get.mockImplementation(async (_l: string, m: string) => data(m)));
+
+  it('HM-01 맨 위 카드: 108,700,000원 · 지난달보다 ▼18,300,000원 · 작은 추이', async () => {
+    seedV4();
+    render(<HomePage />);
+    const card = await nwLink();
+    expect(card).toHaveAccessibleName('우리집 순자산, 108,700,000원, 지난달보다 18,300,000원 줄었어요, 자산 탭으로 이동');
+    expect(within(card).getByTestId('home-net-worth')).toHaveTextContent('108,700,000원');
+    expect(card).toHaveTextContent('지난달보다 ▼ 18,300,000원');
+    expect(card.querySelector('svg.mini-trend polyline')).not.toBeNull();
+    expect(card.querySelectorAll('svg.mini-trend circle')).toHaveLength(1);
+    // 카드가 이번 달 요약보다 위
+    const summary = await screen.findByRole('region', { name: '이번 달 요약' });
+    expect(card.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('HM-02 카드를 누르면 자산 탭으로 간다', async () => {
+    seedV4();
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await user.click(await nwLink());
+    expect(screen.getByText('자산 탭 화면')).toBeInTheDocument();
+  });
+
+  it('HM-03·04 월 이동: 카드는 그 달 월말 기준, 아래 요약은 그 달 내역', async () => {
+    seedV4();
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await nwLink();
+    await user.click(screen.getByRole('button', { name: '이전 달' }));
+    let card = await nwLink();
+    expect(card).toHaveTextContent('10월 말 기준');
+    expect(within(card).getByTestId('home-net-worth')).toHaveTextContent('127,000,000원');
+    expect(card).toHaveTextContent('9월 말보다 ▼ 1,000,000원');
+    await screen.findByRole('region', { name: '이번 달 요약' });
+    expect(fake.get).toHaveBeenLastCalledWith('ledger-1', '2026-10');
+
+    await user.click(screen.getByRole('button', { name: '이전 달' }));
+    card = await nwLink();
+    expect(within(card).getByTestId('home-net-worth')).toHaveTextContent('128,000,000원');
+    expect(card).toHaveTextContent('8월 말보다 –');
+    expect(assetDb.calls).toBe(1); // 자산은 달마다 다시 읽지 않는다
+  });
+
+  it('HM-05 이력 시작 전 달(8월)은 "–"', async () => {
+    seedV4();
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await nwLink();
+    for (let i = 0; i < 3; i += 1) await user.click(screen.getByRole('button', { name: '이전 달' }));
+    const card = await nwLink();
+    expect(within(card).getByTestId('home-net-worth')).toHaveTextContent(/^–$/);
+    expect(card).toHaveAccessibleName(/8월 말 기준, 기록이 없어요/);
+  });
+
+  it('HM-06 미래 달(12월)은 현재 값', async () => {
+    seedV4();
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await nwLink();
+    await user.click(screen.getByRole('button', { name: '다음 달' }));
+    const card = await nwLink();
+    expect(card).toHaveTextContent('지금 기준');
+    expect(within(card).getByTestId('home-net-worth')).toHaveTextContent('108,700,000원');
+  });
+
+  it('HM-07 자산이 없으면 "자산을 등록해 보세요" → 자산 추가 화면', async () => {
+    const user = userEvent.setup();
+    render(<HomePage />);
+    const link = await screen.findByRole('link', { name: /자산을 등록해 보세요/ });
+    await user.click(link);
+    expect(screen.getByText('자산 추가 화면')).toBeInTheDocument();
+  });
+
+  it('HM-08 순자산 음수는 빨간색 "−"', async () => {
+    assetDb.assets = [
+      {
+        id: 'd',
+        ledger_id: 'ledger-1',
+        name: '빚',
+        kind: 'loan',
+        owner_id: null,
+        balance: 9_999_999_999,
+        memo: null,
+        archived_at: null,
+        created_at: kst('2026-11-02T09:00:00'),
+        updated_at: kst('2026-11-02T09:00:00'),
+      },
+    ];
+    assetDb.history = [{ id: 1, asset_id: 'd', ledger_id: 'ledger-1', balance: 9_999_999_999, changed_by: 'mA', changed_at: kst('2026-11-02T09:00:00') }];
+    render(<HomePage />);
+    const value = within(await nwLink()).getByTestId('home-net-worth');
+    expect(value).toHaveTextContent('−9,999,999,999원');
+    expect(value).toHaveClass('is-negative');
+  });
+
+  it('순자산을 못 불러와도 아래 요약은 보이고, 카드만 다시 불러올 수 있다', async () => {
+    seedV4();
+    assetDb.fail = 1;
+    const user = userEvent.setup();
+    render(<HomePage />);
+    expect(await screen.findByText('순자산을 불러오지 못했어요.')).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: '이번 달 요약' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '순자산 다시 불러오기' }));
+    expect(await nwLink()).toHaveTextContent('108,700,000원');
+  });
+
+  it('불러오는 중 안내', () => {
+    assetDb.pending = true;
+    render(<HomePage />);
+    expect(screen.getByText('순자산을 불러오고 있어요')).toBeInTheDocument();
   });
 });
