@@ -108,7 +108,7 @@ function renderAt(path = '/assets') {
 }
 
 const card = (name: string) => screen.getByRole('region', { name });
-const netWorth = (name = '순자산') => within(card(name)).getByText(/원$/, { selector: '.net-worth__value' }).textContent;
+const netWorth = (name = '순자산') => card(name).querySelector('.net-worth__value [aria-hidden="true"]')?.textContent;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'], now: new Date(db.now) });
@@ -158,10 +158,10 @@ it('순자산이 음수면 "−" + 빨간색 클래스 (AS-15·16)', async () =>
   seed('3', null, 9_999_999_999, '대출3', 'loan');
   renderAt();
   await screen.findByText('대출1');
-  const value = within(card('순자산')).getByText(/원$/, { selector: '.net-worth__value' });
-  expect(value).toHaveTextContent('−29,999,999,997원');
+  const value = card('순자산').querySelector('.net-worth__value') as HTMLElement;
+  expect(value.querySelector('[aria-hidden="true"]')).toHaveTextContent('−29,999,999,997원');
   expect(value).toHaveClass('is-negative');
-  expect(value).toHaveAccessibleName('마이너스 29,999,999,997원');
+  expect(within(value).getByText('마이너스 29,999,999,997원')).toHaveClass('sr-only');
   // 총자산 0 → 비율 표시 안 함
   expect(within(card('자산 구성')).getByText('총자산이 0원이라 비율을 표시하지 않아요')).toBeInTheDocument();
 });
@@ -178,7 +178,7 @@ it('전월 대비: 늘면 ▲, 줄면 ▼, 같으면 변동 없음, 지난달 �
   const r2 = renderAt();
   await screen.findByText('카드');
   expect(delta()).toHaveTextContent('지난달 말보다 ▼ 500,000원');
-  expect(delta()).toHaveAccessibleName('지난달보다 500,000원 줄었어요');
+  expect(within(delta()).getByText('지난달 말보다 500,000원 줄었어요')).toHaveClass('sr-only');
   expect(delta()).toHaveClass('delta--down');
   r2.unmount();
 

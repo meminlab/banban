@@ -1,4 +1,4 @@
-import { Archive, CalendarCheck, ChevronRight, Clock, X } from 'lucide-react';
+import { Archive, CalendarCheck, ChevronRight, Clock, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
@@ -188,7 +188,10 @@ export function AssetsPage() {
                   type="radio"
                   name="asset-owner"
                   checked={selected?.ownerId === o.ownerId}
-                  onChange={() => setOwner(o.ownerId)}
+                  onChange={(e) => {
+                    setOwner(o.ownerId);
+                    e.currentTarget.closest('label')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' });
+                  }}
                 />
                 <span>
                   {o.label}
@@ -249,7 +252,8 @@ export function AssetsPage() {
             <div className="section-head">
               <h2 className="section-head__title">목록</h2>
               <Link to={ASSET_NEW_PATH} className="button button--primary button--small">
-                + 자산 추가
+                <Plus size={16} aria-hidden="true" />
+                자산 추가
               </Link>
             </div>
             <AssetGroupList title="자산" items={active.filter((a) => !isLiability(a.kind))} members={members} />
@@ -302,9 +306,9 @@ function NetWorthCard({
       <h2 className="net-worth__label">{label}</h2>
       <p
         className={`net-worth__value money${nw.net < 0 ? ' is-negative' : ''}${netText.length >= 14 ? ' net-worth__value--long' : ''}`}
-        aria-label={`${nw.net < 0 ? '마이너스 ' : ''}${formatWon(Math.abs(nw.net))}원`}
       >
-        {netText}
+        <span aria-hidden="true">{netText}</span>
+        <span className="sr-only">{`${nw.net < 0 ? '마이너스 ' : ''}${formatWon(Math.abs(nw.net))}원`}</span>
       </p>
       <Delta value={delta} label="지난달 말보다" />
       <dl className="net-worth__totals">
@@ -323,23 +327,27 @@ function NetWorthCard({
 
 /** 증감 ▲▼ (design.md 5.21): 늘면 delta-up, 줄면 delta-down(회색), 이력 없으면 "–" */
 function Delta({ value, label }: { value: number | null; label: string }) {
+  // 보이는 글자는 aria-hidden, 화면낭독은 sr-only 문장으로 (역할 없는 요소의 aria-label은 읽히지 않을 수 있음)
   if (value === null)
     return (
-      <p className="delta" aria-label="지난달 기록이 없어요">
-        {label} –
+      <p className="delta">
+        <span aria-hidden="true">{label} –</span>
+        <span className="sr-only">{label} 기록이 없어요</span>
       </p>
     );
   if (value === 0) return <p className="delta">{label} 변동 없음</p>;
   const up = value > 0;
   const amount = `${formatWon(Math.abs(value))}원`;
   return (
-    <p className={`delta ${up ? 'delta--up' : 'delta--down'}`} aria-label={`지난달보다 ${amount} ${up ? '늘었어요' : '줄었어요'}`}>
-      <span className="delta__label">{label}</span>{' '}
-      <span className="delta__value money">
-        <span className="delta__arrow" aria-hidden="true">
-          {up ? '▲' : '▼'}
-        </span>{' '}
-        {amount}
+    <p className={`delta ${up ? 'delta--up' : 'delta--down'}`}>
+      <span aria-hidden="true">
+        <span className="delta__label">{label}</span>{' '}
+        <span className="delta__value money">
+          <span className="delta__arrow">{up ? '▲' : '▼'}</span> {amount}
+        </span>
+      </span>
+      <span className="sr-only">
+        {label} {amount} {up ? '늘었어요' : '줄었어요'}
       </span>
     </p>
   );

@@ -649,7 +649,8 @@ button { font: inherit; }
 .card-head__total { font-size: 1.0625rem; font-weight: 700; }
 
 .segmented--two { grid-template-columns: repeat(2, 1fr); }
-.owner-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px; scrollbar-width: none; }
+.owner-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 16px 2px 2px; scroll-padding-inline: 2px 16px; scrollbar-width: none; }
+.owner-chips .chip { flex: none; }
 .owner-chips .chip span { white-space: nowrap; }
 .chip .chip__weak { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--color-text-weak); font-weight: 400; }
 .chip input:checked + span .chip__weak { color: inherit; opacity: 0.85; }
