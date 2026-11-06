@@ -1,5 +1,5 @@
 import { ChevronRight, Landmark } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_PATH } from '../app/routes';
@@ -175,6 +175,19 @@ function BreakdownList({ title, rows }: { title: string; rows: BreakdownRow[] })
 const monthNo = (ym: YearMonth) => Number(ym.slice(5));
 
 /** 360px에서 작은 추이(72px) 옆에 금액이 잘리지 않게: 13자부터 22px, 15자부터 20px (기본 28px, design.md 5.22) */
+/** 큰 글자(200%)에서 금액이 줄바꿈될 때 쉼표 뒤에서 먼저 끊기게 <wbr> 을 넣는다 */
+const breakAtCommas = (text: string) =>
+  text.split(',').map((part, i) => (
+    <Fragment key={i}>
+      {i > 0 && (
+        <>
+          ,<wbr />
+        </>
+      )}
+      {part}
+    </Fragment>
+  ));
+
 const netSizeClass = (text: string) =>
   text.length >= 15 ? ' home-nw__value--longer' : text.length >= 13 ? ' home-nw__value--long' : '';
 
@@ -244,7 +257,7 @@ function HomeNetWorthCard({ state, retry, month }: { state: AssetLoadState; retr
             className={`home-nw__value money${net !== null && net < 0 ? ' is-negative' : ''}${netSizeClass(netText)}`}
             data-testid="home-net-worth"
           >
-            {netText}
+            {breakAtCommas(netText)}
           </span>
           <Delta value={data.change} label={deltaLabel} />
         </div>
