@@ -34,10 +34,13 @@ const CATEGORIES: Category[] = [
   c('home-rent', 'expense', 'home', '월세'),
   c('salary', 'income', null, '급여'),
   c('salary-1', 'income', 'salary', '급여'),
+  { ...c('old', 'expense', null, '옛분류', 3), is_hidden: true },
+  c('old-1', 'expense', 'old', '옛소분류'),
 ];
 const POCKETS: Pocket[] = [
   { id: 'p-shared', ledger_id: 'L', name: '공동소비', scope: 'shared', sort_order: 1, is_hidden: false, created_at: '' },
   { id: 'p-mine', ledger_id: 'L', name: '개인용돈', scope: 'personal', sort_order: 2, is_hidden: false, created_at: '' },
+  { id: 'p-old', ledger_id: 'L', name: '옛주머니', scope: 'shared', sort_order: 3, is_hidden: true, created_at: '' },
 ];
 const MEMBERS: Member[] = [
   { id: 'm-me', ledger_id: 'L', user_id: 'u-me', role: 'owner', display_name: '에이', joined_at: '2026-11-01', left_at: null },
@@ -192,6 +195,52 @@ describe('가계부 탭: 필터', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('checkbox', { name: '수입' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '0건 보기' }));
     expect(screen.getByText('조건에 맞는 내역이 없어요')).toBeInTheDocument();
+  });
+});
+
+describe('가계부 탭: 필터 유지 (BANB-20)', () => {
+  it('11월에 고른 나간 멤버는 그 멤버 내역이 없는 10월에서도 선택된 칩으로 보이고, 끄면 내역이 다시 보인다', async () => {
+    const user = userEvent.setup();
+    renderAt('/ledger');
+    await screen.findByRole('heading', { name: '11월 5일 (목)' });
+    await user.click(screen.getByRole('button', { name: '필터' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('checkbox', { name: '씨 (나감)' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '1건 보기' }));
+
+    await user.click(screen.getByRole('button', { name: '이전 달' }));
+    await screen.findByText('조건에 맞는 내역이 없어요');
+    expect(screen.getByText('필터 1개 적용 중')).toBeInTheDocument(); // 달을 옮겨도 필터 유지
+
+    await user.click(screen.getByRole('button', { name: '필터 (1개 적용 중)' }));
+    const chip = within(screen.getByRole('dialog')).getByRole('checkbox', { name: '씨 (나감)' });
+    expect(chip).toBeChecked();
+    await user.click(chip);
+    // 끄면 10월에 안 쓰인 나간 멤버 칩은 다음부터 안 보인다 (선택 안 된 나감 항목은 그 달에 쓰였을 때만)
+    expect(within(screen.getByRole('dialog')).queryByRole('checkbox', { name: '씨 (나감)' })).not.toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '1건 보기' }));
+    expect(listItems()).toHaveLength(1);
+  });
+
+  it('숨긴 카테고리·주머니도 고른 상태면 그 달에 안 쓰였어도 칩으로 보인다', async () => {
+    const user = userEvent.setup();
+    renderAt('/ledger?category=old&pocket=p-old');
+    await screen.findByText('조건에 맞는 내역이 없어요');
+    await user.click(screen.getByRole('button', { name: '필터 (2개 적용 중)' }));
+    const sheet = screen.getByRole('dialog');
+    expect(within(sheet).getByRole('checkbox', { name: '옛분류' })).toBeChecked();
+    expect(within(sheet).getByRole('checkbox', { name: '옛주머니' })).toBeChecked();
+    await user.click(within(sheet).getByRole('checkbox', { name: '옛분류' }));
+    await user.click(within(sheet).getByRole('checkbox', { name: '옛주머니' }));
+    await user.click(within(sheet).getByRole('button', { name: '4건 보기' }));
+    expect(listItems()).toHaveLength(4);
+  });
+
+  it('주소에 남은 알 수 없는 값(삭제된 카테고리·주머니 등)은 무시한다', async () => {
+    renderAt('/ledger?category=gone&pocket=gone&spender=gone');
+    await screen.findByRole('heading', { name: '11월 5일 (목)' });
+    expect(listItems()).toHaveLength(4);
+    expect(screen.getByRole('button', { name: '필터' })).toBeInTheDocument();
+    expect(screen.queryByText(/필터 \d+개 적용 중/)).not.toBeInTheDocument();
   });
 });
 

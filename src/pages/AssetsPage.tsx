@@ -50,6 +50,7 @@ export function AssetsPage() {
   const members = state.status === 'ready' ? state.members : [];
   const assets = state.status === 'ready' ? state.assets : [];
   const summary = useMemo(() => summarizeAssets(assets, members), [assets, members]);
+  const totalText = `${formatWon(summary.total)}원`;
   const sorted = useMemo(() => sortAssets(assets), [assets]);
   const myMemberId = members.find((m) => m.user_id === user.id && !m.left_at)?.id ?? null;
 
@@ -102,9 +103,7 @@ export function AssetsPage() {
         <p id="asset-total-label" className="asset-total__label">
           전체 자산
         </p>
-        <p className="asset-total__total">
-          {formatWon(summary.total)}원
-        </p>
+        <p className={`asset-total__total${totalText.length > 18 ? ' asset-total__total--long' : ''}`}>{totalText}</p>
         <ul className="owner-totals" aria-label="소유자별 합계">
           {summary.byOwner.map((o) => (
             <li key={o.ownerId ?? 'shared'} className="owner-totals__row">
