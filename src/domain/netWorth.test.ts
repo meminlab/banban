@@ -8,6 +8,10 @@ import {
   needsMonthlyCheck,
   netWorthChange,
   netWorthForMonth,
+  netWorthTrend,
+  trendRatio,
+  trendScale,
+  trendSegments,
   type OwnerView,
 } from './netWorth';
 
@@ -193,5 +197,106 @@ describe('월초 안내 (AS-20·21, Q12)', () => {
       { id: 1, asset_id: 'x', ledger_id: 'L', balance: 1, changed_by: null, changed_at: '2026-11-06T01:00:00Z' },
     ];
     expect(needsMonthlyCheck(migrated, NOW)).toBe(true);
+  });
+});
+
+describe('월별 추이 (BANB-26, QA v4 TR)', () => {
+  const nets = (assets: Asset[], now = NOW) => netWorthTrend(assets, history, now).map((p) => [p.ym, p.net]);
+
+  it('TR-01 합친: 6~11월 중 9·10·11월만 값, 6~8월은 null', () => {
+    expect(nets(V4)).toEqual([
+      ['2026-06', null],
+      ['2026-07', null],
+      ['2026-08', null],
+      ['2026-09', 128_000_000],
+      ['2026-10', 127_000_000],
+      ['2026-11', 108_700_000],
+    ]);
+  });
+
+  it('TR-02 잔액을 고친 다음 달: 11월 = 11월 말 값, 12월 = 현재 값 (완료 기준)', () => {
+    const dec = new Date('2026-12-02T03:00:00Z');
+    const changed = V4.map((a) => (a.id === '우리집' ? { ...a, balance: 310_000_000 } : a)); // 12월에 고친 현재 값
+    history.push({ id: 9_001, asset_id: '우리집', ledger_id: 'L1', balance: 310_000_000, changed_by: 'ma', changed_at: kst('2026-12-01T10:00:00') });
+    try {
+      const t = netWorthTrend(changed, history, dec);
+      expect(t.map((p) => p.ym)).toEqual(['2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12']);
+      expect(t[4].net).toBe(108_700_000);
+      expect(t[5].net).toBe(118_700_000);
+    } finally {
+      history.pop();
+    }
+  });
+
+  it('TR-03 보관한 B차는 9·10월 값에 포함, 11월에는 빠진다 (완료 기준)', () => {
+    const car = V4.filter((a) => a.id === 'B차');
+    expect(netWorthTrend(car, history, NOW).map((p) => p.net)).toEqual([null, null, null, 20_000_000, 20_000_000, 0]);
+  });
+
+  it('TR-04 사람별: 칩마다 값이 바뀌고, 각 달 세 값의 합 = 합친', () => {
+    const at = (o: OwnerView) => netWorthTrend(view(o), history, NOW).slice(3).map((p) => p.net);
+    expect(at('ma')).toEqual([3_000_000, 1_000_000, 1_700_000]);
+    expect(at('mb')).toEqual([25_000_000, 26_000_000, 6_000_000]);
+    expect(at(null)).toEqual([100_000_000, 100_000_000, 101_000_000]);
+    const all = netWorthTrend(V4, history, NOW).slice(3).map((p) => p.net);
+    expect([0, 1, 2].map((i) => at('ma')[i]! + at('mb')[i]! + at(null)[i]!)).toEqual(all);
+  });
+
+  it('TR-05 이력이 7개월 이상이어도 최근 6개월만', () => {
+    const t = netWorthTrend(V4, history, new Date('2027-05-10T03:00:00Z'));
+    expect(t.map((p) => p.ym)).toEqual(['2026-12', '2027-01', '2027-02', '2027-03', '2027-04', '2027-05']);
+    expect(t.every((p) => p.net === 108_700_000)).toBe(true);
+  });
+
+  it('TR-06 이번 달에만 이력: 마지막 1개만 값', () => {
+    const fresh = mk('신규', 'cash', null, [['2026-11-03T09:00:00', 50_000]]);
+    expect(netWorthTrend([fresh], history, NOW).map((p) => p.net)).toEqual([null, null, null, null, null, 50_000]);
+  });
+
+  it('TR-08 10-31 23:59:59 KST 수정은 10월 값 (B적금 6,000,000)', () => {
+    expect(netWorthTrend(view('mb'), history, NOW)[4].net).toBe(26_000_000);
+  });
+
+  it('보관 후 되살리면 보관해 있던 달에도 다시 들어간다 (Q10)', () => {
+    const early = V4.map((a) => (a.id === 'B차' ? { ...a, archived_at: kst('2026-10-20T00:00:00') } : a));
+    expect(netWorthTrend(early, history, NOW)[4].net).toBe(107_000_000);
+    const restored = early.map((a) => (a.id === 'B차' ? { ...a, archived_at: null } : a));
+    expect(netWorthTrend(restored, history, NOW)[4].net).toBe(127_000_000);
+  });
+
+  it('종류를 자산 → 부채로 바꾸면 지난 달도 부채로 계산 (Q11)', () => {
+    const flipped = V4.map((a) => (a.id === 'B차' ? { ...a, kind: 'other_liability' as const } : a));
+    expect(netWorthTrend(flipped, history, NOW)[3].net).toBe(88_000_000);
+  });
+});
+
+describe('추이 그래프 세로 범위 (design.md 5.19)', () => {
+  it('0부터 시작하지 않고 최소~최대에 15% 여유', () => {
+    const s = trendScale([null, 100, 200])!;
+    expect(s).toEqual({ min: 85, max: 215, crossesZero: false });
+    expect(trendRatio(215, s)).toBe(0);
+    expect(trendRatio(85, s)).toBe(1);
+  });
+
+  it('TR-07 음수가 섞이면 0 기준선, 모두 음수면 기준선 없음', () => {
+    expect(trendScale([-100, 100])?.crossesZero).toBe(true);
+    expect(trendScale([-300, -100])?.crossesZero).toBe(false);
+    const s = trendScale([-100, 100])!;
+    expect(trendRatio(0, s)).toBeCloseTo(0.5);
+  });
+
+  it('값이 하나뿐이거나 모두 같아도 깨지지 않는다', () => {
+    const one = trendScale([null, null, 50_000])!;
+    expect(one.max).toBeGreaterThan(one.min);
+    expect(trendRatio(50_000, one)).toBeCloseTo(0.5);
+    const zero = trendScale([0, 0])!;
+    expect(zero.max).toBeGreaterThan(zero.min);
+    expect(trendScale([null, null])).toBeNull();
+  });
+
+  it('선은 이어진 달끼리만 잇는다', () => {
+    const p = (net: number | null) => ({ ym: '2026-01', net });
+    expect(trendSegments([p(null), p(1), p(2), p(null), p(3), p(4)])).toEqual([[1, 2], [4, 5]]);
+    expect(trendSegments([p(null), p(1)])).toEqual([[1]]);
   });
 });
