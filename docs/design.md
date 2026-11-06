@@ -1,20 +1,40 @@
-# 반반 디자인 시스템 v1
+# 반반 디자인 시스템 v1.1
 
-> 상태: v1 (BANB-18) · 기준 폭 360–430px · 이 문서가 화면 시안(BANB-19)과 개발 반영의 기준이다.
+> 상태: v1.1 (BANB-19 앞 단계, v1 = BANB-18) · 기준 폭 360–430px · 이 문서가 화면 시안(BANB-19)과 개발 반영의 기준이다.
 > 미리보기: `docs/design-preview.html`을 브라우저로 열면 토큰과 컴포넌트를 라이트/다크로 볼 수 있다.
 
 ## 0. 방향
 
-**"우리 집 냉장고에 붙은 메모처럼 따뜻하고, 은행 앱처럼 숫자가 또렷한 가계부."**
+**"흰 바탕에 큰 숫자, 색은 한 가지만. 조용하고 따뜻한 가계부."**
 
 | 원칙 | 뜻 | 화면에서 |
 |---|---|---|
 | 10초 안에 | 열자마자 이번 달 숫자, 한 번 눌러 입력 | 홈 첫 화면에 남은 돈·지출, 가계부 탭 ＋ 버튼은 항상 같은 자리 |
-| 숫자가 주인공 | 금액은 가장 크고 굵고, 자릿수가 세로로 맞는다 | 금액은 항상 `tabular-nums`, 라벨은 작고 연하게 |
-| 따뜻하고 차분하게 | 흰 바탕 + 살구색 포인트, 둥근 모서리, 해요체 | 차가운 회색·형광색·각진 표 대신 아이보리 바탕과 부드러운 카드 |
+| 숫자가 주인공 | 금액은 가장 크고 굵고, 자릿수가 세로로 맞는다 | 금액은 항상 `tabular-nums`, 라벨은 작고 연하게. 홈 남은 돈 36px |
+| 색은 한 가지 | **포인트 색(살구) 1개 + 무채색 단계.** 포인트 색은 "누를 수 있는 것·선택된 것"에만 | 바탕은 아주 연한 회색, 카드는 흰색. 카테고리 아이콘은 모두 회색 원 |
+| 의미 색은 아껴서 | 수입·저축·음수 색은 **금액 숫자에만**, 채도를 낮춰서 | 배지·아이콘 원·안내 상자에는 의미 색을 칠하지 않는다 |
 | 색은 거들 뿐 | 의미는 글자·기호·아이콘으로 먼저 전한다 | 음수는 `−` 기호 + 빨강, 선택은 체크 아이콘 + 색 |
+| 넉넉하게 | 카드 안 여백 24, 카드 사이 12, 구분선 대신 여백 | 목록 행 사이 선 없음, 카드 테두리 없음(라이트) |
 
-벤치마크(모아불리)는 수준과 흐름만 참고하고, 색·문구·로고는 가져오지 않았다.
+벤치마크(모아불리·뱅크샐러드)는 "흰 바탕, 절제된 색, 큰 숫자, 넉넉한 여백"이라는 수준만 참고하고, 색·문구·로고·아이콘은 가져오지 않았다.
+
+### 0.1 v1 → v1.1 바뀐 점 (클라이언트 피드백 "색이 너무 많이 쓰인 느낌")
+
+| 항목 | v1 | v1.1 |
+|---|---|---|
+| 바탕 | 아이보리 `#FBF8F3`, 따뜻한 갈색 기운 회색 | 연한 회색 `#F5F6F8`, 무채색 회색 단계 |
+| 카드 | 흰 카드 + 테두리 + 갈색 그림자 | 흰 카드, **테두리 없음**(라이트), 아주 옅은 무채색 그림자, 안쪽 여백 24 |
+| 포인트 색 | 살구 — 버튼·탭·칩 + 가계부 첫 글자 원·막대 그래프 | 살구 그대로(값 같음). 가계부 첫 글자 원은 회색으로, 그 외 "누를 수 있는 것·선택"에만 |
+| 수입·저축·음수 | 선명한 파랑·초록·빨강, 아이콘 원·배지에도 칠함 | 채도 낮춘 남색·청록·적갈색, **금액 숫자에만** |
+| 카테고리·수입·저축 아이콘 원 | 지출 회색, 수입 파랑 원, 저축 초록 원 | **모두 회색 원 + 진회색 아이콘** (한 톤) |
+| 배지(고정·저축) | 노랑·초록 바탕 | 회색 바탕 + 아이콘 |
+| 안내 상자 | 노랑 바탕·갈색 글자 | 회색 바탕 + `Info` 아이콘 |
+| 달력 토·일 | 파랑·빨강 날짜 | 무채색(요일 머리글로 구분). 오늘만 포인트 색 원 |
+| 홈 남은 돈 | 32px | **36px** (`amount-hero`), 14자 이상이면 28px |
+| 목록 | 행 사이 구분선 | 구분선 없이 여백. 날짜별 묶음이 카드 1장 |
+| 삭제된 토큰 | — | `income-soft`, `saving-soft`, `negative-soft`, `notice-bg`, `notice-text`, `cal-sun`, `cal-sat`, `success` (1.2 끝) |
+
+유지: 구조·컴포넌트·크기·간격 단계, 숫자 표기 원칙(2.3), 아이콘 세트(Lucide), 접근성 기준, 문구 톤.
 
 ---
 
@@ -24,51 +44,48 @@
 
 토큰 이름 `color.xxx` → CSS 변수 `--color-xxx` (점 `.`은 하이픈 `-`으로).
 
+색은 세 무리뿐이다: **무채색 단계**(바탕·글자·선) / **포인트 색 1개**(살구) / **의미 색 3개**(수입·저축·음수, 금액 숫자 전용).
+
 | 토큰 | 라이트 | 다크 | 쓰는 곳 |
 |---|---|---|---|
-| `color.bg` | `#FBF8F3` | `#171412` | 앱 바탕(아이보리). 카드 바깥 |
-| `color.surface` | `#FFFFFF` | `#221E1B` | 카드·헤더·탭바·시트·입력 |
-| `color.surface-sunken` | `#F4EFE7` | `#2C2723` | 세그먼트 바탕, 막대 그래프 바탕, 스켈레톤, 보조 정보 상자 |
-| `color.border` | `#EAE3D8` | `#3A342E` | 카드 테두리, 목록 구분선 (장식용) |
-| `color.border-strong` | `#8E8579` | `#7D7368` | 입력·체크박스 테두리 (바탕 대비 3:1 이상) |
-| `color.text` | `#2A2420` | `#F4EFE9` | 본문·제목·지출 금액 |
-| `color.text-sub` | `#615850` | `#C2B8AD` | 라벨·보조 설명·비활성 탭 |
-| `color.text-weak` | `#7A7066` | `#9E9388` | 자리표시(placeholder)·글자 수 등 덜 중요한 글자 |
-| `color.primary` | `#BF4D1B` | `#F0895A` | 주 버튼 바탕, 활성 탭, ＋ 버튼, 포커스 링, 링크 |
+| `color.bg` | `#F5F6F8` | `#131416` | 앱 바탕(아주 연한 회색). 카드 바깥 |
+| `color.surface` | `#FFFFFF` | `#1D1E21` | 카드·헤더·탭바·시트·입력 |
+| `color.surface-sunken` | `#F0F1F4` | `#27292D` | 아이콘 원, 세그먼트 바탕, 막대 그래프 바탕, 배지, 안내 상자, 스켈레톤 |
+| `color.border` | `#E8EAED` | `#34363B` | 헤더·탭바 경계, 다크 모드 카드 테두리 (장식용) |
+| `color.border-strong` | `#8A8F98` | `#7B8089` | 입력·체크박스·보조 버튼 테두리 (바탕 대비 3:1 이상) |
+| `color.text` | `#1D1F23` | `#F1F2F4` | 본문·제목·지출 금액·아이콘 원 안 아이콘 |
+| `color.text-sub` | `#5B6068` | `#B8BCC3` | 라벨·보조 설명·비활성 탭 |
+| `color.text-weak` | `#686D76` | `#989CA4` | 자리표시(placeholder)·글자 수·계산식 등 덜 중요한 글자 |
+| `color.primary` | `#BF4D1B` | `#F0895A` | **포인트 색.** 주 버튼 바탕, 활성 탭, ＋ 버튼, 포커스 링, 링크, 막대 그래프, 달력 오늘 |
 | `color.primary-pressed` | `#A23F14` | `#E07444` | 주 버튼 누름 |
 | `color.primary-strong` | `#A3401A` | `#F7A27C` | `primary-soft` 위 글자 (선택된 칩·배지) |
 | `color.primary-soft` | `#FCEDE5` | `#3A2519` | 선택된 칩·현재 가계부 행·활성 탭 알약 바탕 |
 | `color.on-primary` | `#FFFFFF` | `#1A1310` | 주 버튼·＋ 버튼 위 글자/아이콘 |
 | `color.focus` | `#BF4D1B` | `#F0895A` | 키보드 포커스 링 (= primary) |
-| `color.scrim` | `rgb(23 20 18 / 0.45)` | `rgb(0 0 0 / 0.6)` | 시트·확인 창 뒤 어둡게 |
-| `color.inverse-surface` | `#2A2420` | `#F4EFE9` | 토스트 바탕 |
-| `color.on-inverse` | `#FFFFFF` | `#171412` | 토스트 글자 |
+| `color.scrim` | `rgb(15 16 18 / 0.45)` | `rgb(0 0 0 / 0.6)` | 시트·확인 창 뒤 어둡게 |
+| `color.inverse-surface` | `#1D1F23` | `#F1F2F4` | 토스트 바탕 |
+| `color.on-inverse` | `#FFFFFF` | `#131416` | 토스트 글자 |
 | `color.inverse-action` | `#F7A27C` | `#A3401A` | 토스트 안 "되돌리기" 버튼 글자 |
 
-### 1.2 의미 색 토큰 (돈·상태)
+### 1.2 의미 색 토큰 (돈·상태) — 금액 숫자에만
 
 | 토큰 | 라이트 | 다크 | 쓰는 곳 | 색 외 표시(필수) |
 |---|---|---|---|---|
-| `color.expense` | `#2A2420` | `#F4EFE9` | 지출 금액 (= text, 무채색) | 목록에서 `−` 기호, 요약에서는 "지출" 라벨 |
-| `color.income` | `#2459D6` | `#8AAEFF` | 수입 금액 | `+` 기호 또는 "수입" 라벨 |
-| `color.income-soft` | `#EAF0FD` | `#1E2A44` | 수입 배지 바탕 | — |
-| `color.saving` | `#13795B` | `#5CC99E` | 저축 금액 | "저축" 배지(돼지저금통 아이콘) |
-| `color.saving-soft` | `#E3F3EC` | `#17332A` | 저축 배지 바탕 | — |
-| `color.negative` | `#C8283C` | `#FF7B88` | 남은 돈 음수, 자산 합계 음수 | `−` 기호 + 화면낭독 "마이너스" |
-| `color.negative-soft` | `#FDECEE` | `#3D1D22` | 음수 강조 상자 바탕 | — |
-| `color.danger` | `#C8283C` | `#FF7B88` | 오류 글자, 위험 버튼 바탕, 오류 입력 테두리 | 오류 아이콘 + 문장 |
+| `color.expense` | `#1D1F23` | `#F1F2F4` | 지출 금액 (= text, 무채색) | 목록에서 `−` 기호, 요약에서는 "지출" 라벨 |
+| `color.income` | `#3E5F9E` | `#9DB2DC` | 수입 **금액 숫자** (차분한 남색) | `+` 기호 또는 "수입" 라벨 |
+| `color.saving` | `#3B7560` | `#93C4AD` | 저축 **금액 숫자** (차분한 청록) | 기호 없음 + "저축" 배지 또는 라벨 |
+| `color.negative` | `#B23A48` | `#EE8F99` | 남은 돈 음수, 자산 합계 음수 | `−` 기호 + 화면낭독 "마이너스" |
+| `color.danger` | `#B23A48` | `#EE8F99` | 오류 글자, 위험 버튼 바탕, 오류 입력 테두리 (= negative) | 오류 아이콘 + 문장 |
 | `color.on-danger` | `#FFFFFF` | `#1A1310` | 위험 버튼 글자 | — |
-| `color.danger-soft` | `#FDECEE` | `#3D1D22` | 삭제 확인 상자 바탕 | — |
-| `color.success` | `#1E7A46` | `#66CF8F` | 저장·복사 완료 글자 | 체크 아이콘 + 문장 |
-| `color.notice-bg` | `#FFF3D6` | `#3A2E14` | 안내 상자 바탕, 고정지출 배지 바탕 | — |
-| `color.notice-text` | `#7A4B00` | `#F5C56B` | 안내 상자·고정지출 배지 글자 | 아이콘/라벨 |
+| `color.danger-soft` | `#FBEEEF` | `#3A2226` | 삭제 확인 상자 바탕 (이 한 곳만) | — |
 | `color.chart-bar` | `#BF4D1B` | `#F0895A` | 홈 나눠 보기 막대 (= primary) | 금액·% 숫자 같이 표시 |
-| `color.chart-track` | `#F4EFE7` | `#2C2723` | 막대 바탕 (= surface-sunken) | — |
-| `color.cal-sun` | `#C8283C` | `#FF7B88` | 달력 일요일 날짜 숫자 | 요일 머리글 "일" |
-| `color.cal-sat` | `#2459D6` | `#8AAEFF` | 달력 토요일 날짜 숫자 | 요일 머리글 "토" |
+| `color.chart-track` | `#F0F1F4` | `#27292D` | 막대 바탕 (= surface-sunken) | — |
 
 **결정: 지출은 무채색.** 지출은 가장 자주 보이는 숫자라 빨강으로 칠하면 화면 전체가 경고처럼 보이고, "남은 돈 음수(빨강)"와 구분이 안 된다. 국내 은행·가계부 앱 관행(출금 검정, 입금 파랑)과도 맞다.
-**결정: 주 색(살구)은 금액에 쓰지 않는다.** 금액 색은 위 표의 돈 토큰만 쓴다. 주 색은 "누를 수 있는 것"에만.
+**결정: 주 색(살구)은 금액에 쓰지 않는다.** 금액 색은 위 표의 돈 토큰만 쓴다. 주 색은 "누를 수 있는 것·선택된 것"에만.
+**결정 (v1.1): 의미 색은 금액 숫자에만.** 아이콘 원·배지·안내 상자·달력 요일에는 의미 색을 칠하지 않는다. 한 화면에 보이는 유채색은 포인트 색 + 금액 숫자 정도로 줄인다.
+
+**v1.1에서 삭제한 토큰** (코드에 아직 옮기지 않았으므로 바로 삭제): `income-soft`, `saving-soft`, `negative-soft`(→ `danger-soft`만 남김), `success`(완료 표시는 `text` + `CircleCheck` 아이콘), `notice-bg`·`notice-text`(안내 상자·고정 배지는 `surface-sunken` + `text-sub`), `cal-sun`·`cal-sat`(달력 요일 무채색).
 
 ### 1.3 명도 대비 검증 (WCAG 2.1 AA)
 
@@ -76,32 +93,30 @@
 
 | 조합 | 라이트 | 다크 |
 |---|---|---|
-| text / bg | 14.45 | 16.04 |
-| text-sub / surface | 6.95 | 8.47 |
-| text-sub / surface-sunken | 6.08 | 7.56 |
-| text-weak / surface | 4.84 | 5.50 |
-| primary / surface (링크·활성 탭) | 4.89 | 6.64 |
+| text / bg · surface | 15.26 · 16.50 | 16.45 · 14.88 |
+| text-sub / surface · surface-sunken · bg | 6.33 · 5.60 · 5.85 | 8.75 · 7.65 · 9.67 |
+| text-weak / surface · bg · surface-sunken | 5.20 · 4.81 · 4.61 | 6.05 · 6.69 · 5.29 |
+| primary / surface · bg (링크·활성 탭) | 4.89 · 4.52 | 6.69 · 7.40 |
 | on-primary / primary (주 버튼) | 4.89 | 7.37 |
 | primary-strong / primary-soft (선택 칩) | 5.56 | 7.14 |
-| income / surface · income-soft | 6.04 · 5.29 | 7.55 · 6.52 |
-| saving / surface · saving-soft | 5.37 · 4.68 | 8.12 · 6.68 |
-| negative / surface · negative-soft | 5.49 · 4.81 | 6.65 · 6.04 |
-| on-danger / danger (위험 버튼) | 5.49 | 7.37 |
-| success / surface | 5.35 | 8.58 |
-| notice-text / notice-bg | 6.72 | 8.28 |
-| on-inverse / inverse-surface (토스트) | 15.31 | 16.04 |
-| inverse-action / inverse-surface | 7.59 | 5.56 |
-| border-strong / surface (입력 테두리, 3:1) | 3.63 | 3.56 |
-| focus / surface (포커스 링, 3:1) | 4.89 | 6.64 |
+| income / surface · surface-sunken | 6.30 · 5.57 | 7.81 · 6.82 |
+| saving / surface · surface-sunken | 5.39 · 4.77 | 8.52 · 7.45 |
+| negative / surface · danger-soft | 5.85 · 5.17 | 7.16 · 6.28 |
+| on-danger / danger (위험 버튼) | 5.85 | 7.88 |
+| on-inverse / inverse-surface (토스트) | 16.50 | 16.45 |
+| inverse-action / inverse-surface | 8.18 | 5.67 |
+| border-strong / surface (입력 테두리, 3:1) | 3.25 | 4.20 |
+| focus / surface (포커스 링, 3:1) | 4.89 | 6.69 |
 
 > `primary`를 `primary-soft` 위 글자로 쓰면 4.28로 미달 → 그 자리엔 반드시 `primary-strong`을 쓴다.
 > 비활성(disabled) 요소는 WCAG 대비 예외지만, 투명도(opacity) 대신 `surface-sunken` 바탕 + `text-weak` 글자로 표현한다.
+> 아이콘 원(회색 바탕 + `text` 아이콘)은 카테고리 이름 글자가 옆에 항상 있어 장식이지만, 대비는 15 이상으로 충분하다.
 
 ### 1.4 다크 모드
 
-- v1은 토큰만 정의한다. 적용 방식: `prefers-color-scheme: dark` 자동 전환, 앱 안 토글은 두지 않는다(다음 단계).
-- 다크에서는 그림자 대신 `surface` 명도 차이와 `border`로 층을 구분한다.
-- `<meta name="theme-color">`를 두 개 둔다: 라이트 `#FFFFFF`, 다크 `#221E1B` (`media="(prefers-color-scheme: dark)"`).
+- v1.1도 토큰만 정의한다. 적용 방식: `prefers-color-scheme: dark` 자동 전환, 앱 안 토글은 두지 않는다(다음 단계).
+- 다크에서는 그림자 대신 `surface` 명도 차이와 카드 `1px border`로 층을 구분한다.
+- `<meta name="theme-color">`를 두 개 둔다: 라이트 `#FFFFFF`, 다크 `#1D1E21` (헤더 `surface`와 같게) (`media="(prefers-color-scheme: dark)"`).
 
 ---
 
@@ -125,8 +140,9 @@
 
 | 토큰 | 크기 / 줄높이 | 굵기 | 쓰는 곳 |
 |---|---|---|---|
-| `font.amount-hero` | 32 / 40 | 700 | 홈 "남은 돈", 자산 합계 |
-| `font.amount-lg` | 24 / 32 | 700 | 요약 카드 주 금액, 입력 화면 금액 |
+| `font.amount-hero` | **36 / 44** | 700 | 홈 "남은 돈", 자산 합계 (v1 32 → 36) |
+| `font.amount-xl` | 28 / 36 | 700 | 입력 화면 금액, hero 금액이 14자 이상일 때 (v1.1 추가) |
+| `font.amount-lg` | 24 / 32 | 700 | 요약 카드 주 금액 |
 | `font.title-lg` | 22 / 30 | 600 | 시작·로그인 큰 제목 |
 | `font.title` | 18 / 26 | 600 | 상단 헤더 제목·가계부 이름, 시트·확인 창 제목 |
 | `font.amount-md` | 17 / 24 | 700 | 목록 행 금액, 요약 보조 금액 |
@@ -144,7 +160,7 @@
 | 규칙 | 예 | 비고 |
 |---|---|---|
 | 천 단위 쉼표 + `원`, 띄어쓰기 없음 | `1,234,000원` | `toLocaleString('ko-KR')` |
-| `원`은 숫자보다 한 단계 작게 | 숫자 32px → `원` 24px(0.75em), 굵기 600 | 숫자가 먼저 읽히게. 17px 이하 금액은 같은 크기 |
+| `원`은 숫자보다 한 단계 작게 | 숫자 36px → `원` 27px(0.75em), 굵기 600 | 숫자가 먼저 읽히게. 17px 이하 금액은 같은 크기 |
 | 숫자+`원`은 한 덩어리, 중간 줄바꿈 금지 | — | `white-space: nowrap` (기존 `.money` 유지) |
 | **음수 기호는 `−`(U+2212 마이너스 기호)로 통일** | `−52,000원` | 하이픈 `-` 금지. 홈 "남은 돈"의 현재 `-`를 바꾼다 (BANB-9 QA 이관 항목) |
 | 음수는 기호 + `color.negative` 둘 다 | `−52,000원`(빨강) | 색만으로 전달 금지 |
@@ -152,7 +168,7 @@
 | 종류가 섞인 목록·달력에서만 기호 표시 | 지출 `−12,000원` / 수입 `+3,000,000원` / 저축 `500,000원`+저축 배지 | 화면낭독은 "지출 12,000원"처럼 종류 단어로 |
 | 라벨이 붙은 합계에는 기호를 붙이지 않음 | "지출 1,234,000원" | 단, 남은 돈·자산 합계가 음수일 때는 `−` |
 | 0원 | `0원` (기호·색 없음) | |
-| 큰 금액 | 최대 `9,999,999,999원`(13자). hero 금액이 14자 이상(`−` 포함)이면 `amount-hero` → `amount-lg`로 한 단계 줄임 | 기존 `.asset-total__total--long`과 같은 방식 |
+| 큰 금액 | 최대 `9,999,999,999원`(13자). hero 금액이 14자 이상(`−` 포함)이면 `amount-hero`(36) → `amount-xl`(28)로 한 단계 줄임 | 기존 `.asset-total__total--long`과 같은 방식 |
 | 줄여 쓰기(만·억) | 달력 칸·그래프 축처럼 좁은 곳만. `1.2만`, `35만`, `1.5억` (기존 `compactWon` 규칙) | 줄인 숫자를 누르면 원래 금액이 보여야 하고, 화면낭독은 원래 금액 |
 | 비율 | 정수 `%`, 숫자 오른쪽 정렬 | `formatPercent` |
 | 날짜 | 목록 그룹 `11월 6일 (목)`, 월 이동 `2026년 11월` | 요일은 괄호 |
@@ -179,8 +195,8 @@
 | `space.2` | 8px | 칩 사이, 버튼 2개 사이 |
 | `space.3` | 12px | 목록 행 안 요소 사이, 라벨–입력 사이 |
 | `space.4` | 16px | 카드 안 묶음 사이, 목록 행 세로 여백 |
-| `space.5` | 20px | **화면 좌우 여백**, 카드 안쪽 여백 |
-| `space.6` | 24px | 섹션 사이 |
+| `space.5` | 20px | **화면 좌우 여백**, 작은 카드(목록 묶음) 안쪽 여백 |
+| `space.6` | 24px | 섹션 사이, **요약 카드 안쪽 여백** (v1.1) |
 | `space.8` | 32px | 큰 섹션 사이, 빈 화면 위아래 |
 | `space.10` | 40px | 시작 화면 위 여백 |
 
@@ -192,17 +208,20 @@
 | `radius.md` | 12px | 버튼, 입력, 세그먼트 안쪽 |
 | `radius.lg` | 16px | 카드, 목록 묶음, 확인 창 |
 | `radius.xl` | 24px | 바텀시트 위 모서리, 홈 요약 큰 카드 |
+
+**카드 간격 (v1.1)**: 카드 사이 12px(`space.3`), 섹션 제목과 카드 사이 12px, 섹션 사이 24px(`space.6`). 카드 안에서는 구분선보다 여백으로 묶는다.
 | `radius.full` | 999px | 칩, 토스트, ＋ 버튼, 아바타 |
 
-### 3.3 그림자 (라이트만, 따뜻한 갈색 기운)
+### 3.3 그림자 (라이트만, 무채색)
 
 | 토큰 | 값 | 쓰는 곳 |
 |---|---|---|
-| `shadow.sm` | `0 1px 2px rgb(42 36 32 / 0.06)` | 카드, 세그먼트 선택 |
-| `shadow.md` | `0 4px 12px rgb(42 36 32 / 0.08)` | 떠 있는 헤더(스크롤 시), 토스트 |
-| `shadow.lg` | `0 8px 24px rgb(42 36 32 / 0.16)` | 바텀시트, 확인 창, ＋ 버튼 |
+| `shadow.sm` | `0 1px 2px rgb(15 16 18 / 0.04)` | 카드(테두리 대신), 세그먼트 선택 |
+| `shadow.md` | `0 4px 12px rgb(15 16 18 / 0.08)` | 떠 있는 헤더(스크롤 시), 토스트 |
+| `shadow.lg` | `0 8px 24px rgb(15 16 18 / 0.14)` | 바텀시트, 확인 창, ＋ 버튼 |
 
-다크: 모두 `none`, 대신 `surface`와 `border`로 구분.
+라이트 카드는 **테두리 없이** 흰색 + `shadow.sm`으로 회색 바탕과 구분한다.
+다크: 모두 `none`, 대신 카드에 `1px border`를 두어 `surface`와 `bg`를 구분.
 
 ### 3.4 움직임
 
@@ -264,7 +283,9 @@
 | 불러오는 중 | `LoaderCircle` | 다시 시도 | `RotateCw` |
 | 빈 화면(내역) | `ReceiptText` | 빈 화면(자산) | `Landmark` |
 
-기본 대분류 아이콘 (목록 행 왼쪽 원). 사용자가 만든 카테고리는 이름 첫 글자를 원 안에 쓴다.
+기본 대분류 아이콘 (목록 행 왼쪽 원). 사용자가 만든 카테고리는 이름 첫 글자를 원 안에 쓴다(15/600).
+
+**아이콘 원은 한 톤 (v1.1 결정)**: 지출·수입·저축·자산 종류 모두 **`surface-sunken` 원 40px + `text` 아이콘 20px**. 카테고리별·종류별로 색을 다르게 칠하지 않는다. 구분은 아이콘 모양과 옆의 이름 글자로 한다. (카테고리 색 아이콘은 클라이언트가 취소함, 2026-11-06)
 
 | 지출 대분류 | 아이콘 | 지출 대분류 | 아이콘 |
 |---|---|---|---|
@@ -330,16 +351,16 @@
 | 부분 | 규칙 |
 |---|---|
 | 높이 | 최소 64px, 세로 여백 12, 좌우 0(카드 안이면 16) |
-| 아이콘 원 | 40px `radius.full`, 바탕 `surface-sunken`, 아이콘 20 `text-sub` (4절 대분류 매핑). 수입은 `income-soft`/`income`, 저축은 `saving-soft`/`saving` |
+| 아이콘 원 | 40px `radius.full`, 바탕 `surface-sunken`, 아이콘 20 `text` (4절 대분류 매핑). **수입·저축도 같은 회색 원** (v1.1) |
 | 제목 | `font.body-sm` 15/600 `text`, 한 줄 넘으면 말줄임 |
 | 보조 | 13/400 `text-sub`, `·`로 구분, 한 줄 말줄임 |
 | 금액 | `font.amount-md` 17/700, 지출 `−`+`expense`, 수입 `+`+`income`, 저축 기호 없음+`saving`. 줄바꿈 금지, 오른쪽 정렬 |
-| 배지 | 고정지출 `notice-bg`/`notice-text` + `Repeat` 12, 저축 `saving-soft`/`saving` |
-| 구분 | 행 사이 `1px border`, 아이콘 오른쪽부터(왼쪽 56px 들여서) |
-| 날짜 묶음 머리 | `11월 6일 (목)` 13/600 `text-sub` + 오른쪽 그날 지출 합 13/600 `text` |
+| 배지 | 고정지출 `Repeat` 12 + "고정", 저축 `PiggyBank` 12 + "저축" — 둘 다 기본 배지(`surface-sunken`/`text-sub`) |
+| 구분 | **구분선 없음** (v1.1). 행 높이·여백으로 나눈다 |
+| 날짜 묶음 | 날짜 하루 = 흰 카드 1장(`radius.lg`, 안쪽 좌우 20·위아래 8). 카드 위 머리 `11월 6일 (목)` 13/600 `text-sub` + 오른쪽 그날 지출 합 13/600 `text` |
 | 누름 | 전체 행이 링크. 누름 바탕 `surface-sunken` |
 
-**자산 행**: 같은 구조. 아이콘 원에 종류별 아이콘(입출금 `Wallet` / 적금·예금 `PiggyBank` / 투자 `TrendingUp` / 현금 `Banknote` / 기타 `Ellipsis`), 보조 줄 "종류 · 소유자(공동)", 금액은 `text` 17/700(음수 없음, 잔액 ≥ 0).
+**자산 행**: 같은 구조. 아이콘 원(같은 회색 톤)에 종류별 아이콘(입출금 `Wallet` / 적금·예금 `PiggyBank` / 투자 `TrendingUp` / 현금 `Banknote` / 기타 `Ellipsis`), 보조 줄 "종류 · 소유자(공동)", 금액은 `text` 17/700(음수 없음, 잔액 ≥ 0).
 
 **메뉴 행(설정)**: 높이 56, 왼쪽 아이콘 20 `text-sub` + 이름 16, 오른쪽 현재 값 15 `text-sub` + `ChevronRight`.
 
@@ -347,7 +368,8 @@
 
 | 변형 | 크기 | 쓰는 곳 |
 |---|---|---|
-| `hero` | 32/700, `원` 24 | 홈 남은 돈, 자산 합계 |
+| `hero` | 36/700, `원` 27 | 홈 남은 돈, 자산 합계 (14자 이상이면 `xl`) |
+| `xl` | 28/700, `원` 21 | 입력 화면 금액, 긴 hero |
 | `lg` | 24/700, `원` 18 | 요약 카드 주요 3개(수입·지출·저축) |
 | `md` | 17/700 | 목록 행, 나눠 보기 |
 | `sm` | 15/600 | 보조 금액, 소유자별 합계 |
@@ -360,7 +382,7 @@
 | `saving` | `saving` | 없음 |
 | `negative` | `negative` | `−` (+ 화면낭독 "마이너스") |
 
-홈 요약 카드 구성(시안 BANB-19에서 확정): 위 라벨 "11월 남은 돈"(13 `text-sub`) → `hero` 금액 → 아래 3칸 수입/지출/저축(`caption` 라벨 + `md` 금액). 남은 돈 계산식은 카드 아래 `text-weak` 13px로.
+홈 요약 카드 구성(시안 BANB-19에서 확정): 흰 카드(`radius.xl`, 안쪽 24) 안에 위 라벨 "11월 남은 돈"(15/500 `text-sub`) → 간격 4 → `hero` 금액 → 간격 24 → 3칸 수입/지출/저축(`caption` 라벨 + `md` 금액, **구분선 없이** 여백으로). 남은 돈 계산식은 카드 아래 `text-weak` 13px로.
 360px에서 3칸 폭(약 90px)보다 금액이 길면(예: `10,000,000원` 이상) 기존 D-1 규칙대로 그 항목만 한 줄 전체로 내려간다. 금액을 자르거나 글자를 줄이지 않는다.
 
 ### 5.5 칩 (필터·주머니·카테고리 선택)
@@ -373,7 +395,7 @@
 
 - 높이 44, 좌우 14, `radius.full`, 글자 15, 사이 8. 넘치면 줄바꿈(가로 스크롤 금지 — 숨은 선택지가 생김).
 - 주머니 칩은 이름 뒤에 범위 아이콘(`Users` 공동 / `User` 개인) 14px을 붙이고 `aria-label`에 "공동"/"개인" 포함.
-- 필터가 걸려 있으면 가계부 탭 위에 "필터 2개 적용 중 · 지우기" 띠(`primary-soft`/`primary-strong`).
+- 필터가 걸려 있으면 가계부 탭 위에 "필터 2개 적용 중 · 지우기" 띠(`surface-sunken`/`text`, "지우기"는 `primary` 텍스트 버튼).
 
 ### 5.6 상단 헤더 (가계부 전환 포함)
 
@@ -382,16 +404,17 @@
 | 탭 화면(홈·가계부·자산) | **가계부 전환 버튼** | — | `Settings` 아이콘 버튼 44 |
 | 하위 화면(설정·입력 등) | `ChevronLeft` 버튼 44 | 화면 제목 `font.title` | 화면 동작(있으면) |
 
-- 높이 56 + `safe-top`, 바탕 `surface`, 아래 `1px border`(스크롤 0일 때는 테두리 없음, 스크롤되면 `border` 표시).
-- **가계부 전환 버튼**: [가계부 첫 글자 원 28px `primary-soft`/`primary-strong` 14/700] + 가계부 이름 `font.title` 18/600(한 줄 말줄임, 최대 폭 = 헤더 − 오른쪽 버튼) + `ChevronDown` 20 `text-sub`. 전체가 하나의 버튼(높이 44 이상). `aria-label="가계부 전환, 지금 보는 가계부: {이름}"`, `aria-haspopup="dialog"`.
+- 높이 56 + `safe-top`, 바탕 `surface`, 아래 경계 없음 → 스크롤되면 `1px border` 표시.
+- **가계부 전환 버튼**: [가계부 첫 글자 원 28px `surface-sunken`/`text` 14/700 (v1.1: 회색)] + 가계부 이름 `font.title` 18/600(한 줄 말줄임, 최대 폭 = 헤더 − 오른쪽 버튼) + `ChevronDown` 20 `text-sub`. 전체가 하나의 버튼(높이 44 이상). `aria-label="가계부 전환, 지금 보는 가계부: {이름}"`, `aria-haspopup="dialog"`.
 - **가계부 전환 시트**(5.8 바텀시트 사용, 제목 "가계부"):
-  - 행: 높이 64, [첫 글자 원 40] 이름 16/600(두 줄까지, 넘치면 말줄임) + "멤버 N명" 13 `text-sub`. 현재 가계부는 행 바탕 `primary-soft` + 오른쪽 `Check` 20 `primary` + `aria-current="true"` (배지 문구 "지금 보는 중"은 화면낭독용으로만).
+  - 행: 높이 64, [첫 글자 원 40, `surface-sunken`/`text`] 이름 16/600(두 줄까지, 넘치면 말줄임) + "멤버 N명" 13 `text-sub`. 현재 가계부는 행 바탕 `primary-soft` + 오른쪽 `Check` 20 `primary` + `aria-current="true"` (배지 문구 "지금 보는 중"은 화면낭독용으로만).
   - 목록 아래 구분선 후 텍스트 행 2개: `Plus` "새 가계부 만들기", `UserPlus` "초대코드로 참여" (높이 56, `primary` 글자). 5개 상한이면 두 행을 비활성으로 두고 아래 "가계부는 최대 5개까지 참여할 수 있어요" 13 `text-sub`.
   - 360px에서 5개 + 동작 2개가 스크롤 없이 보이는 높이 기준(64×5 + 56×2 + 머리 56 ≈ 488px).
 
 ### 5.7 하단 탭
 
 - 높이 64 + `safe-bottom`, 바탕 `surface`, 위 `1px border`. 3칸 균등.
+- 비활성 칸 아이콘·라벨은 `text-weak`보다 진한 `text-sub`(대비 유지), 활성만 포인트 색.
 - 칸: 아이콘 24 + 라벨 12/500, 사이 4.
 - 기본: `text-sub`. 활성: 아이콘 뒤 알약 56×32 `primary-soft`, 아이콘 `primary-strong`, 라벨 `text` 12/700 + `aria-current="page"`. (색 + 알약 모양 + 굵기로 구분)
 - ＋ 버튼(내역 추가)은 탭이 아니라 가계부·홈 탭 위 떠 있는 56px 원(`primary`/`on-primary`, `shadow.lg`, `aria-label="내역 추가"`). 위치: 오른쪽 20, 탭바 위 16.
@@ -420,7 +443,7 @@
 
 ### 5.11 빈 화면
 
-- 가운데 정렬, 위아래 `space.8`. 원 72px `surface-sunken` 안에 아이콘 32 `text-sub` → 제목 16/600 → 설명 15 `text-sub`(최대 2줄) → 필요하면 주 버튼 M.
+- 가운데 정렬, 위아래 `space.8`. 원 72px `surface-sunken` 안에 아이콘 32 `text-sub` (일러스트·색 없음) → 제목 16/600 → 설명 15 `text-sub`(최대 2줄) → 필요하면 주 버튼 M.
 - 문구는 다음 행동을 알려 준다. 예:
 
 | 자리 | 제목 | 설명 | 버튼 |
@@ -444,7 +467,16 @@
 
 ### 5.13 배지
 
-높이 20, 좌우 6, `radius.sm`, 12/600. 종류: 기본(`surface-sunken`/`text-sub`), 주(`primary-soft`/`primary-strong`), 수입·저축·고정(1.2 표의 soft/글자 조합).
+높이 20, 좌우 6, `radius.sm`, 12/600. 종류는 두 가지뿐: 기본(`surface-sunken`/`text-sub`, 고정·저축·수입 등 모든 분류 배지, 앞에 아이콘 12) / 주(`primary-soft`/`primary-strong`, "나"·"새로"처럼 강조가 꼭 필요한 곳).
+
+**안내 상자** (v1.1): `surface-sunken` 바탕, `radius.md`, 안쪽 12, `Info` 16 + 14/500 `text-sub`. 노란 상자는 쓰지 않는다.
+
+### 5.14 달력 칸 색 (v1.1)
+
+- 요일 머리글 `일 월 화 수 목 금 토` 13/500 `text-sub`, 날짜 숫자 13/500 `text` — **토·일도 같은 무채색**(머리글 글자로 구분).
+- 오늘: 날짜 숫자 뒤 24px 원 `primary` + `on-primary` 글자. 선택한 날: 칸 바탕 `primary-soft`.
+- 칸 금액(`font.micro`): 지출 `text`, 수입 `income`. 다른 달 날짜는 `text-weak`.
+- 저축만 있는 날 표시 방식은 화면 시안(BANB-19)에서 정한다.
 
 ---
 
@@ -452,7 +484,7 @@
 
 - [ ] 누르는 영역 최소 44×44px (주 버튼·입력 48px). 작은 아이콘도 감싸는 버튼은 44.
 - [ ] 키보드 포커스가 항상 보인다(`:focus-visible` 2px `focus` 링). 링을 지우는 `outline: none` 금지.
-- [ ] 색만으로 의미 전달 금지: 음수 `−`+단어, 선택 `Check`, 오류 아이콘+문장, 수입·지출 기호/라벨, 활성 탭 알약+굵기.
+- [ ] 색만으로 의미 전달 금지: 음수 `−`+단어, 선택 `Check`, 오류 아이콘+문장, 수입·지출 기호/라벨, 활성 탭 알약+굵기, 저축 배지.
 - [ ] 글자 대비 4.5:1, 큰 글자·테두리·포커스 3:1 (1.3 표). 새 색 조합은 표에 추가하고 계산한다.
 - [ ] 아이콘만 있는 버튼에 `aria-label`. 장식 아이콘은 `aria-hidden`.
 - [ ] 금액은 화면낭독기가 "마이너스 52,000원", "지출 12,000원"처럼 의미대로 읽는다.
@@ -474,47 +506,40 @@
 ```css
 :root {
   /* 색 — 라이트 */
-  --color-bg: #FBF8F3;
+  --color-bg: #F5F6F8;
   --color-surface: #FFFFFF;
-  --color-surface-sunken: #F4EFE7;
-  --color-border: #EAE3D8;
-  --color-border-strong: #8E8579;
-  --color-text: #2A2420;
-  --color-text-sub: #615850;
-  --color-text-weak: #7A7066;
+  --color-surface-sunken: #F0F1F4;
+  --color-border: #E8EAED;
+  --color-border-strong: #8A8F98;
+  --color-text: #1D1F23;
+  --color-text-sub: #5B6068;
+  --color-text-weak: #686D76;
   --color-primary: #BF4D1B;
   --color-primary-pressed: #A23F14;
   --color-primary-strong: #A3401A;
   --color-primary-soft: #FCEDE5;
   --color-on-primary: #FFFFFF;
   --color-focus: #BF4D1B;
-  --color-scrim: rgb(23 20 18 / 0.45);
-  --color-inverse-surface: #2A2420;
+  --color-scrim: rgb(15 16 18 / 0.45);
+  --color-inverse-surface: #1D1F23;
   --color-on-inverse: #FFFFFF;
   --color-inverse-action: #F7A27C;
 
-  --color-expense: #2A2420;
-  --color-income: #2459D6;
-  --color-income-soft: #EAF0FD;
-  --color-saving: #13795B;
-  --color-saving-soft: #E3F3EC;
-  --color-negative: #C8283C;
-  --color-negative-soft: #FDECEE;
-  --color-danger: #C8283C;
+  --color-expense: #1D1F23;
+  --color-income: #3E5F9E;
+  --color-saving: #3B7560;
+  --color-negative: #B23A48;
+  --color-danger: #B23A48;
   --color-on-danger: #FFFFFF;
-  --color-danger-soft: #FDECEE;
-  --color-success: #1E7A46;
-  --color-notice-bg: #FFF3D6;
-  --color-notice-text: #7A4B00;
+  --color-danger-soft: #FBEEEF;
   --color-chart-bar: #BF4D1B;
-  --color-chart-track: #F4EFE7;
-  --color-cal-sun: #C8283C;
-  --color-cal-sat: #2459D6;
+  --color-chart-track: #F0F1F4;
 
   /* 글자 */
   --font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
     'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  --font-amount-hero: 700 2rem/2.5rem var(--font-family);       /* 32/40 */
+  --font-amount-hero: 700 2.25rem/2.75rem var(--font-family);   /* 36/44 */
+  --font-amount-xl: 700 1.75rem/2.25rem var(--font-family);     /* 28/36 */
   --font-amount-lg: 700 1.5rem/2rem var(--font-family);         /* 24/32 */
   --font-title-lg: 600 1.375rem/1.875rem var(--font-family);    /* 22/30 */
   --font-title: 600 1.125rem/1.625rem var(--font-family);       /* 18/26 */
@@ -533,9 +558,10 @@
   --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px; --radius-full: 999px;
 
   /* 그림자 */
-  --shadow-sm: 0 1px 2px rgb(42 36 32 / 0.06);
-  --shadow-md: 0 4px 12px rgb(42 36 32 / 0.08);
-  --shadow-lg: 0 8px 24px rgb(42 36 32 / 0.16);
+  --shadow-sm: 0 1px 2px rgb(15 16 18 / 0.04);
+  --shadow-md: 0 4px 12px rgb(15 16 18 / 0.08);
+  --shadow-lg: 0 8px 24px rgb(15 16 18 / 0.14);
+  --card-border: none;
 
   /* 움직임 */
   --motion-fast: 120ms ease-out;
@@ -561,14 +587,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #171412;
-    --color-surface: #221E1B;
-    --color-surface-sunken: #2C2723;
-    --color-border: #3A342E;
-    --color-border-strong: #7D7368;
-    --color-text: #F4EFE9;
-    --color-text-sub: #C2B8AD;
-    --color-text-weak: #9E9388;
+    --color-bg: #131416;
+    --color-surface: #1D1E21;
+    --color-surface-sunken: #27292D;
+    --color-border: #34363B;
+    --color-border-strong: #7B8089;
+    --color-text: #F1F2F4;
+    --color-text-sub: #B8BCC3;
+    --color-text-weak: #989CA4;
     --color-primary: #F0895A;
     --color-primary-pressed: #E07444;
     --color-primary-strong: #F7A27C;
@@ -576,31 +602,24 @@
     --color-on-primary: #1A1310;
     --color-focus: #F0895A;
     --color-scrim: rgb(0 0 0 / 0.6);
-    --color-inverse-surface: #F4EFE9;
-    --color-on-inverse: #171412;
+    --color-inverse-surface: #F1F2F4;
+    --color-on-inverse: #131416;
     --color-inverse-action: #A3401A;
 
-    --color-expense: #F4EFE9;
-    --color-income: #8AAEFF;
-    --color-income-soft: #1E2A44;
-    --color-saving: #5CC99E;
-    --color-saving-soft: #17332A;
-    --color-negative: #FF7B88;
-    --color-negative-soft: #3D1D22;
-    --color-danger: #FF7B88;
+    --color-expense: #F1F2F4;
+    --color-income: #9DB2DC;
+    --color-saving: #93C4AD;
+    --color-negative: #EE8F99;
+    --color-danger: #EE8F99;
     --color-on-danger: #1A1310;
-    --color-danger-soft: #3D1D22;
-    --color-success: #66CF8F;
-    --color-notice-bg: #3A2E14;
-    --color-notice-text: #F5C56B;
+    --color-danger-soft: #3A2226;
     --color-chart-bar: #F0895A;
-    --color-chart-track: #2C2723;
-    --color-cal-sun: #FF7B88;
-    --color-cal-sat: #8AAEFF;
+    --color-chart-track: #27292D;
 
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;
+    --card-border: 1px solid var(--color-border);
   }
 }
 
@@ -618,26 +637,31 @@
 
 | 지금 | 새 토큰 |
 |---|---|
-| `--color-bg #f6f7f9` | `--color-bg` (값 변경) |
+| `--color-bg #f6f7f9` | `--color-bg` (값 변경, `#F5F6F8`) |
 | `--color-surface`, `--color-text`, `--color-text-sub`, `--color-border` | 이름 같음, 값 변경 |
-| `--color-primary #1f6f5c` (초록) | `--color-primary` (살구로 변경). 저축 의미로 쓰던 곳(`.tx-row__amount--saving`, `.tx-badge--saving`)은 `--color-saving` |
+| `--color-primary #1f6f5c` (초록) | `--color-primary` (살구로 변경). 저축 금액(`.tx-row__amount--saving`)은 `--color-saving`, 저축 배지(`.tx-badge--saving`)는 기본 배지(`surface-sunken`/`text-sub`) |
 | `--color-danger #c62828` | 오류·위험은 `--color-danger`, 남은 돈 음수(`.is-negative`)는 `--color-negative` |
-| `--color-success`, `--color-notice-bg` | 이름 같음, 값 변경 |
-| 하드코딩 `#1d4ed8` (수입·토요일) | `--color-income` / `--color-cal-sat` |
-| 하드코딩 `#e6f2ee`, `#e3f1ed`, `#f1f8f6` (선택 바탕) | `--color-primary-soft` (저축 배지는 `--color-saving-soft`) |
+| `--color-success` | 삭제. 완료 글자는 `--color-text` + `CircleCheck` |
+| `--color-notice-bg` | 삭제. 안내 상자는 `--color-surface-sunken` + `--color-text-sub` |
+| 하드코딩 `#1d4ed8` (수입·토요일) | 수입 금액은 `--color-income`, 토요일 날짜는 `--color-text` (색 없음) |
+| 하드코딩 `#e6f2ee`, `#e3f1ed`, `#f1f8f6` (선택 바탕) | `--color-primary-soft` (저축 배지는 `--color-surface-sunken`) |
 | 하드코딩 `#8a929c`, `#8a94a3` (입력 테두리) | `--color-border-strong` |
 | 하드코딩 `#fdecea` (삭제 확인) | `--color-danger-soft` |
-| 하드코딩 `#7a4b00` (고정 배지) | `--color-notice-text` |
+| 하드코딩 `#7a4b00` (고정 배지) | 기본 배지 `--color-surface-sunken` / `--color-text-sub` |
+| 카드 `border: 1px solid var(--color-border)` | `border: var(--card-border)` + `box-shadow: var(--shadow-sm)` (라이트는 테두리 없음) |
+| 목록 행 사이 구분선 | 삭제 (행 여백으로 구분) |
+| 수입·저축 아이콘 원 색 바탕 | 모든 아이콘 원 `--color-surface-sunken` + `--color-text` |
 | `--tabbar-height: 60px` | `64px` |
 | `--touch: 48px` | 최소 `--touch: 44px`, 주요 버튼·입력 `--touch-lg: 48px` |
 | `font-family: system-ui …` | `--font-family` (Pretendard) |
 | `src/components/Icon.tsx` 직접 그린 SVG | `lucide-react` 아이콘으로 교체 (4절 매핑) |
 | 가계부 전환 `▾` 글자 | `ChevronDown` |
 | `src/domain/format.ts` `formatWon`의 `-` | `−`(U+2212) + 금액 컴포넌트에서 화면낭독 "마이너스" |
-| `index.html` `theme-color #ffffff` | 라이트 `#FFFFFF` / 다크 `#221E1B` 두 개 |
+| `index.html` `theme-color #ffffff` | 라이트 `#FFFFFF` / 다크 `#1D1E21` 두 개 |
 
 ## 10. 범위·다음 단계
 
 - 이 문서는 기준만 정한다. 화면별 시안(시작·홈·가계부·입력·자산·설정)은 **BANB-19**.
-- 다음 단계로 미룬 것: 앱 안 다크 모드 토글, 가계부별 색/이모지(데이터 항목 필요), 그래프 다색 팔레트(대분류 5개 이상 색 구분), 일러스트.
+- 다음 단계로 미룬 것: 앱 안 다크 모드 토글, 가계부별 색/이모지(데이터 항목 필요), 일러스트.
+- v1.1에서 하지 않기로 한 것: 카테고리별 색 아이콘, 그래프 다색 팔레트 (색을 줄이는 방향과 반대. 클라이언트 결정 2026-11-06).
 - 바꾸는 법: 토큰 값·이름 변경은 이 문서를 먼저 고치는 PR → 디자인 리뷰 → 코드 반영.
