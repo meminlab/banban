@@ -393,7 +393,7 @@ describe('초대 링크 (/join/코드)', () => {
     expect(localStorage.length).toBe(0); // 기억해 둔 코드는 지운다
   });
 
-  it('3번째 사람은 상한 안내를 받고 참여되지 않는다', async () => {
+  it('인원이 가득 찬 가계부에는 상한 안내를 받고 참여되지 않는다', async () => {
     fake.joinLedger.mockRejectedValueOnce(rpcError('MEMBER_LIMIT_REACHED', '2'));
     const user = userEvent.setup();
     renderAt('/join/ABCD2345');
