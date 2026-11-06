@@ -188,7 +188,7 @@ export interface TrendPoint {
 }
 
 /**
- * 이번 달까지 최근 n개월(기본 6) 순자산. 오래된 달이 앞.
+ * end(기본 이번 달)까지 최근 n개월(기본 6) 순자산. 오래된 달이 앞. 이번 달·미래 달은 현재 값(Q13).
  * 보기(합친/사람별)는 assets 를 filterByOwner 로 거른 뒤 넘긴다 — 종류·소유자는 현재 값 기준(Q11)
  */
 export function netWorthTrend(
@@ -196,8 +196,8 @@ export function netWorthTrend(
   history: readonly AssetBalanceHistory[],
   now: Date = new Date(),
   months = 6,
+  end: YearMonth = currentYearMonth(now),
 ): TrendPoint[] {
-  const end = currentYearMonth(now);
   return Array.from({ length: months }, (_, i) => {
     const ym = addMonths(end, i - (months - 1));
     return { ym, net: netWorthForMonth(assets, history, ym, now)?.net ?? null };
@@ -239,4 +239,47 @@ export function trendSegments(points: readonly TrendPoint[]): number[][] {
   });
   if (cur.length) segs.push(cur);
   return segs;
+}
+
+// ── 홈 "우리집 순자산" 카드 (BANB-27)
+
+/** 카드가 보여 주는 값의 기준: 이번 달 = 지금, 지난 달 = 그 달 월말, 미래 달 = 지금 값(Q13) */
+export type HomeNetWorthBasis = 'now' | 'month_end' | 'future';
+
+export type HomeNetWorth =
+  /** 자산·부채가 하나도 없음(보관 제외) → "자산을 등록해 보세요". 지난 달은 그 달 이력이 있으면 값을 보여 준다 */
+  | { kind: 'empty' }
+  | {
+      kind: 'value';
+      basis: HomeNetWorthBasis;
+      /** 그 달 순자산. 이력이 시작되기 전 달이면 null(화면 "–") */
+      net: number | null;
+      /** 전월 대비. 비교할 달 이력이 없으면 null(화면 "–") */
+      change: number | null;
+      /** 선택한 달까지 6개월 작은 추이 */
+      trend: TrendPoint[];
+    };
+
+/**
+ * 홈 카드 값 (합친 보기). 자산 탭 합친 보기와 같은 함수로 계산하므로 같은 달이면 값이 같다(QA HM-10).
+ */
+export function homeNetWorth(
+  assets: readonly Asset[],
+  history: readonly AssetBalanceHistory[],
+  ym: YearMonth,
+  now: Date = new Date(),
+): HomeNetWorth {
+  const cur = currentYearMonth(now);
+  const basis: HomeNetWorthBasis = ym === cur ? 'now' : ym > cur ? 'future' : 'month_end';
+  const value = netWorthForMonth(assets, history, ym, now);
+  const hasActive = assets.some(isActive);
+  // 이번 달·미래 달은 지금 등록된 것이 없으면 빈 안내. 지난 달은 그 달 이력이 없고 지금도 없을 때만
+  if (!hasActive && (basis !== 'month_end' || value === null)) return { kind: 'empty' };
+  return {
+    kind: 'value',
+    basis,
+    net: value?.net ?? null,
+    change: netWorthChange(assets, history, ym, now),
+    trend: netWorthTrend(assets, history, now, 6, ym),
+  };
 }

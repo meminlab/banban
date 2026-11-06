@@ -3,6 +3,7 @@ import {
   composition,
   currentNetWorth,
   filterByOwner,
+  homeNetWorth,
   monthEndBoundary,
   monthEndNetWorth,
   needsMonthlyCheck,
@@ -298,5 +299,65 @@ describe('추이 그래프 세로 범위 (design.md 5.19)', () => {
     const p = (net: number | null) => ({ ym: '2026-01', net });
     expect(trendSegments([p(null), p(1), p(2), p(null), p(3), p(4)])).toEqual([[1, 2], [4, 5]]);
     expect(trendSegments([p(null), p(1)])).toEqual([[1]]);
+  });
+});
+
+describe('홈 우리집 순자산 카드 (BANB-27, QA v4 HM)', () => {
+  const nets = (t: { net: number | null }[]) => t.map((p) => p.net);
+
+  it('HM-01 이번 달: 현재 값 108,700,000 · ▼18,300,000 · 6개월 작은 추이', () => {
+    const h = homeNetWorth(V4, history, '2026-11', NOW);
+    expect(h).toMatchObject({ kind: 'value', basis: 'now', net: 108_700_000, change: -18_300_000 });
+    if (h.kind !== 'value') throw new Error();
+    expect(h.trend.map((p) => p.ym)).toEqual(['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11']);
+    expect(nets(h.trend)).toEqual([null, null, null, 128_000_000, 127_000_000, 108_700_000]);
+  });
+
+  it('HM-03 10월: 10월 말 값 127,000,000 · ▼1,000,000, 작은 추이는 10월에서 끝난다', () => {
+    const h = homeNetWorth(V4, history, '2026-10', NOW);
+    expect(h).toMatchObject({ kind: 'value', basis: 'month_end', net: 127_000_000, change: -1_000_000 });
+    if (h.kind !== 'value') throw new Error();
+    expect(h.trend[5].ym).toBe('2026-10');
+    expect(nets(h.trend)).toEqual([null, null, null, null, 128_000_000, 127_000_000]);
+  });
+
+  it('HM-04 9월: 128,000,000 · 전월 대비 "–"(null)', () => {
+    expect(homeNetWorth(V4, history, '2026-09', NOW)).toMatchObject({ basis: 'month_end', net: 128_000_000, change: null });
+  });
+
+  it('HM-05 이력 시작 전 달(8월): 값·전월 대비 모두 "–"(null) (Q13)', () => {
+    const h = homeNetWorth(V4, history, '2026-08', NOW);
+    expect(h).toMatchObject({ kind: 'value', basis: 'month_end', net: null, change: null });
+  });
+
+  it('HM-06 미래 달(12월): 현재 값 108,700,000 (Q13), 11월 말과 같아 변동 없음', () => {
+    const h = homeNetWorth(V4, history, '2026-12', NOW);
+    expect(h).toMatchObject({ kind: 'value', basis: 'future', net: 108_700_000, change: 0 });
+    if (h.kind !== 'value') throw new Error();
+    expect(nets(h.trend)).toEqual([null, null, 128_000_000, 127_000_000, 108_700_000, 108_700_000]);
+  });
+
+  it('HM-10 같은 달이면 자산 탭 합친 보기 값과 같다', () => {
+    const h = homeNetWorth(V4, history, '2026-11', NOW);
+    expect(h.kind === 'value' && h.net).toBe(currentNetWorth(V4).net);
+    expect(h.kind === 'value' && h.change).toBe(netWorthChange(V4, history, '2026-11', NOW));
+  });
+
+  it('HM-07 자산·부채가 하나도 없으면 empty (어느 달이든)', () => {
+    expect(homeNetWorth([], [], '2026-11', NOW)).toEqual({ kind: 'empty' });
+    expect(homeNetWorth([], [], '2026-10', NOW)).toEqual({ kind: 'empty' });
+    expect(homeNetWorth([], [], '2026-12', NOW)).toEqual({ kind: 'empty' });
+  });
+
+  it('모두 보관: 이번 달은 empty, 지난 달은 그 달 이력이 있으면 값', () => {
+    const car = V4.filter((a) => a.id === 'B차');
+    expect(homeNetWorth(car, history, '2026-11', NOW)).toEqual({ kind: 'empty' });
+    expect(homeNetWorth(car, history, '2026-10', NOW)).toMatchObject({ kind: 'value', net: 20_000_000 });
+    expect(homeNetWorth(car, history, '2026-08', NOW)).toEqual({ kind: 'empty' });
+  });
+
+  it('HM-08 순자산 음수', () => {
+    const debt = [mk('빚', 'loan', null, [['2026-11-02T09:00:00', 9_999_999_999]])];
+    expect(homeNetWorth(debt, history, '2026-11', NOW)).toMatchObject({ kind: 'value', net: -9_999_999_999 });
   });
 });
