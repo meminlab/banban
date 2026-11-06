@@ -1,8 +1,8 @@
-import { Check, Plus } from 'lucide-react';
+import { Check, Plus, Tag } from 'lucide-react';
 import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import type { Category, TransactionType } from '../data/types';
 import { NAME_MAX, sortByOrder, TRANSACTION_TYPES, TYPE_LABEL } from '../domain/catalog';
-import { firstLetter, ICON_GROUPS, isKnownIcon } from '../domain/categoryIcon';
+import { categoryGlyph, ICON_GROUPS, isKnownIcon } from '../domain/categoryIcon';
 import { checkCategoryDraft, type ParentChoice } from '../domain/categoryPicker';
 import { GlyphCircle, LucideByKey } from './CategoryIcon';
 
@@ -48,6 +48,11 @@ export function CategoryEditor({
   const [touched, setTouched] = useState(false);
 
   const isAdd = !editing;
+  // 미리보기는 저장 후 실제로 보일 모양과 같게: 고른 아이콘 → (소분류면) 대분류 아이콘 → 이름 첫 글자 → 이름도 없으면 Tag
+  const previewParentId = editing ? editing.parent_id : parent?.kind === 'existing' ? parent.id : null;
+  const previewParent = previewParentId ? categories.find((c) => c.id === previewParentId) : undefined;
+  const previewGlyph = categoryGlyph({ name, icon }, previewParent);
+  const previewEmpty = previewGlyph.kind === 'letter' && name.trim() === '';
   const check = checkCategoryDraft({ name, type, categories, parent, editing });
   const parents = sortByOrder(
     categories.filter(
@@ -89,7 +94,13 @@ export function CategoryEditor({
 
       <div className="cat-editor__preview" aria-hidden="true">
         <span className="cat-editor__preview-circle">
-          <GlyphCircle glyph={icon ? { kind: 'icon', key: icon } : { kind: 'letter', letter: firstLetter(name) }} size="preview" />
+          {previewEmpty ? (
+            <span className="cat-icon cat-icon--preview">
+              <Tag size={30} strokeWidth={2} aria-hidden="true" focusable="false" />
+            </span>
+          ) : (
+            <GlyphCircle glyph={previewGlyph} size="preview" />
+          )}
         </span>
         <span className="cat-editor__preview-name">{name.trim() || '새 카테고리'}</span>
       </div>
@@ -145,7 +156,7 @@ export function CategoryEditor({
 
       <div className="cat-editor__field">
         <p className="manage-sheet__label" id={`${id}-icons`}>
-          아이콘 <span className="field__optional">(안 고르면 이름 첫 글자)</span>
+          아이콘 <span className="field__optional">(안 고르면 대분류 아이콘, 없으면 이름 첫 글자)</span>
         </p>
         <div className="icon-grid" role="radiogroup" aria-labelledby={`${id}-icons`}>
           {ICON_GROUPS.flatMap((g) => g.icons).map((o) => {

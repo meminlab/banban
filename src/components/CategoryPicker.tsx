@@ -7,6 +7,8 @@ import { CategoryIcon } from './CategoryIcon';
  * 카테고리 선택 시트 본문 (design.md 5.17).
  * 최근 쓴 것 → 대분류 구역(소분류 아이콘 격자 4열) → 그 밖의 분류 → 끝에 "추가" 칸.
  * 고르면 onSelect, "추가"는 onAdd.
+ * 구역마다 radiogroup 을 따로 둔다: 고른 카테고리가 "최근 쓴 것"과 원래 구역에 함께 나와도
+ * 한 그룹 안에서 선택(aria-checked)은 하나뿐이다.
  */
 export function CategoryPicker({
   model,
@@ -65,11 +67,11 @@ export function CategoryPicker({
   const lastIsOthers = model.others.length > 0;
 
   return (
-    <div className="cat-picker" role="radiogroup" aria-label="카테고리">
+    <div className="cat-picker">
       {model.recent.length > 0 && (
         <section className="cat-picker__section" aria-label="최근 쓴 것">
           <h3 className="cat-picker__head">최근 쓴 것</h3>
-          <div className="cat-grid">{model.recent.map((c) => cell(c, 'recent-'))}</div>
+          <div className="cat-grid" role="radiogroup" aria-label="최근 쓴 것">{model.recent.map((c) => cell(c, 'recent-'))}</div>
         </section>
       )}
       {model.sections.map(({ parent, children }, i) => (
@@ -79,7 +81,7 @@ export function CategoryPicker({
             {parent.name}
             {parent.is_hidden ? ' (숨김)' : ''}
           </h3>
-          <div className="cat-grid">
+          <div className="cat-grid" role="radiogroup" aria-label={parent.name}>
             {children.map((c) => cell(c))}
             {!lastIsOthers && i === model.sections.length - 1 && addCell}
           </div>
@@ -88,7 +90,7 @@ export function CategoryPicker({
       {lastIsOthers && (
         <section className="cat-picker__section" aria-label="그 밖의 분류">
           <h3 className="cat-picker__head">그 밖의 분류</h3>
-          <div className="cat-grid">
+          <div className="cat-grid" role="radiogroup" aria-label="그 밖의 분류">
             {model.others.map((c) => cell(c))}
             {addCell}
           </div>

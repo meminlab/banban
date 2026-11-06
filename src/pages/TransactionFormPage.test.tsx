@@ -265,7 +265,20 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     expect(mart.querySelector('svg')).not.toBeNull(); // 첫 글자가 아니라 대분류 아이콘
     expect(within(sheet).getByRole('button', { name: '추가' })).toBeInTheDocument();
 
+    // 최근 쓴 것과 원래 구역에 같은 칸이 있어도, 그룹마다 선택은 하나
     await user.click(mart);
+    await user.click(categoryField());
+    const again = await screen.findByRole('dialog', { name: '지출 카테고리' });
+    for (const g of within(again).getAllByRole('radiogroup')) {
+      expect(within(g).queryAllByRole('radio', { checked: true }).length).toBeLessThanOrEqual(1);
+    }
+    expect(within(again).getAllByRole('radio', { checked: true })).toHaveLength(2);
+    await user.click(within(again).getByRole('button', { name: '닫기' }));
+    await user.click(categoryField());
+    const sheet2 = await screen.findByRole('dialog', { name: '지출 카테고리' });
+    const mart2 = within(within(sheet2).getByRole('region', { name: '식비' })).getByRole('radio', { name: '장보기' });
+
+    await user.click(mart2);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(categoryField()).toHaveTextContent('식비 › 장보기');
     await user.click(categoryField());
@@ -333,6 +346,9 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     await user.click(categoryField());
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '추가' }));
     const editor = await screen.findByRole('dialog', { name: '카테고리 추가' });
+    // 이름도 아이콘도 없으면 "?" 대신 Tag 아이콘 (디자인 결정)
+    expect(editor.querySelector('.cat-editor__preview .cat-icon__letter')).toBeNull();
+    expect(editor.querySelector('.cat-editor__preview svg')).not.toBeNull();
     await user.type(within(editor).getByLabelText('이름'), '술');
     expect(editor.querySelector('.cat-editor__preview .cat-icon__letter')).toHaveTextContent('술');
     await user.click(within(editor).getByRole('radio', { name: '와인' }));
@@ -340,6 +356,10 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     // 다시 누르면 고르지 않은 상태로
     await user.click(within(editor).getByRole('radio', { name: '와인' }));
     expect(editor.querySelector('.cat-editor__preview .cat-icon__letter')).toHaveTextContent('술');
+    // 소분류로 넣을 대분류를 고르면, 저장 후 시트에 보일 모양처럼 대분류 아이콘으로 미리 보인다
+    await user.click(within(editor).getByRole('radio', { name: '식비' }));
+    expect(editor.querySelector('.cat-editor__preview .cat-icon__letter')).toBeNull();
+    expect(editor.querySelector('.cat-editor__preview svg')).not.toBeNull();
   });
 });
 

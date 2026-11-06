@@ -232,6 +232,30 @@ describe('카테고리 관리', () => {
     expect(await screen.findByRole('button', { name: /^바깥밥/ })).toBeInTheDocument();
   });
 
+  it('같은 이름 소분류뿐인 대분류의 아이콘을 바꾸면 그 소분류도 같이 바뀐다 (QA 결함 1)', async () => {
+    fake.categories.find((x) => x.id === 'ins')!.icon = 'shield-check';
+    fake.categories.find((x) => x.id === 'ins-c')!.icon = 'shield-check';
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click((await screen.findAllByRole('button', { name: /^보험/ }))[0]);
+    const dialog = screen.getByRole('dialog', { name: '대분류 수정' });
+    await user.click(within(dialog).getByRole('radio', { name: '하트' }));
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+    expect(catalog.updateCategory).toHaveBeenCalledWith('ins', { name: '보험', icon: 'heart' });
+    expect(catalog.updateCategory).toHaveBeenCalledWith('ins-c', { icon: 'heart' });
+    expect(catalog.updateCategory).toHaveBeenCalledTimes(2);
+  });
+
+  it('이름만 바꾸면 소분류는 건드리지 않는다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click((await screen.findAllByRole('button', { name: /^보험/ }))[0]);
+    const dialog = screen.getByRole('dialog', { name: '대분류 수정' });
+    await user.type(within(dialog).getByLabelText('이름'), '료');
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+    expect(catalog.updateCategory).toHaveBeenCalledTimes(1);
+  });
+
   it('순서를 바꿀 수 있고, 맨 위에서는 위로 버튼이 꺼진다', async () => {
     const user = userEvent.setup();
     const { container } = renderAt('/settings/categories');

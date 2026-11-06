@@ -62,6 +62,18 @@ export function selectableCategoryTree(categories: readonly Category[], type: Tr
     .filter((node) => node.children.length > 0);
 }
 
+/**
+ * 대분류 아이콘을 바꿀 때 함께 바꿀 소분류: 대분류와 이름이 같고(소분류 없이 만든 대분류의 자동 소분류),
+ * 아이콘이 대분류의 원래 아이콘과 같거나 비어 있는 것. 소분류에 따로 다른 아이콘을 줬다면 그대로 둔다.
+ * (선택 시트의 "그 밖의 분류"는 이 소분류를 보여 주므로, 대분류만 바꾸면 화면에 반영되지 않는다 — BANB-24 QA 결함 1)
+ */
+export function iconFollowers(categories: readonly Category[], parent: Category): Category[] {
+  if (parent.parent_id !== null) return [];
+  return categories.filter(
+    (c) => c.parent_id === parent.id && c.name === parent.name && (c.icon === null || c.icon === parent.icon),
+  );
+}
+
 /** 내역 입력에서 고를 수 있는 주머니 (숨긴 것 제외, 순서대로) */
 export function selectablePockets(pockets: readonly Pocket[]): Pocket[] {
   return sortByOrder(pockets.filter((p) => !p.is_hidden));

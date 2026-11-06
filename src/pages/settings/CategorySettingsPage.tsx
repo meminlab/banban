@@ -10,7 +10,7 @@ import { Sheet } from '../../components/Sheet';
 import { StatusScreen } from '../../components/StatusScreen';
 import { addChildCategory, addParentCategory, listCategories, saveOrder, updateCategory } from '../../data/catalog';
 import type { Category, TransactionType } from '../../data/types';
-import { buildCategoryTree, moveItem, nextSortOrder, positionOf, TRANSACTION_TYPES, TYPE_LABEL } from '../../domain/catalog';
+import { buildCategoryTree, iconFollowers, moveItem, nextSortOrder, positionOf, TRANSACTION_TYPES, TYPE_LABEL } from '../../domain/catalog';
 import { HideButton, ItemButton, OrderButtons, SheetError } from './ManageParts';
 
 type SheetState = null | { kind: 'add'; parentId: string | null } | { kind: 'edit'; id: string };
@@ -158,7 +158,13 @@ export function CategorySettingsPage() {
             busy={saving.busy}
             submitLabel="저장"
             onSubmit={async ({ name, icon }) => {
-              if (await save(() => updateCategory(editing.id, { name, icon }))) closeSheet();
+              // 대분류 아이콘을 바꾸면 같은 이름 소분류도 함께 (선택 시트에는 그 소분류가 보인다)
+              const followers = icon !== editing.icon ? iconFollowers(all, editing) : [];
+              const ok = await save(async () => {
+                await updateCategory(editing.id, { name, icon });
+                await Promise.all(followers.map((c) => updateCategory(c.id, { icon })));
+              });
+              if (ok) closeSheet();
             }}
           />
           <OrderButtons
