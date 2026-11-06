@@ -10,6 +10,8 @@ import { TransactionFormPage } from '../pages/TransactionFormPage';
 import { JoinPage } from '../pages/JoinPage';
 import { MembersPage } from '../pages/MembersPage';
 import { LedgerNamePage } from '../pages/LedgerNamePage';
+import { CategorySettingsPage } from '../pages/settings/CategorySettingsPage';
+import { PocketSettingsPage } from '../pages/settings/PocketSettingsPage';
 import { RequireAuth, RequireLedger, RequireNoLedger } from './guards';
 
 export function App() {
@@ -32,6 +34,8 @@ export function App() {
           <Route path="ledger/:transactionId" element={<TransactionFormPage />} />
           <Route path="settings/name" element={<LedgerNamePage />} />
           <Route path="settings/members" element={<MembersPage />} />
+          <Route path="settings/categories" element={<CategorySettingsPage />} />
+          <Route path="settings/pockets" element={<PocketSettingsPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,4 +1,4 @@
--- 스키마·권한 규칙 테스트. 실패하면 예외로 중단된다.
+-- 스키마·권한 규칙 테스트. 운영 DB에 실제 데이터가 있어도 돌 수 있도록 조회는 테스트 가계부로 한정한다. 실패하면 예외로 중단된다.
 -- 전체를 한 트랜잭션으로 실행하고 마지막에 ROLLBACK 하므로 테스트 데이터·테스트용 스키마가 남지 않는다.
 -- → 실제 Supabase SQL Editor에서도 그대로 실행 가능 ("Success. No rows returned" = 통과)
 begin;
@@ -86,8 +86,8 @@ insert into public.invite (ledger_id) select val from test.ctx where key = 'ledg
 select test.expect_count('select * from public.invite where is_revoked = false', 1);
 select test.expect_count($$select * from public.invite where code ~ '^[A-Z0-9]{8}$' and expires_at > now() + interval '6 days 23 hours'$$, 2);
 reset role;
-insert into test.ctx select 'old_invite', id from public.invite where is_revoked;
-insert into test.ctx select 'invite', id from public.invite where not is_revoked;
+insert into test.ctx select 'old_invite', id from public.invite where is_revoked and ledger_id = (select val from test.ctx where key = 'ledger');
+insert into test.ctx select 'invite', id from public.invite where not is_revoked and ledger_id = (select val from test.ctx where key = 'ledger');
 
 -- ── 2. 외부인 X: 아무것도 못 읽고 못 쓴다
 set role authenticated;
@@ -158,11 +158,11 @@ reset role;
 
 -- ── 7. 내역 규칙 (B가 입력)
 reset role;
-insert into test.ctx select 'expense_child', id from public.category where type = 'expense' and name = '외식';
-insert into test.ctx select 'expense_parent', id from public.category where type = 'expense' and name = '식비';
-insert into test.ctx select 'income_child', id from public.category where type = 'income' and parent_id is not null and name = '급여';
-insert into test.ctx select 'pocket', id from public.pocket where name = '공동소비';
-insert into test.ctx select 'member_a', id from public.member where display_name = 'A';
+insert into test.ctx select 'expense_child', id from public.category where type = 'expense' and name = '외식' and ledger_id = (select val from test.ctx where key = 'ledger');
+insert into test.ctx select 'expense_parent', id from public.category where type = 'expense' and name = '식비' and ledger_id = (select val from test.ctx where key = 'ledger');
+insert into test.ctx select 'income_child', id from public.category where type = 'income' and parent_id is not null and name = '급여' and ledger_id = (select val from test.ctx where key = 'ledger');
+insert into test.ctx select 'pocket', id from public.pocket where name = '공동소비' and ledger_id = (select val from test.ctx where key = 'ledger');
+insert into test.ctx select 'member_a', id from public.member where display_name = 'A' and ledger_id = (select val from test.ctx where key = 'ledger');
 insert into test.ctx select 'member_b', id from public.member where user_id = '00000000-0000-0000-0000-00000000000b';
 create view test.v as select
   (select val from test.ctx where key = 'ledger') ledger,

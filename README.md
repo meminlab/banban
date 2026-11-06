@@ -45,6 +45,7 @@ npm run dev                  # http://localhost:5173
 | `npm run build` | 타입 검사 + 배포용 빌드 (`dist/`) |
 | `npm test` | 화면 테스트 |
 | `npm run test:db` | 스키마·권한 규칙 테스트 (Docker 필요. Postgres 컨테이너를 띄워 마이그레이션 적용 후 검사하고 지움). `STRICT=1`이면 테이블 자동 노출을 끈 프로젝트 조건으로 검사 |
+| `SUPABASE_URL=… SUPABASE_KEY=… npx vitest run src/data/catalog.integration.test.ts` | 카테고리·주머니 저장소 함수를 실제 Supabase API로 확인 (두 멤버 간 변경 반영, 숨김 후 지난 내역 이름, N1 거부). **로컬 Supabase 전용**. 환경변수가 없으면 `npm test`에서 건너뛴다 |
 | `node supabase/tests/api_flow.mjs` | 가입 → 가계부 생성 → 초대 → 참여 흐름을 실제 Supabase API로 확인. **로컬 Supabase(`npx supabase start`) 전용** — 테스트 계정을 만들므로 운영 프로젝트에는 돌리지 않는다. `SUPABASE_URL`, `SUPABASE_KEY`(publishable) 필요 |
 | `node supabase/tests/asset_flow.mjs` | 자산 추가·수정·삭제·값 검증·외부인 차단을 실제 Supabase API로 확인. **로컬 Supabase 전용**, 환경변수는 위와 같음 |
 | `node supabase/tests/transaction_flow.mjs` | 내역 입력 → 다른 멤버가 수정(마지막 수정자 바뀜) → 삭제 → 삭제된 내역 저장 시 0행 흐름을 실제 Supabase API로 확인. 로컬 Supabase 전용, 환경변수는 위와 같음 |
@@ -67,8 +68,10 @@ npm run dev                  # http://localhost:5173
       - `20261105010000_category_depth_invite_rules.sql` — 카테고리 2단계, 초대 만료·무효 규칙 보강
       - `20261106000000_profile.sql` — 사용자 프로필(구글 이름·이미지) 테이블과 자동 저장 트리거
       - `20261106120000_ledger_leave_rejoin.sql` — 가계부 나가기(owner 자동 승계·보관), 다시 참여 시 예전 멤버 연결, 보관된 가계부 초대 무효
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `invite_rules=true`, `profile_sync=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+      - `20261106130000_category_in_use_stays_child.sql` — 내역에 쓰인 소분류는 대분류로 바꿀 수 없게 (적용 전 대분류를 가리키는 내역이 있으면 멈춤)
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
+   4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
 3. 프로젝트 설정 → API Keys에서 URL, publishable key를 복사해 `.env.local`과 호스팅 환경변수에 넣기
 4. 구글 로그인 설정 — 아래 "구글 로그인 설정" 참고
