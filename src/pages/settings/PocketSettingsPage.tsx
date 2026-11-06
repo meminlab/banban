@@ -50,7 +50,7 @@ export function PocketSettingsPage() {
         </p>
 
         {pockets.length === 0 ? (
-          <p className="empty">아직 주머니가 없어요. 아래에서 주머니를 추가해 보세요.</p>
+          <p className="manage-empty">아직 주머니가 없어요. 아래에서 주머니를 추가해 보세요.</p>
         ) : (
           <ul className="manage-list">
             {pockets.map((p) => (
@@ -72,7 +72,7 @@ export function PocketSettingsPage() {
           + 주머니 추가
         </button>
 
-        <p className="toast toast--no-tabbar" role="status" aria-live="polite">
+        <p className="manage-toast" role="status" aria-live="polite">
           {saving.done}
         </p>
       </main>
@@ -108,7 +108,7 @@ export function PocketSettingsPage() {
               if (await save(() => updatePocket(editing.id, { name }))) closeSheet();
             }}
           />
-          <div className="sheet__section">
+          <div className="manage-sheet__section">
             <ScopePicker
               value={editing.scope}
               disabled={saving.busy}
@@ -141,10 +141,10 @@ export function PocketSettingsPage() {
 function ScopePicker({ value, disabled, onChange }: { value: PocketScope; disabled: boolean; onChange: (s: PocketScope) => void }) {
   return (
     <fieldset className="scope-picker" disabled={disabled}>
-      <legend className="sheet__label">구분</legend>
-      <div className="segmented">
+      <legend className="manage-sheet__label">구분</legend>
+      <div className="manage-tabs">
         {SCOPES.map((s) => (
-          <label key={s} className={`segmented__item${s === value ? ' is-active' : ''}`}>
+          <label key={s} className={`manage-tabs__item${s === value ? ' is-active' : ''}`}>
             <input type="radio" name="pocket-scope" value={s} checked={s === value} onChange={() => onChange(s)} className="visually-hidden" />
             {SCOPE_LABEL[s]}
           </label>

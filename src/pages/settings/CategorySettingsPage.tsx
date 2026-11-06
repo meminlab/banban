@@ -49,7 +49,7 @@ export function CategorySettingsPage() {
     <div className="shell">
       <BackHeader title="카테고리 관리" fallback={SETTINGS_PATH} />
       <main className="content content--no-tabbar manage">
-        <div className="segmented" role="tablist" aria-label="유형">
+        <div className="manage-tabs" role="tablist" aria-label="유형">
           {TRANSACTION_TYPES.map((t) => (
             <button
               key={t}
@@ -58,7 +58,7 @@ export function CategorySettingsPage() {
               id={`tab-${t}`}
               aria-selected={t === type}
               aria-controls="category-panel"
-              className={`segmented__item${t === type ? ' is-active' : ''}`}
+              className={`manage-tabs__item${t === type ? ' is-active' : ''}`}
               onClick={() => setType(t)}
             >
               {TYPE_LABEL[t]}
@@ -69,7 +69,7 @@ export function CategorySettingsPage() {
 
         <section id="category-panel" role="tabpanel" aria-labelledby={`tab-${type}`}>
           {tree.length === 0 ? (
-            <p className="empty">아직 {TYPE_LABEL[type]} 카테고리가 없어요. 아래에서 대분류를 추가해 보세요.</p>
+            <p className="manage-empty">아직 {TYPE_LABEL[type]} 카테고리가 없어요. 아래에서 대분류를 추가해 보세요.</p>
           ) : (
             <ul className="manage-list">
               {tree.map(({ category: parent, children }) => (
@@ -102,7 +102,7 @@ export function CategorySettingsPage() {
           + {TYPE_LABEL[type]} 대분류 추가
         </button>
 
-        <p className="toast toast--no-tabbar" role="status" aria-live="polite">
+        <p className="manage-toast" role="status" aria-live="polite">
           {saving.done}
         </p>
       </main>

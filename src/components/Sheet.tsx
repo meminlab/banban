@@ -21,21 +21,21 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   }, [onClose]);
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
+    <div className="manage-sheet-backdrop" onClick={onClose}>
       <div
         ref={panelRef}
-        className="sheet"
+        className="manage-sheet"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sheet__head">
-          <h2 id={titleId} className="sheet__title">
+        <div className="manage-sheet__head">
+          <h2 id={titleId} className="manage-sheet__title">
             {title}
           </h2>
-          <button type="button" className="icon-button sheet__close" aria-label="닫기" onClick={onClose}>
+          <button type="button" className="icon-button manage-sheet__close" aria-label="닫기" onClick={onClose}>
             ✕
           </button>
         </div>

@@ -42,9 +42,9 @@ export function OrderButtons({
   onMove: (dir: -1 | 1) => void;
 }) {
   return (
-    <div className="sheet__section">
-      <p className="sheet__label">순서</p>
-      <div className="button-row">
+    <div className="manage-sheet__section">
+      <p className="manage-sheet__label">순서</p>
+      <div className="manage-button-row">
         <button type="button" className="button button--secondary" disabled={busy || position.isFirst} onClick={() => onMove(-1)}>
           ↑ 위로
         </button>
@@ -68,7 +68,7 @@ export function HideButton({
   onToggle: () => void;
 }) {
   return (
-    <div className="sheet__section">
+    <div className="manage-sheet__section">
       <button type="button" className="button button--secondary button--block" disabled={busy} onClick={onToggle}>
         {hidden ? '다시 보이기' : '숨기기'}
       </button>
@@ -83,7 +83,7 @@ export function HideButton({
 /** 목록 표시(공동/개인, 숨김). 화면 읽기에서는 "이름, 공동, 숨김"처럼 쉼표로 끊어 읽힌다 */
 function Badge({ text, muted }: { text: string; muted?: boolean }) {
   return (
-    <span className={`badge${muted ? ' badge--muted' : ''}`}>
+    <span className={`manage-badge${muted ? ' manage-badge--muted' : ''}`}>
       <span className="visually-hidden">, </span>
       {text}
     </span>

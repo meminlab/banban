@@ -37,13 +37,13 @@ export function NameForm({
   }
 
   return (
-    <form className="sheet__section" onSubmit={submit} noValidate>
-      <label className="sheet__label" htmlFor={`${id}-name`}>
+    <form className="manage-sheet__section" onSubmit={submit} noValidate>
+      <label className="manage-sheet__label" htmlFor={`${id}-name`}>
         이름
       </label>
       <input
         id={`${id}-name`}
-        className="text-input"
+        className="manage-input"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         autoComplete="off"
