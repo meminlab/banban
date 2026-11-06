@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>반반 디자인 시스템 v1 미리보기</title>
+<!-- 미리보기 전용. 앱은 npm pretendard / lucide-react 로 번들한다 (docs/design.md 2·4절) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<style>
+/* docs/design.md 8절 토큰 (미리보기에서는 라이트/다크를 나란히 보이려고 .dark 클래스로 덮어씀) */
+.theme {
+  --color-bg:#FBF8F3; --color-surface:#FFFFFF; --color-surface-sunken:#F4EFE7; --color-border:#EAE3D8; --color-border-strong:#8E8579;
+  --color-text:#2A2420; --color-text-sub:#615850; --color-text-weak:#7A7066;
+  --color-primary:#BF4D1B; --color-primary-pressed:#A23F14; --color-primary-strong:#A3401A; --color-primary-soft:#FCEDE5; --color-on-primary:#FFFFFF;
+  --color-focus:#BF4D1B; --color-scrim:rgb(23 20 18 / .45); --color-inverse-surface:#2A2420; --color-on-inverse:#FFFFFF; --color-inverse-action:#F7A27C;
+  --color-expense:#2A2420; --color-income:#2459D6; --color-income-soft:#EAF0FD; --color-saving:#13795B; --color-saving-soft:#E3F3EC;
+  --color-negative:#C8283C; --color-negative-soft:#FDECEE; --color-danger:#C8283C; --color-on-danger:#FFFFFF; --color-danger-soft:#FDECEE;
+  --color-success:#1E7A46; --color-notice-bg:#FFF3D6; --color-notice-text:#7A4B00; --color-chart-bar:#BF4D1B; --color-chart-track:#F4EFE7;
+  --shadow-sm:0 1px 2px rgb(42 36 32 / .06); --shadow-md:0 4px 12px rgb(42 36 32 / .08); --shadow-lg:0 8px 24px rgb(42 36 32 / .16);
+  --font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+}
+.theme.dark {
+  --color-bg:#171412; --color-surface:#221E1B; --color-surface-sunken:#2C2723; --color-border:#3A342E; --color-border-strong:#7D7368;
+  --color-text:#F4EFE9; --color-text-sub:#C2B8AD; --color-text-weak:#9E9388;
+  --color-primary:#F0895A; --color-primary-pressed:#E07444; --color-primary-strong:#F7A27C; --color-primary-soft:#3A2519; --color-on-primary:#1A1310;
+  --color-focus:#F0895A; --color-scrim:rgb(0 0 0 / .6); --color-inverse-surface:#F4EFE9; --color-on-inverse:#171412; --color-inverse-action:#A3401A;
+  --color-expense:#F4EFE9; --color-income:#8AAEFF; --color-income-soft:#1E2A44; --color-saving:#5CC99E; --color-saving-soft:#17332A;
+  --color-negative:#FF7B88; --color-negative-soft:#3D1D22; --color-danger:#FF7B88; --color-on-danger:#1A1310; --color-danger-soft:#3D1D22;
+  --color-success:#66CF8F; --color-notice-bg:#3A2E14; --color-notice-text:#F5C56B; --color-chart-bar:#F0895A; --color-chart-track:#2C2723;
+  --shadow-sm:none; --shadow-md:none; --shadow-lg:none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #d9d4cc; font-family: 'Pretendard Variable', Pretendard, sans-serif; }
+.wrap { display: flex; gap: 32px; padding: 32px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+.theme { width: 375px; background: var(--color-bg); color: var(--color-text); font-family: var(--font-family); border-radius: 28px; overflow: hidden; box-shadow: 0 10px 40px rgb(0 0 0 / .18); }
+.cap { font: 600 13px/18px var(--font-family); color: var(--color-text-sub); margin: 24px 20px 8px; letter-spacing: .02em; }
+.pad { padding: 0 20px; }
+svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
+.i24 svg.lucide, svg.lucide.i24 { width: 24px; height: 24px; stroke-width: 1.75; }
+.i16 svg.lucide { width: 16px; height: 16px; }
+
+/* 헤더 */
+.topbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 12px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.switch { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--color-text); font: 600 18px/26px var(--font-family); border-radius: 12px; }
+.initial { width: 28px; height: 28px; border-radius: 999px; background: var(--color-primary-soft); color: var(--color-primary-strong); display: inline-flex; align-items: center; justify-content: center; font: 700 14px var(--font-family); }
+.initial.lg { width: 40px; height: 40px; font-size: 16px; }
+.switch svg { color: var(--color-text-sub); }
+.iconbtn { width: 44px; height: 44px; border: 0; background: none; color: var(--color-text); display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; }
+
+/* 요약 카드 */
+.card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 24px; padding: 20px; box-shadow: var(--shadow-sm); }
+.label { font: 500 13px/18px var(--font-family); color: var(--color-text-sub); margin: 0; }
+.money { white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; font-weight: 700; }
+.money__unit { font-size: .75em; font-weight: 600; margin-left: 1px; }
+.hero { font-size: 32px; line-height: 40px; margin: 4px 0 16px; display: block; }
+.md { font-size: 17px; line-height: 24px; }
+.neg { color: var(--color-negative); } .inc { color: var(--color-income); } .sav { color: var(--color-saving); }
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 16px; border-top: 1px solid var(--color-border); }
+.three div { display: flex; flex-direction: column; gap: 2px; }
+.formula { font: 400 13px/18px var(--font-family); color: var(--color-text-weak); margin: 12px 0 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* 버튼 */
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn { min-height: 48px; padding: 0 20px; border-radius: 12px; border: 1px solid transparent; font: 600 16px var(--font-family); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn.s { min-height: 44px; font-size: 15px; padding: 0 14px; }
+.primary { background: var(--color-primary); color: var(--color-on-primary); }
+.secondary { background: var(--color-surface); color: var(--color-text); border-color: var(--color-border-strong); }
+.danger { background: var(--color-danger); color: var(--color-on-danger); }
+.danger-outline { background: var(--color-surface); color: var(--color-danger); border-color: var(--color-danger); }
+.textbtn { background: none; color: var(--color-primary); }
+.disabled { background: var(--color-surface-sunken); color: var(--color-text-weak); }
+.focus { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* 입력 */
+.field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.input { min-height: 48px; padding: 0 14px; border: 1px solid var(--color-border-strong); border-radius: 12px; background: var(--color-surface); color: var(--color-text); font: 400 16px var(--font-family); display: flex; align-items: center; }
+.input.ph { color: var(--color-text-weak); justify-content: space-between; }
+.input.err { border-color: var(--color-danger); }
+.input.focused { border: 2px solid var(--color-primary); padding: 0 13px; }
+.amount { min-height: 64px; justify-content: flex-end; gap: 6px; font: 700 24px var(--font-family); font-variant-numeric: tabular-nums; }
+.amount small { font: 600 18px var(--font-family); }
+.errmsg { display: flex; align-items: center; gap: 4px; color: var(--color-danger); font: 500 13px var(--font-family); margin: 0; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--color-surface-sunken); border-radius: 14px; margin-bottom: 16px; }
+.seg span { min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font: 600 16px var(--font-family); color: var(--color-text-sub); }
+.seg .on { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
+
+/* 칩 */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-text); font: 400 15px var(--font-family); display: inline-flex; align-items: center; gap: 4px; }
+.chip.on { background: var(--color-primary-soft); color: var(--color-primary-strong); border-color: var(--color-primary); font-weight: 600; }
+.chip svg.lucide { width: 16px; height: 16px; }
+.chip .scope svg.lucide { width: 14px; height: 14px; color: var(--color-text-sub); }
+
+/* 목록 */
+.list { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 16px; padding: 0 16px; }
+.dayhead { display: flex; justify-content: space-between; font: 600 13px/18px var(--font-family); color: var(--color-text-sub); margin: 0 4px 8px; }
+.dayhead b { color: var(--color-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0; }
+.row + .row { border-top: 1px solid var(--color-border); margin-left: 52px; padding-left: 0; }
+.row + .row .ic { margin-left: -52px; }
+.ic { width: 40px; height: 40px; border-radius: 999px; background: var(--color-surface-sunken); color: var(--color-text-sub); display: flex; align-items: center; justify-content: center; flex: none; }
+.ic.inc { background: var(--color-income-soft); color: var(--color-income); }
+.ic.sav { background: var(--color-saving-soft); color: var(--color-saving); }
+.rmain { flex: 1; min-width: 0; }
+.rtitle { font: 600 15px/22px var(--font-family); margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rsub { font: 400 13px/18px var(--font-family); color: var(--color-text-sub); margin: 2px 0 0; display: flex; gap: 4px; align-items: center; white-space: nowrap; overflow: hidden; }
+.badge { display: inline-flex; align-items: center; gap: 2px; height: 20px; padding: 0 6px; border-radius: 8px; font: 600 12px var(--font-family); }
+.badge.fixed { background: var(--color-notice-bg); color: var(--color-notice-text); }
+.badge.sav { background: var(--color-saving-soft); color: var(--color-saving); }
+.badge svg.lucide { width: 12px; height: 12px; }
+
+/* 탭바 */
+.tabbar { display: grid; grid-template-columns: repeat(3, 1fr); height: 64px; background: var(--color-surface); border-top: 1px solid var(--color-border); position: relative; }
+.tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font: 500 12px var(--font-family); color: var(--color-text-sub); }
+.pill { width: 56px; height: 32px; border-radius: 999px; display: flex; align-items: center; justify-content: center; }
+.tab.on { color: var(--color-text); font-weight: 700; }
+.tab.on .pill { background: var(--color-primary-soft); color: var(--color-primary-strong); }
+.fab { position: absolute; right: 20px; top: -72px; width: 56px; height: 56px; border-radius: 999px; background: var(--color-primary); color: var(--color-on-primary); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-lg); }
+
+/* 시트 */
+.scrimbox { background: var(--color-scrim); padding-top: 24px; }
+.sheet { background: var(--color-surface); border-radius: 24px 24px 0 0; box-shadow: var(--shadow-lg); padding: 8px 20px 24px; }
+.grab { width: 36px; height: 4px; border-radius: 2px; background: var(--color-border-strong); margin: 0 auto 4px; }
+.sheethead { display: flex; justify-content: space-between; align-items: center; height: 56px; font: 600 18px var(--font-family); }
+.lrow { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 0 12px; border-radius: 16px; }
+.lrow.cur { background: var(--color-primary-soft); }
+.lrow .rmain b { display: block; font: 600 16px/24px var(--font-family); }
+.lrow .rmain span { font: 400 13px var(--font-family); color: var(--color-text-sub); }
+.lrow > svg.lucide { color: var(--color-primary); }
+.act { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 12px; color: var(--color-primary); font: 600 16px var(--font-family); }
+.sep { height: 1px; background: var(--color-border); margin: 8px 0; }
+
+/* 확인 창 · 토스트 */
+.dialog { background: var(--color-surface); border-radius: 16px; padding: 24px 20px 16px; box-shadow: var(--shadow-lg); margin: 0 20px; border: 1px solid var(--color-border); }
+.dialog h4 { margin: 0 0 8px; font: 600 18px var(--font-family); }
+.dialog p { margin: 0 0 20px; font: 400 15px/22px var(--font-family); color: var(--color-text-sub); }
+.toast { display: inline-flex; align-items: center; gap: 8px; background: var(--color-inverse-surface); color: var(--color-on-inverse); padding: 12px 20px; border-radius: 999px; font: 500 15px var(--font-family); box-shadow: var(--shadow-md); }
+.toast u { color: var(--color-inverse-action); text-decoration: none; font-weight: 600; margin-left: 8px; }
+
+/* 빈·오류·로딩 */
+.empty { text-align: center; padding: 32px 20px; }
+.empty .circle { width: 72px; height: 72px; border-radius: 999px; background: var(--color-surface-sunken); color: var(--color-text-sub); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.empty .circle svg.lucide { width: 32px; height: 32px; }
+.empty h4 { margin: 0 0 4px; font: 600 16px var(--font-family); }
+.empty p { margin: 0 0 16px; font: 400 15px/22px var(--font-family); color: var(--color-text-sub); }
+.sk { background: var(--color-surface-sunken); border-radius: 8px; height: 14px; }
+.notice { background: var(--color-notice-bg); color: var(--color-notice-text); border-radius: 12px; padding: 12px; font: 500 14px/20px var(--font-family); display: flex; gap: 8px; }
+.bar { height: 6px; border-radius: 3px; background: var(--color-chart-track); overflow: hidden; margin-top: 6px; }
+.bar span { display: block; height: 100%; background: var(--color-chart-bar); }
+.brow { display: grid; grid-template-columns: 1fr auto 3em; gap: 8px; align-items: baseline; font: 400 15px var(--font-family); margin-bottom: 12px; }
+.brow .pct { color: var(--color-text-sub); text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.sw div { height: 44px; border-radius: 10px; border: 1px solid var(--color-border); display: flex; align-items: flex-end; padding: 4px; font: 600 9px var(--font-family); }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap"></div>
+
+<template id="screen">
+  <div class="topbar">
+    <button class="switch"><span class="initial">우</span>우리집 가계부<i data-lucide="chevron-down"></i></button>
+    <button class="iconbtn i24" aria-label="설정"><i data-lucide="settings"></i></button>
+  </div>
+
+  <p class="cap">색 토큰</p>
+  <div class="pad sw">
+    <div style="background:var(--color-bg)"></div>
+    <div style="background:var(--color-surface-sunken)"></div>
+    <div style="background:var(--color-primary);color:var(--color-on-primary)">primary</div>
+    <div style="background:var(--color-primary-soft);color:var(--color-primary-strong)">soft</div>
+    <div style="background:var(--color-text);color:var(--color-bg)">text</div>
+    <div style="background:var(--color-income);color:var(--color-surface)">수입</div>
+    <div style="background:var(--color-saving);color:var(--color-surface)">저축</div>
+    <div style="background:var(--color-negative);color:var(--color-surface)">음수</div>
+    <div style="background:var(--color-success);color:var(--color-surface)">성공</div>
+    <div style="background:var(--color-notice-bg);color:var(--color-notice-text)">안내</div>
+  </div>
+
+  <p class="cap">금액 표시 · 요약 카드</p>
+  <div class="pad">
+    <div class="card">
+      <p class="label">11월 남은 돈</p>
+      <span class="money hero neg"><span aria-hidden="true">−</span><span class="sr">마이너스 </span>52,000<span class="money__unit">원</span></span>
+      <div class="three">
+        <div><span class="label">수입</span><span class="money md inc">4,200,000원</span></div>
+        <div><span class="label">지출</span><span class="money md">3,752,000원</span></div>
+        <div><span class="label">저축</span><span class="money md sav">500,000원</span></div>
+      </div>
+      <p class="formula">남은 돈 = 수입 − 지출 − 저축</p>
+    </div>
+  </div>
+
+  <p class="cap">나눠 보기 막대</p>
+  <div class="pad">
+    <div class="brow"><span>민지<div class="bar"><span style="width:62%"></span></div></span><span class="money md">2,326,000원</span><span class="pct">62%</span></div>
+    <div class="brow"><span>준호<div class="bar"><span style="width:38%"></span></div></span><span class="money md">1,426,000원</span><span class="pct">38%</span></div>
+  </div>
+
+  <p class="cap">내역 목록</p>
+  <div class="pad">
+    <p class="dayhead">11월 6일 (목) <b>−58,500원</b></p>
+    <div class="list">
+      <div class="row"><span class="ic"><i data-lucide="utensils-crossed"></i></span><div class="rmain"><p class="rtitle">저녁 장보기</p><p class="rsub">식비 · 공동소비 · 민지</p></div><span class="money md">−46,500원</span></div>
+      <div class="row"><span class="ic"><i data-lucide="smartphone"></i></span><div class="rmain"><p class="rtitle">휴대폰 요금</p><p class="rsub">통신 · 준호 <span class="badge fixed"><i data-lucide="repeat"></i>고정</span></p></div><span class="money md">−12,000원</span></div>
+      <div class="row"><span class="ic inc"><i data-lucide="banknote"></i></span><div class="rmain"><p class="rtitle">11월 급여</p><p class="rsub">급여 · 민지</p></div><span class="money md inc">+3,000,000원</span></div>
+      <div class="row"><span class="ic sav"><i data-lucide="piggy-bank"></i></span><div class="rmain"><p class="rtitle">청약 납입</p><p class="rsub">청약 · 준호 <span class="badge sav">저축</span></p></div><span class="money md sav">100,000원</span></div>
+    </div>
+  </div>
+
+  <p class="cap">버튼</p>
+  <div class="pad btns">
+    <span class="btn primary">저장하기</span><span class="btn secondary">취소</span>
+    <span class="btn danger">삭제하기</span><span class="btn danger-outline"><i data-lucide="trash-2"></i>삭제</span>
+    <span class="btn disabled">저장하기</span><span class="btn textbtn s focus">다시 시도</span>
+  </div>
+
+  <p class="cap">입력 · 선택</p>
+  <div class="pad">
+    <div class="seg"><span class="on">지출</span><span>수입</span><span>저축</span></div>
+    <div class="field"><span class="label">금액</span><div class="input amount focused">46,500<small>원</small></div></div>
+    <div class="field"><span class="label">카테고리</span><div class="input ph">선택해 주세요<i data-lucide="chevron-right"></i></div></div>
+    <div class="field"><span class="label">메모 (선택)</span><div class="input err">저녁 장보기 저녁 장보기 저녁 장보기…</div><p class="errmsg"><i data-lucide="circle-alert" style="width:16px;height:16px"></i>메모는 100자까지 쓸 수 있어요</p></div>
+  </div>
+
+  <p class="cap">칩 (주머니)</p>
+  <div class="pad chips">
+    <span class="chip on"><i data-lucide="check"></i>공동소비<span class="scope"><i data-lucide="users"></i></span></span>
+    <span class="chip">개인용돈<span class="scope"><i data-lucide="user"></i></span></span>
+    <span class="chip">여행<span class="scope"><i data-lucide="users"></i></span></span>
+    <span class="chip">경조사비<span class="scope"><i data-lucide="users"></i></span></span>
+  </div>
+
+  <p class="cap">안내 · 토스트 · 확인 창</p>
+  <div class="pad"><div class="notice"><i data-lucide="info"></i>초대 링크는 7일 동안 쓸 수 있어요.</div></div>
+  <div class="pad" style="text-align:center;margin:16px 0"><span class="toast"><i data-lucide="circle-check" style="width:16px;height:16px"></i>내역을 삭제했어요<u>되돌리기</u></span></div>
+  <div class="dialog"><h4>이 내역을 삭제할까요?</h4><p>삭제하면 두 사람 모두에게서 사라지고 되돌릴 수 없어요.</p><div class="btns"><span class="btn secondary focus">취소</span><span class="btn danger">삭제하기</span></div></div>
+
+  <p class="cap">빈 화면 · 로딩</p>
+  <div class="empty"><span class="circle"><i data-lucide="receipt-text"></i></span><h4>아직 이번 달 내역이 없어요</h4><p>오늘 쓴 돈부터 가볍게 남겨 볼까요?</p><span class="btn primary"><i data-lucide="plus"></i>내역 추가</span></div>
+  <div class="pad" style="display:flex;gap:12px;align-items:center;margin-bottom:24px"><span class="sk" style="width:40px;height:40px;border-radius:999px"></span><div style="flex:1;display:grid;gap:6px"><span class="sk" style="width:60%"></span><span class="sk" style="width:40%;height:12px"></span></div><span class="sk" style="width:72px"></span></div>
+
+  <p class="cap">가계부 전환 시트</p>
+  <div class="scrimbox">
+    <div class="sheet">
+      <div class="grab"></div>
+      <div class="sheethead">가계부<span class="iconbtn"><i data-lucide="x"></i></span></div>
+      <div class="lrow cur"><span class="initial lg">우</span><div class="rmain"><b>우리집 가계부</b><span>멤버 2명</span></div><i data-lucide="check"></i></div>
+      <div class="lrow"><span class="initial lg">내</span><div class="rmain"><b>내 용돈</b><span>멤버 1명</span></div></div>
+      <div class="lrow"><span class="initial lg">부</span><div class="rmain"><b>부모님 생활비</b><span>멤버 4명</span></div></div>
+      <div class="sep"></div>
+      <div class="act"><i data-lucide="plus"></i>새 가계부 만들기</div>
+      <div class="act"><i data-lucide="user-plus"></i>초대코드로 참여</div>
+    </div>
+  </div>
+
+  <div style="height:88px;background:var(--color-bg)"></div>
+  <div class="tabbar">
+    <span class="fab i24"><i data-lucide="plus"></i></span>
+    <span class="tab on"><span class="pill i24"><i data-lucide="house"></i></span>홈</span>
+    <span class="tab"><span class="pill i24"><i data-lucide="notebook-pen"></i></span>가계부</span>
+    <span class="tab"><span class="pill i24"><i data-lucide="landmark"></i></span>자산</span>
+  </div>
+</template>
+
+<script>
+  const wrap = document.getElementById('wrap');
+  const tpl = document.getElementById('screen');
+  for (const mode of ['light', 'dark']) {
+    const s = document.createElement('section');
+    s.className = 'theme' + (mode === 'dark' ? ' dark' : '');
+    s.setAttribute('aria-label', mode === 'dark' ? '다크' : '라이트');
+    s.appendChild(tpl.content.cloneNode(true));
+    wrap.appendChild(s);
+  }
+  if (window.lucide) lucide.createIcons();
+</script>
+</body>
+</html>
