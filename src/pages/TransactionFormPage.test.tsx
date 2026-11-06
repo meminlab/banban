@@ -74,7 +74,7 @@ const B_ENTRY: Transaction = {
 
 vi.mock('../data/transaction', () => ({
   getTransactionFormOptions: async () => ({ categories: CATEGORIES, pockets: POCKETS, members: MEMBERS }),
-  listRecentTransactions: async () => fake.transactions,
+  listMonthTransactions: async () => fake.transactions,
   getTransaction: async (id: string) => fake.transactions.find((t) => (t as Transaction).id === id) ?? null,
   createTransaction: (...args: unknown[]) => fake.create(...args),
   updateTransaction: (...args: unknown[]) => fake.update(...args),
@@ -290,6 +290,6 @@ describe('가계부 탭 목록', () => {
   it('내역이 없으면 빈 화면 안내', async () => {
     fake.transactions = [];
     renderAt('/ledger');
-    expect(await screen.findByText('아직 내역이 없어요')).toBeInTheDocument();
+    expect(await screen.findByText('이 달에 입력한 내역이 없어요')).toBeInTheDocument();
   });
 });

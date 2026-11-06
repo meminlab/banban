@@ -1,4 +1,5 @@
 /** 내역(transaction) 조회·추가·수정·삭제와 입력 화면 선택지 조회 */
+import { monthRange, type YearMonth } from '../domain/month';
 import type { TransactionValues } from '../domain/transactionForm';
 import { getSupabase } from './supabase';
 import type { Category, Member, Pocket, Transaction } from './types';
@@ -43,17 +44,29 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
   return data as Transaction | null;
 }
 
-/** 최근 내역 (날짜 최신순). 가계부 탭 목록 */
-export async function listRecentTransactions(ledgerId: string, limit = 50): Promise<Transaction[]> {
-  const { data, error } = await getSupabase()
-    .from('transaction')
-    .select(TRANSACTION_COLUMNS)
-    .eq('ledger_id', ledgerId)
-    .order('occurred_on', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return data as Transaction[];
+/** Supabase(PostgREST)는 한 번에 최대 1,000행만 돌려주므로 나눠서 다 읽는다 */
+const PAGE_SIZE = 1000;
+
+/** 그 달(KST 날짜 기준) 내역 전부. 가계부 탭 달력·목록 */
+export async function listMonthTransactions(ledgerId: string, month: YearMonth): Promise<Transaction[]> {
+  const { start, end } = monthRange(month);
+  const rows: Transaction[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await getSupabase()
+      .from('transaction')
+      .select(TRANSACTION_COLUMNS)
+      .eq('ledger_id', ledgerId)
+      .gte('occurred_on', start)
+      .lt('occurred_on', end)
+      .order('occurred_on', { ascending: false })
+      .order('created_at', { ascending: false })
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    // bigint 금액을 숫자로 (건당 최대 99억 → Number 안전 범위)
+    rows.push(...(data as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) })));
+    if (data.length < PAGE_SIZE) return rows;
+  }
 }
 
 /** 새 내역. source 는 manual, 작성자·마지막 수정자·시각은 서버(트리거)가 로그인 사용자로 기록한다 */
