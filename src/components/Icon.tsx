@@ -1,31 +1,20 @@
+import { ChevronLeft, House, Landmark, NotebookPen, Plus, Settings, type LucideIcon } from 'lucide-react';
 import type { TabIcon } from '../app/routes';
 
-type IconName = TabIcon | 'settings' | 'back';
+type IconName = TabIcon | 'settings' | 'back' | 'add';
 
-const PATHS: Record<IconName, string> = {
-  home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
-  ledger: 'M5 3h11l3 3v15H5zM8 8h8M8 12h8M8 16h5',
-  assets: 'M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h2',
-  settings:
-    'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-  back: 'M15 18l-6-6 6-6',
+/** 앱 공통 아이콘 (design.md 4절 매핑, Lucide 한 세트만) */
+const ICONS: Record<IconName, LucideIcon> = {
+  home: House,
+  ledger: NotebookPen,
+  assets: Landmark,
+  settings: Settings,
+  back: ChevronLeft,
+  add: Plus,
 };
 
-export function Icon({ name }: { name: IconName }) {
-  return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d={PATHS[name]} />
-    </svg>
-  );
+/** 장식용 아이콘. 크기 24·선 굵기 1.75가 기본 (헤더·탭바). 색은 글자 색을 따른다. 뜻은 감싼 버튼의 aria-label이 맡는다 */
+export function Icon({ name, size = 24 }: { name: IconName; size?: number }) {
+  const Svg = ICONS[name];
+  return <Svg size={size} strokeWidth={size >= 24 ? 1.75 : 2} aria-hidden="true" focusable="false" />;
 }
