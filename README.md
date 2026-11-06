@@ -142,7 +142,7 @@ npm run dev                  # http://localhost:5173
 - 아이폰은 홈 화면 앱과 사파리가 로그인 저장소를 따로 쓴다 → 홈 화면 앱에서 처음 한 번은 다시 로그인해야 할 수 있다
 - 설정 파일: `public/manifest.webmanifest`, 아이폰용 설정은 `index.html`의 `apple-*` 메타 태그
 - 노치·홈 바: `viewport-fit=cover` + `global.css`의 `--safe-top` / `--safe-bottom` 여백(상단바·하단 탭·로그인·상태 화면에 적용)
-- 아이콘: `public/icons/` (초록 배경 + 흰 글자 "반반"). 바꿀 때만 `python3 scripts/make-icons.py <Pretendard-ExtraBold.otf>`로 다시 만든다(Pillow 필요, 글꼴은 OFL 라이선스 Pretendard)
+- 아이콘: 로고 B-1(웃는 주머니). 원본은 `docs/brand/`이고 앱에는 복사본을 쓴다 — `public/favicon.svg`·`favicon.ico`, `public/icons/apple-touch-icon-180.png`·`icon-192.png`·`icon-512.png`(manifest에는 파일마다 `any` 항목·`maskable` 항목을 따로 등록 — `"any maskable"` 한 항목은 Chrome 경고). 로고를 바꾸면 `docs/brand/`에서 다시 복사한다. 로그인·시작 화면 로고는 `docs/brand/banban-lockup-light.svg`를 직접 불러 쓴다(`src/components/BrandLogo.tsx`)
 
 ## 데이터 모델
 
