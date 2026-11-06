@@ -70,7 +70,7 @@ select test.expect_count('select * from public.pocket where scope = ''personal''
 -- 대분류 15+6+6 = 27, 소분류 = 식비4 주거3 통신3 교통4 생활2 쇼핑2 건강3 문화3 + 단일 19 = 43
 select test.expect_count('select * from public.category where parent_id is null', 27);
 select test.expect_count('select * from public.category where parent_id is not null', 43);
-select test.expect_count('select * from public.ledger where member_limit = 2', 1);
+select test.expect_count('select * from public.ledger where member_limit = 4', 1);  -- 기본 상한 4명 (BANB-16)
 -- 두 번째 가계부는 못 만든다 (1인 1가계부)
 select test.expect_error($$select public.create_ledger('또', 'A')$$, 'ALREADY_IN_LEDGER');
 -- member_limit은 클라이언트가 못 바꾼다
@@ -143,6 +143,9 @@ select test.expect_error($$update public.member set role = 'owner'$$, 'permissio
 reset role;
 
 -- ── 5. C: 상한(2명) 초과로 참여 불가
+-- 아래 시나리오(5·나가기/다시 참여)는 상한 2 기준이라 관리자가 이 가계부만 2로 낮춘다.
+-- 기본 4명 상한은 맨 끝 "4명 상한" 구간에서 따로 확인한다.
+update public.ledger set member_limit = 2 where id = (select val from test.ctx where key = 'ledger');
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
 select test.expect_error(format('select public.join_ledger(%L, ''C'')', (select valid from codes)), 'MEMBER_LIMIT_REACHED');
@@ -462,6 +465,47 @@ set role anon;
 reset request.jwt.claim.sub;
 select test.expect_error('select public.leave_ledger()', 'permission denied');
 reset role;
+
+-- ── 4명 상한 (BANB-16): 새 가계부는 기본 4명, 5번째는 MEMBER_LIMIT_REACHED(detail '4')
+select test.expect_count($$select * from information_schema.columns
+  where table_schema = 'public' and table_name = 'ledger' and column_name = 'member_limit' and column_default = '4'$$, 1);
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000e1', 'e1@test'),
+  ('00000000-0000-0000-0000-0000000000e2', 'e2@test'),
+  ('00000000-0000-0000-0000-0000000000e3', 'e3@test'),
+  ('00000000-0000-0000-0000-0000000000e4', 'e4@test'),
+  ('00000000-0000-0000-0000-0000000000e5', 'e5@test');
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e1';
+insert into test.ctx values ('ledger_e', public.create_ledger('넷이네', 'E1'));
+select test.expect_count('select * from public.ledger where member_limit = 4', 1);
+-- 멤버(owner 포함)는 member_limit을 못 바꾼다
+select test.expect_error($$update public.ledger set member_limit = 10$$, 'permission denied');
+insert into public.invite (ledger_id) select val from test.ctx where key = 'ledger_e';
+reset role;
+create temp table codes_e as select code from public.invite where ledger_id = (select val from test.ctx where key = 'ledger_e') and is_revoked = false;
+grant select on codes_e to authenticated;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e2';
+select public.join_ledger((select code from codes_e), 'E2');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e3';
+select public.join_ledger((select code from codes_e), 'E3');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e4';
+select public.join_ledger((select code from codes_e), 'E4');
+select test.expect_count('select * from public.member where left_at is null', 4);
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
+do $$ declare v_detail text; begin
+  perform public.join_ledger((select code from codes_e), 'E5');
+  raise exception 'TEST FAILED: 5th member joined over limit 4';
+exception when others then
+  get stacked diagnostics v_detail = pg_exception_detail;
+  if sqlerrm <> 'MEMBER_LIMIT_REACHED' or v_detail <> '4' then
+    raise exception 'TEST FAILED: limit 4 error -> % / %', sqlerrm, v_detail;
+  end if;
+end $$;
+select test.expect_count('select * from public.member', 0);
+reset role;
+select test.expect_count($$select * from public.member where ledger_id = (select val from test.ctx where key = 'ledger_e') and left_at is null$$, 4);
 
 select 'all RLS/schema tests passed' as result;
 
