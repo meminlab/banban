@@ -1,7 +1,7 @@
 # 반반 디자인 시스템 v1.2
 
 > 상태: v1.2 (BANB-22, 자산관리 1단계 그래프·자산/부채·증감 규칙 5.19~5.22 추가 = BANB-19, v1.1 = BANB-19 앞 단계, v1 = BANB-18) · 기준 폭 360–430px · 이 문서가 화면 시안(BANB-19)과 개발 반영의 기준이다.
-> 미리보기: `docs/design-preview.html`(테마 3종 홈·입력·컴포넌트, 주소 끝에 `#dark`를 붙이면 다크), `docs/design-preview-flows.html`(카테고리 선택·추가, 가계부 전환·추가 동선). 스크린샷은 `docs/assets/design-v1.2/`. 홈·자산 시안: `docs/screens/assets-home.html`.
+> 미리보기: `docs/design-preview.html`(테마 3종 홈·입력·컴포넌트, 주소 끝에 `#dark`를 붙이면 다크), `docs/design-preview-flows.html`(카테고리 선택·추가, 가계부 전환·추가 동선). 스크린샷은 `docs/assets/design-v1.2/`. 홈·자산 시안: `docs/screens/assets-home.html`. 나머지 화면 시안: `docs/screens/screens.html` + `docs/screens/README.md`(BANB-19).
 
 ## 0. 방향
 
@@ -569,7 +569,7 @@
 - 요일 머리글 `일 월 화 수 목 금 토` 13/500 `text-sub`, 날짜 숫자 13/500 `text` — **토·일도 같은 무채색**(머리글 글자로 구분).
 - 오늘: 날짜 숫자 뒤 24px 원 `primary` + `on-primary` 글자. 선택한 날: 칸 바탕 `primary-soft`.
 - 칸 금액(`font.micro`): 지출 `text`, 수입 `income`. 다른 달 날짜는 `text-weak`.
-- 저축만 있는 날 표시 방식은 화면 시안(BANB-19)에서 정한다.
+- 저축이 있는 날: 날짜 아래 5px 점 `saving` + 범례 "● 저축"(저축만 있는 날도 표시). 점은 장식, 칸 `aria-label`에 저축 금액. (BANB-19 결정, `docs/screens/README.md`)
 
 
 ### 5.15 내역 입력 (키패드 + 빠른 금액) — v1.2
