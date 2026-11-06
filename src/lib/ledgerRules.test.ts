@@ -79,7 +79,13 @@ describe('오류 안내', () => {
       code: 'MEMBER_LIMIT_REACHED',
       limit: 3,
     });
+    expect(parseLedgerError({ message: 'LEDGER_LIMIT_REACHED', details: '5' })).toEqual({
+      code: 'LEDGER_LIMIT_REACHED',
+      limit: 5,
+    });
     expect(parseLedgerError({ message: 'INVITE_EXPIRED', details: null })).toEqual({ code: 'INVITE_EXPIRED', limit: null });
+    // 예전 오류 코드는 더 이상 없다 (1인 1가계부 규칙 제거)
+    expect(parseLedgerError({ message: 'ALREADY_IN_LEDGER' })).toEqual({ code: 'UNKNOWN', limit: null });
     expect(parseLedgerError(new TypeError('Failed to fetch'))).toEqual({ code: 'UNKNOWN', limit: null });
     expect(parseLedgerError(undefined)).toEqual({ code: 'UNKNOWN', limit: null });
   });
@@ -88,14 +94,19 @@ describe('오류 안내', () => {
     expect(joinErrorMessage('MEMBER_LIMIT_REACHED', 4)).toBe('현재 최대 4명까지 참여할 수 있어요.');
     expect(joinErrorMessage('MEMBER_LIMIT_REACHED', null)).toBe('현재 최대 4명까지 참여할 수 있어요.');
   });
-  it('만료 / 무효 / 다른 가계부 참여자 / 네트워크', () => {
+  it('1인 가계부 상한 문구는 서버 상한 값을 따른다 (없으면 기본 5개)', () => {
+    expect(joinErrorMessage('LEDGER_LIMIT_REACHED', 5)).toBe('가계부는 최대 5개까지 참여할 수 있어요.');
+    expect(joinErrorMessage('LEDGER_LIMIT_REACHED', 6)).toBe('가계부는 최대 6개까지 참여할 수 있어요.');
+    expect(joinErrorMessage('LEDGER_LIMIT_REACHED', null)).toBe('가계부는 최대 5개까지 참여할 수 있어요.');
+    expect(createErrorMessage('LEDGER_LIMIT_REACHED', 5)).toBe('가계부는 최대 5개까지 참여할 수 있어요.');
+    expect(createErrorMessage('LEDGER_LIMIT_REACHED')).toBe('가계부는 최대 5개까지 참여할 수 있어요.');
+  });
+  it('만료 / 무효 / 네트워크', () => {
     expect(joinErrorMessage('INVITE_EXPIRED', null)).toMatch('만료');
     expect(joinErrorMessage('INVITE_NOT_FOUND', null)).toMatch('쓸 수 없는 초대 코드');
-    expect(joinErrorMessage('ALREADY_IN_LEDGER', null)).toMatch('이미 다른 가계부');
     expect(joinErrorMessage('UNKNOWN', null)).toMatch('다시 시도');
   });
   it('가계부 만들기 실패', () => {
-    expect(createErrorMessage('ALREADY_IN_LEDGER')).toMatch('이미 다른 가계부');
     expect(createErrorMessage('UNKNOWN')).toMatch('만들지 못했어요');
   });
 });

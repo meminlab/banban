@@ -1,18 +1,32 @@
 /** 가계부·멤버·초대 저장소 접근. 화면은 이 함수들만 쓴다. */
 import { getSupabase } from './supabase';
+import { toMyLedgers, type LedgerWithMembers, type MyLedger } from '../domain/ledgers';
 import type { Invite, Ledger, Member } from './types';
 
-/** 내가 현재 참여 중인 가계부 id. 없으면 null (사용자당 1개, MVP) */
-export async function getMyLedgerId(userId: string): Promise<string | null> {
+/** 내가 현재 참여 중인 가계부 목록 (이름·멤버 수). 권한 규칙상 내가 현재 멤버인 가계부만 조회된다 */
+export async function listMyLedgers(userId: string): Promise<MyLedger[]> {
   const { data, error } = await getSupabase()
-    .from('member')
-    .select('ledger_id')
+    .from('ledger')
+    .select('id, name, member(user_id, joined_at, left_at)');
+  if (error) throw error;
+  return toMyLedgers((data ?? []) as LedgerWithMembers[], userId);
+}
+
+/** 마지막으로 본 가계부 id (서버 저장 — 기기·홈 화면 앱이 달라도 같다). 기록이 없으면 null */
+export async function getLastLedgerId(userId: string): Promise<string | null> {
+  const { data, error } = await getSupabase()
+    .from('user_preference')
+    .select('last_ledger_id')
     .eq('user_id', userId)
-    .is('left_at', null)
-    .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return (data?.ledger_id as string | undefined) ?? null;
+  return (data?.last_ledger_id as string | null | undefined) ?? null;
+}
+
+/** 마지막으로 본 가계부 기록 (현재 멤버인 가계부만, 아니면 NOT_IN_LEDGER) */
+export async function rememberLedger(ledgerId: string): Promise<void> {
+  const { error } = await getSupabase().rpc('set_last_ledger', { p_ledger_id: ledgerId });
+  if (error) throw error;
 }
 
 export async function getLedger(ledgerId: string): Promise<Ledger> {
@@ -30,23 +44,29 @@ export async function renameLedger(ledgerId: string, name: string): Promise<void
   if (error) throw error;
 }
 
-/** 가계부 만들기 (만든 사람 = owner, 기본 카테고리·주머니는 DB가 만든다). 실패 시 오류 그대로 던짐 → parseLedgerError */
+/**
+ * 가계부 만들기 (만든 사람 = owner, 기본 카테고리·주머니는 DB가 만든다).
+ * 만든 가계부가 마지막으로 본 가계부로 기록된다. 실패 시 오류 그대로 던짐 → parseLedgerError
+ */
 export async function createLedger(name: string, displayName: string): Promise<string> {
   const { data, error } = await getSupabase().rpc('create_ledger', { p_name: name.trim(), p_display_name: displayName });
   if (error) throw error;
   return data as string;
 }
 
-/** 초대 코드로 참여. 실패 시 오류 그대로 던짐 → parseLedgerError */
+/**
+ * 초대 코드로 참여. 이미 멤버인 가계부면 그대로 성공(그 가계부 id).
+ * 참여한 가계부가 마지막으로 본 가계부로 기록된다. 실패 시 오류 그대로 던짐 → parseLedgerError
+ */
 export async function joinLedger(code: string, displayName: string): Promise<string> {
   const { data, error } = await getSupabase().rpc('join_ledger', { p_code: code, p_display_name: displayName });
   if (error) throw error;
   return data as string;
 }
 
-/** 가계부에서 나가기 (내 내역은 남는다) */
-export async function leaveLedger(): Promise<void> {
-  const { error } = await getSupabase().rpc('leave_ledger');
+/** 가계부에서 나가기 (내 내역은 남는다). 마지막으로 본 가계부였으면 기록이 지워진다 */
+export async function leaveLedger(ledgerId: string): Promise<void> {
+  const { error } = await getSupabase().rpc('leave_ledger', { p_ledger_id: ledgerId });
   if (error) throw error;
 }
 

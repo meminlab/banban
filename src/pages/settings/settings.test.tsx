@@ -25,7 +25,9 @@ vi.mock('../../data/auth', () => ({
   signOut: async () => {},
 }));
 vi.mock('../../data/ledger', () => ({
-  getMyLedgerId: async () => 'L',
+  listMyLedgers: async () => [{ id: 'L', name: '우리집', memberCount: 2, joinedAt: '2026-11-01T00:00:00Z' }],
+  getLastLedgerId: async () => 'L',
+  rememberLedger: async () => {},
   // 설정 메뉴가 가계부 이름을 보여 준다 (BANB-5)
   getLedger: async () => ({ id: 'L', name: '우리집', member_limit: 2, created_by: 'u', created_at: '' }),
 }));

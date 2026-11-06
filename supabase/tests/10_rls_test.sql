@@ -71,8 +71,7 @@ select test.expect_count('select * from public.pocket where scope = ''personal''
 select test.expect_count('select * from public.category where parent_id is null', 27);
 select test.expect_count('select * from public.category where parent_id is not null', 43);
 select test.expect_count('select * from public.ledger where member_limit = 4', 1);  -- 기본 상한 4명 (BANB-16)
--- 두 번째 가계부는 못 만든다 (1인 1가계부)
-select test.expect_error($$select public.create_ledger('또', 'A')$$, 'ALREADY_IN_LEDGER');
+-- (1인 1가계부 규칙은 BANB-17에서 제거 → 여러 가계부·1인 5개 상한은 30_multi_ledger_test.sql)
 -- member_limit은 클라이언트가 못 바꾼다
 select test.expect_error($$update public.ledger set member_limit = 10$$, 'permission denied');
 select test.expect_affected($$update public.ledger set name = '반반네'$$, 1);
@@ -378,10 +377,10 @@ select test.expect_count($$select * from public.transaction t, test.v where t.cr
 reset role;
 select test.expect_count($$select * from public.member where user_id = '00000000-0000-0000-0000-00000000000b'$$, 1);
 
--- C(다른 가계부 참여 중)는 참여 불가
+-- C는 다른 가계부에 참여 중이어도 참여할 수 있지만(BANB-17), 지금은 인원 상한(2명)에 막힌다
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
-select test.expect_error(format('select public.join_ledger(%L, ''C'')', (select code from codes2)), 'ALREADY_IN_LEDGER');
+select test.expect_error(format('select public.join_ledger(%L, ''C'')', (select code from codes2)), 'MEMBER_LIMIT_REACHED');
 -- D: 상한(2명) 초과, detail 에 상한 값
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 do $$ declare v_detail text; begin
@@ -400,9 +399,9 @@ reset role;
 create temp table codes_c as select code from public.invite where ledger_id = (select val from test.ctx where key = 'ledger_c');
 grant select on codes_c to authenticated;
 set role authenticated;
-select public.leave_ledger();
+select public.leave_ledger((select val from test.ctx where key = 'ledger_c'));
 select test.expect_count('select * from public.ledger', 0);  -- 나가면 아무것도 안 보임
-select test.expect_error('select public.leave_ledger()', 'NOT_IN_LEDGER');
+select test.expect_error($$select public.leave_ledger((select val from test.ctx where key = 'ledger_c'))$$, 'NOT_IN_LEDGER');
 reset role;
 select test.expect_count($$select * from public.ledger where id = (select val from test.ctx where key = 'ledger_c')$$, 1); -- 삭제 안 함
 select test.expect_count($$select * from public.invite where ledger_id = (select val from test.ctx where key = 'ledger_c') and is_revoked = false$$, 0);
@@ -439,7 +438,7 @@ reset role;
 update public.member set joined_at = now() - interval '1 day' where user_id = '00000000-0000-0000-0000-00000000000b';
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select public.leave_ledger();
+select public.leave_ledger((select val from test.ctx where key = 'ledger'));
 select test.expect_count('select * from public.transaction', 0);  -- 나간 A는 못 봄
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select test.expect_count($$select * from public.member where role = 'owner' and user_id = auth.uid()$$, 1);
@@ -448,9 +447,9 @@ select test.expect_count($$select * from public.member where role = 'owner'$$, 1
 select test.expect_count($$select * from public.member m, test.v where m.id = v.ma and m.left_at is not null and m.role = 'member'$$, 1);
 select test.expect_count($$select * from public.transaction t, test.v where t.updated_by = v.ma$$, 1);
 -- B, C 모두 나가면 보관: 초대 무효, 다시 그 코드로 참여 불가
-select public.leave_ledger();
+select public.leave_ledger((select val from test.ctx where key = 'ledger'));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
-select public.leave_ledger();
+select public.leave_ledger((select val from test.ctx where key = 'ledger'));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select test.expect_error(format('select public.join_ledger(%L, ''D'')', (select code from codes2)), 'INVITE_NOT_FOUND');
 -- 보관된 가계부에 남았던 B도 그 코드로는 못 돌아온다
@@ -463,7 +462,7 @@ select test.expect_count($$select * from public.transaction where ledger_id = (s
 -- 비로그인은 나가기 불가
 set role anon;
 reset request.jwt.claim.sub;
-select test.expect_error('select public.leave_ledger()', 'permission denied');
+select test.expect_error($$select public.leave_ledger('00000000-0000-0000-0000-000000000000')$$, 'permission denied');
 reset role;
 
 -- ── 4명 상한 (BANB-16): 새 가계부는 기본 4명, 5번째는 MEMBER_LIMIT_REACHED(detail '4')
