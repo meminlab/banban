@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>반반 v1.2 — 카테고리 선택·추가, 가계부 전환·추가 동선</title>
+<!-- 미리보기 전용 CDN. 앱은 npm pretendard / lucide-react 로 번들한다 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<style>
+[data-theme="berry"]{--color-bg:#F5F6F8;--color-surface:#FFFFFF;--color-surface-sunken:#F0F1F4;--color-border:#E8EAED;--color-border-strong:#8A8F98;--color-text:#1D1F23;--color-text-sub:#5B6068;--color-text-weak:#686D76;--color-primary:#A23B72;--color-primary-pressed:#8A2D5F;--color-primary-strong:#8A2D5F;--color-primary-soft:#F9EAF2;--color-on-primary:#FFFFFF;--color-inverse-action:#F5A9D0;--color-saving:#3B7560;--color-hero-bg:#FFFFFF;--color-hero-label:#5B6068;--color-member-1:#A23B72;--color-member-2:#D98CB5;--color-member-3:#6F6A75;--color-member-4:#B9B4BE;--color-avatar-1:#F0F1F4;--color-avatar-2:#F0F1F4;--color-avatar-3:#F0F1F4;--color-avatar-4:#F0F1F4;--color-on-avatar:#1D1F23;--color-income:#3E5F9E;--color-negative:#B23A48;--card-gutter:16px;--card-radius:16px;--control-radius:12px;--card-shadow:0 1px 2px rgb(15 16 18 / 0.04);}
+[data-theme="berry"][data-mode="dark"]{--color-bg:#131416;--color-surface:#1D1E21;--color-surface-sunken:#27292D;--color-border:#34363B;--color-border-strong:#7B8089;--color-text:#F1F2F4;--color-text-sub:#B8BCC3;--color-text-weak:#989CA4;--color-primary:#F08CC0;--color-primary-pressed:#E673AE;--color-primary-strong:#F5A9D0;--color-primary-soft:#3A1F2E;--color-on-primary:#1F0F18;--color-inverse-action:#8A2D5F;--color-saving:#93C4AD;--color-hero-bg:#1D1E21;--color-hero-label:#B8BCC3;--color-member-1:#F08CC0;--color-member-2:#9C4E78;--color-member-3:#8E8994;--color-member-4:#5A5560;--color-avatar-1:#27292D;--color-avatar-2:#27292D;--color-avatar-3:#27292D;--color-avatar-4:#27292D;--color-on-avatar:#F1F2F4;--color-income:#9DB2DC;--color-negative:#EE8F99;--card-shadow:none;}
+[data-theme="clean"]{--color-bg:#F2F4F6;--color-surface:#FFFFFF;--color-surface-sunken:#F2F4F6;--color-border:#E5E8EB;--color-border-strong:#878E98;--color-text:#191C21;--color-text-sub:#5F6670;--color-text-weak:#69707A;--color-primary:#007F55;--color-primary-pressed:#006A47;--color-primary-strong:#006B47;--color-primary-soft:#E6F4EE;--color-on-primary:#FFFFFF;--color-inverse-action:#6FD3A8;--color-saving:#6B52AE;--color-hero-bg:#FFFFFF;--color-hero-label:#5F6670;--color-member-1:#007F55;--color-member-2:#5DBB92;--color-member-3:#6B727C;--color-member-4:#B8BEC6;--color-avatar-1:#F2F4F6;--color-avatar-2:#F2F4F6;--color-avatar-3:#F2F4F6;--color-avatar-4:#F2F4F6;--color-on-avatar:#191C21;--color-income:#3E5F9E;--color-negative:#B23A48;--card-gutter:0px;--card-radius:0px;--control-radius:12px;--card-shadow:none;}
+[data-theme="clean"][data-mode="dark"]{--color-bg:#101214;--color-surface:#1B1E22;--color-surface-sunken:#262A2F;--color-border:#33383E;--color-border-strong:#7A808A;--color-text:#F2F4F6;--color-text-sub:#B5BBC3;--color-text-weak:#959BA4;--color-primary:#3FC08A;--color-primary-pressed:#2FA877;--color-primary-strong:#6FD3A8;--color-primary-soft:#12301F;--color-on-primary:#04140D;--color-inverse-action:#006B47;--color-saving:#B7A6E8;--color-hero-bg:#1B1E22;--color-hero-label:#B5BBC3;--color-member-1:#3FC08A;--color-member-2:#2A7A58;--color-member-3:#8F96A0;--color-member-4:#4E555E;--color-avatar-1:#262A2F;--color-avatar-2:#262A2F;--color-avatar-3:#262A2F;--color-avatar-4:#262A2F;--color-on-avatar:#F2F4F6;--color-income:#9DB2DC;--color-negative:#EE8F99;--card-shadow:none;}
+[data-theme="cozy"]{--color-bg:#FFF7F3;--color-surface:#FFFFFF;--color-surface-sunken:#FBEDE7;--color-border:#F3DED5;--color-border-strong:#98857E;--color-text:#2B2220;--color-text-sub:#6B5A54;--color-text-weak:#76655F;--color-primary:#C44536;--color-primary-pressed:#A83A2D;--color-primary-strong:#9E3226;--color-primary-soft:#FDE8E3;--color-on-primary:#FFFFFF;--color-inverse-action:#FFB3A3;--color-saving:#3B7560;--color-hero-bg:#FDE8E3;--color-hero-label:#9E3226;--color-member-1:#F7B9A4;--color-member-2:#F6D98B;--color-member-3:#B7D3A8;--color-member-4:#C9C3EC;--color-avatar-1:#F7B9A4;--color-avatar-2:#F6D98B;--color-avatar-3:#B7D3A8;--color-avatar-4:#C9C3EC;--color-on-avatar:#2B2220;--color-income:#3E5F9E;--color-negative:#B23A48;--card-gutter:16px;--card-radius:24px;--control-radius:16px;--card-shadow:0 2px 8px rgb(120 60 40 / 0.06);}
+[data-theme="cozy"][data-mode="dark"]{--color-bg:#171312;--color-surface:#221C1A;--color-surface-sunken:#2E2624;--color-border:#3D3330;--color-border-strong:#85766F;--color-text:#F5EEEB;--color-text-sub:#C4B6B1;--color-text-weak:#A39590;--color-primary:#FF8A74;--color-primary-pressed:#F27560;--color-primary-strong:#FFB3A3;--color-primary-soft:#3D211C;--color-on-primary:#1F0E0B;--color-inverse-action:#9E3226;--color-saving:#93C4AD;--color-hero-bg:#3D211C;--color-hero-label:#FFB3A3;--color-member-1:#E89A84;--color-member-2:#D9B95F;--color-member-3:#8FB07F;--color-member-4:#9F97D6;--color-avatar-1:#E89A84;--color-avatar-2:#D9B95F;--color-avatar-3:#8FB07F;--color-avatar-4:#9F97D6;--color-on-avatar:#1F1715;--color-income:#9DB2DC;--color-negative:#EE8F99;--card-shadow:none;}
+
+* { box-sizing: border-box; }
+body { margin:0; padding:28px; background:#D9DBDF; font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif; word-break:keep-all; color:#1D1F23; }
+h1 { font-size:24px; margin:0 0 4px; } .lead { margin:0 0 20px; font-size:15px; color:#4A4F57; }
+h2.row-t { font-size:17px; margin: 28px 0 10px; }
+.row { display:flex; gap:20px; align-items:flex-start; }
+.cap { font:600 13px/18px inherit; font-family:inherit; color:#4A4F57; margin:0 0 8px 4px; width:360px; }
+.phone { width:360px; height:760px; position:relative; overflow:hidden; border-radius:28px; box-shadow:0 10px 36px rgb(0 0 0 / .18); background:var(--color-bg); color:var(--color-text); }
+.num { font-variant-numeric: tabular-nums; }
+svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
+.ib { width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); }
+.hdr { height:56px; background:var(--color-surface); display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 12px; }
+.lsw { display:flex; align-items:center; gap:8px; height:40px; padding:0 10px 0 5px; border-radius:999px; background:var(--color-surface-sunken); font-weight:700; font-size:16px; }
+.lsw svg { width:18px; height:18px; color:var(--color-text-sub); }
+.av { width:28px; height:28px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; color:var(--color-on-avatar); border:2px solid var(--color-surface-sunken); }
+.av + .av { margin-left:-10px; }
+.card { margin: 0 var(--card-gutter); background:var(--color-surface); border-radius:var(--card-radius); padding:20px; box-shadow:var(--card-shadow); }
+.stack { padding:12px 0; display:flex; flex-direction:column; gap:12px; }
+.lbl { font-size:15px; font-weight:500; color:var(--color-hero-label); } .hero { background:var(--color-hero-bg); }
+.big { font-size:36px; line-height:44px; font-weight:700; letter-spacing:-0.02em; margin:4px 0 0; }
+.unit { font-size:.75em; font-weight:600; }
+.nudge { display:flex; gap:12px; align-items:flex-start; }
+.nudge .ic { width:40px; height:40px; border-radius:12px; background:var(--color-primary-soft); color:var(--color-primary-strong); display:flex; align-items:center; justify-content:center; flex:none; }
+.nudge b { font-size:16px; display:block; } .nudge p { margin:4px 0 12px; font-size:14px; color:var(--color-text-sub); line-height:20px; }
+.btn { height:44px; padding:0 16px; border-radius:var(--control-radius); display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:600; font-size:15px; }
+.btn.p { background:var(--color-primary); color:var(--color-on-primary); }
+.btn.s { background:var(--color-surface); border:1px solid var(--color-border-strong); color:var(--color-text); }
+.btn.t { color:var(--color-primary); padding:0 4px; height:36px; }
+.btn.block { display:flex; width:100%; }
+.tabbar { position:absolute; left:0; right:0; bottom:0; height:64px; background:var(--color-surface); border-top:1px solid var(--color-border); display:flex; align-items:center; padding:0 8px; }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; color:var(--color-text-sub); }
+.tab .pill { width:56px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.tab.on { color:var(--color-text); font-weight:700; } .tab.on .pill { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.plus { width:52px; height:52px; border-radius:18px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; margin:0 6px; }
+/* 시트 */
+.scrim { position:absolute; inset:0; background:rgb(15 16 18 / .45); }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:24px 24px 0 0; }
+.grab { width:36px; height:4px; border-radius:2px; background:var(--color-border-strong); margin:8px auto 0; opacity:.6; }
+.sh-h { height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 20px; }
+.sh-h b { font-size:18px; } .sh-h small { font-size:14px; color:var(--color-text-sub); font-weight:500; margin-left:6px; }
+.sec-t { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--color-text-sub); padding: 12px 20px 6px; }
+.sec-t svg { width:14px; height:14px; }
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px 0; padding:0 12px; }
+.tile { display:flex; flex-direction:column; align-items:center; gap:6px; padding:6px 0; font-size:13px; text-align:center; position:relative; }
+.tile .c { width:48px; height:48px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; color:var(--color-text); }
+.tile.on .c { background:var(--color-primary); color:var(--color-on-primary); }
+.tile.on { font-weight:700; color:var(--color-primary-strong); }
+.tile.on .ck { position:absolute; top:4px; right:14px; width:18px; height:18px; border-radius:999px; background:var(--color-surface); color:var(--color-primary); display:flex; align-items:center; justify-content:center; }
+.tile.on .ck svg { width:14px; height:14px; stroke-width:3; }
+.tile.add .c { background:transparent; border:1.5px dashed var(--color-border-strong); color:var(--color-text-sub); }
+.seg { display:grid; grid-template-columns:repeat(3,1fr); background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:4px; margin:0 20px; height:44px; }
+.seg span { display:flex; align-items:center; justify-content:center; border-radius:calc(var(--control-radius) - 3px); font-weight:600; font-size:14px; color:var(--color-text-sub); }
+.seg span.on { background:var(--color-surface); color:var(--color-text); box-shadow:0 1px 2px rgb(0 0 0 / .08); }
+/* 추가 화면 */
+.sub-h { height:56px; background:var(--color-surface); display:flex; align-items:center; padding:0 8px; gap:4px; } .sub-h b { font-size:18px; }
+.prev { display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 0 8px; background:var(--color-surface); }
+.prev .c { width:64px; height:64px; border-radius:999px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; }
+.prev .c svg { width:30px; height:30px; } .prev span { font-weight:700; font-size:15px; }
+.form { background:var(--color-surface); padding: 6px 20px 14px; }
+.f-k { font-size:13px; font-weight:500; color:var(--color-text-sub); margin:12px 0 6px; display:flex; justify-content:space-between; }
+.inp { height:48px; border:2px solid var(--color-primary); border-radius:var(--control-radius); display:flex; align-items:center; padding:0 14px; font-size:16px; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; }
+.chip { height:36px; padding:0 12px; border-radius:999px; display:inline-flex; align-items:center; gap:4px; font-size:14px; background:var(--color-surface); border:1px solid var(--color-border-strong); }
+.chip.on { background:var(--color-primary-soft); color:var(--color-primary-strong); border-color:var(--color-primary); font-weight:600; }
+.chip svg { width:16px; height:16px; }
+.igrid { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; padding: 0 16px; }
+.ic-b { height:46px; border-radius:var(--control-radius); display:flex; align-items:center; justify-content:center; background:var(--color-surface-sunken); color:var(--color-text); }
+.ic-b.on { background:var(--color-primary); color:var(--color-on-primary); }
+.ig-t { font-size:12px; font-weight:700; color:var(--color-text-sub); padding:12px 20px 6px; }
+.foot { position:absolute; left:0; right:0; bottom:0; padding:12px 16px 16px; background:var(--color-surface); border-top:1px solid var(--color-border); }
+/* 가계부 목록 */
+.lrow { display:flex; align-items:center; gap:12px; height:64px; padding:0 20px; }
+.lrow.cur { background:var(--color-primary-soft); }
+.lrow .ini { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; font-weight:700; }
+.lrow.cur .ini { background:var(--color-surface); }
+.lrow .t { flex:1; } .lrow .t b { display:block; font-size:16px; } .lrow .t span { font-size:13px; color:var(--color-text-sub); }
+.lrow .ck { color:var(--color-primary); }
+.addcards { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding: 12px 20px 4px; }
+.addc { border-radius:16px; border:1.5px solid var(--color-border); padding:14px; display:flex; flex-direction:column; gap:8px; }
+.addc .ic { width:36px; height:36px; border-radius:10px; background:var(--color-primary-soft); color:var(--color-primary-strong); display:flex; align-items:center; justify-content:center; }
+.addc b { font-size:15px; } .addc span { font-size:12px; color:var(--color-text-sub); line-height:16px; }
+.note { font-size:13px; color:var(--color-text-sub); padding: 8px 20px 0; display:flex; gap:6px; align-items:center; }
+.note svg { width:14px; height:14px; }
+.link-row { display:flex; justify-content:center; padding: 10px 0 18px; }
+.menu { background:var(--color-surface); margin: 0 var(--card-gutter); border-radius:var(--card-radius); box-shadow:var(--card-shadow); padding: 4px 0; }
+.mrow { height:56px; display:flex; align-items:center; gap:12px; padding:0 16px 0 20px; font-size:16px; }
+.mrow svg { color:var(--color-text-sub); } .mrow .v { margin-left:auto; color:var(--color-text-sub); font-size:15px; display:flex; align-items:center; gap:4px; }
+.mrow.hl b { font-weight:700; }
+.badge { height:22px; padding:0 7px; border-radius:8px; display:inline-flex; align-items:center; font-size:12px; font-weight:600; background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.sect { font-size:13px; font-weight:700; color:var(--color-text-sub); padding: 16px 20px 8px; }
+</style></head><body>
+<h1>반반 v1.2 — 카테고리 선택·추가 / 가계부 전환·추가 동선</h1>
+<p class="lead">구조는 테마 공통. 1줄 = 기본 테마(클린), 2줄 = 같은 화면의 베리·포근. 더미 데이터는 기본 카테고리(대분류 27 / 소분류 43) 기준.</p>
+<div id="rows"></div>
+<template id="s-picker">
+ <div class="phone">
+  <div class="scrim"></div>
+  <div class="sheet" style="height:700px">
+   <div class="grab"></div>
+   <div class="sh-h"><b>지출 카테고리</b><div class="ib"><i data-lucide="x"></i></div></div>
+   <div class="sec-t"><i data-lucide="history"></i>최근 쓴 것</div>
+   <div class="grid" data-g="recent"></div>
+   <div data-g="sections"></div>
+  </div>
+ </div>
+</template>
+<template id="s-add">
+ <div class="phone">
+  <div class="sub-h"><div class="ib"><i data-lucide="chevron-left"></i></div><b>카테고리 추가</b></div>
+  <div class="prev"><div class="c"><i data-lucide="dog"></i></div><span>강아지 미용</span></div>
+  <div class="form">
+   <div class="f-k"><span>이름</span><span class="num">6/20</span></div>
+   <div class="inp">강아지 미용</div>
+   <div class="f-k"><span>어디에 넣을까요 (대분류)</span></div>
+   <div class="chips"><span class="chip on"><i data-lucide="check"></i>반려동물</span><span class="chip">생활</span><span class="chip">쇼핑</span><span class="chip">건강</span><span class="chip">＋ 새 대분류</span></div>
+  </div>
+  <div class="ig-t">아이콘 고르기</div>
+  <div class="igrid" data-g="icons"></div>
+  <div class="foot"><span class="btn p block">추가하기</span></div>
+ </div>
+</template>
+<template id="s-home">
+ <div class="phone">
+  <div class="hdr"><div class="lsw"><span style="display:flex"><span class="av" style="background:var(--color-avatar-1)">민</span><span class="av" style="background:var(--color-avatar-2)">준</span></span>우리집 가계부<i data-lucide="chevrons-up-down"></i></div><div class="ib"><i data-lucide="settings"></i></div></div>
+  <div class="stack">
+   <div class="card hero"><div class="lbl">11월 남은 돈</div><div class="big num">1,284,500<span class="unit">원</span></div></div>
+   <div class="card" style="padding:18px 20px"><div style="font-weight:700;font-size:17px;margin-bottom:10px">누가 얼마나 썼나</div><div style="display:flex;gap:3px;height:12px"><div style="width:49%;border-radius:99px;background:var(--color-member-1)"></div><div style="width:51%;border-radius:99px;background:var(--color-member-2)"></div></div></div>
+   <div class="card"><div class="nudge"><span class="ic"><i data-lucide="book-plus"></i></span><div style="flex:1"><b>가계부를 더 만들 수 있어요</b><p>부모님 용돈, 내 개인 지출처럼 따로 볼 돈은 가계부를 나눠 보세요. 최대 5개.</p><span class="btn s" style="height:40px">가계부 추가</span></div><div class="ib" style="margin:-10px -10px 0 0"><i data-lucide="x"></i></div></div></div>
+  </div>
+  <div class="tabbar"><div class="tab on"><span class="pill"><i data-lucide="house"></i></span>홈</div><div class="tab"><span class="pill"><i data-lucide="notebook-pen"></i></span>가계부</div><div class="plus"><i data-lucide="plus"></i></div><div class="tab"><span class="pill"><i data-lucide="landmark"></i></span>자산</div></div>
+ </div>
+</template>
+<template id="s-switch">
+ <div class="phone">
+  <div class="hdr"><div class="lsw"><span style="display:flex"><span class="av" style="background:var(--color-avatar-1)">민</span><span class="av" style="background:var(--color-avatar-2)">준</span></span>우리집 가계부<i data-lucide="chevrons-up-down"></i></div><div class="ib"><i data-lucide="settings"></i></div></div>
+  <div class="scrim"></div>
+  <div class="sheet" style="height:560px">
+   <div class="grab"></div>
+   <div class="sh-h"><b>내 가계부<small class="num">2/5</small></b><div class="ib"><i data-lucide="x"></i></div></div>
+   <div class="lrow cur"><span class="ini">우</span><span class="t"><b>우리집 가계부</b><span>멤버 2명 · 지금 보는 중</span></span><i class="ck" data-lucide="circle-check"></i></div>
+   <div class="lrow"><span class="ini">부</span><span class="t"><b>부모님 용돈</b><span>멤버 4명</span></span></div>
+   <div class="sect">가계부 추가</div>
+   <div class="addcards" style="padding-top:0">
+    <div class="addc"><span class="ic"><i data-lucide="book-plus"></i></span><b>새로 만들기</b><span>이름만 정하면 바로 시작</span></div>
+    <div class="addc"><span class="ic"><i data-lucide="ticket"></i></span><b>초대코드로 참여</b><span>받은 코드나 링크로</span></div>
+   </div>
+   <div class="link-row"><span class="btn t"><i data-lucide="settings-2"></i>가계부 관리</span></div>
+  </div>
+ </div>
+</template>
+<template id="s-manage">
+ <div class="phone">
+  <div class="sub-h"><div class="ib"><i data-lucide="chevron-left"></i></div><b>가계부 관리</b></div>
+  <div class="sect num">내 가계부 2/5</div>
+  <div class="menu">
+   <div class="lrow"><span class="ini">우</span><span class="t"><b>우리집 가계부 <span class="badge">지금 보는 중</span></b><span>멤버 2명 · 내가 만듦</span></span><i data-lucide="chevron-right" style="color:var(--color-text-weak)"></i></div>
+   <div class="lrow"><span class="ini">부</span><span class="t"><b>부모님 용돈</b><span>멤버 4명 · 참여함</span></span><i data-lucide="chevron-right" style="color:var(--color-text-weak)"></i></div>
+  </div>
+  <div style="display:flex;gap:8px;padding:16px max(var(--card-gutter),16px) 0"><span class="btn s" style="flex:1"><i data-lucide="book-plus"></i>새로 만들기</span><span class="btn s" style="flex:1"><i data-lucide="ticket"></i>코드로 참여</span></div>
+  <div class="note"><i data-lucide="info"></i>가계부는 1인 최대 5개. 나가기는 각 가계부를 눌러서.</div>
+  <div class="sect" style="margin-top:12px">설정 (지금 보는 가계부: 우리집 가계부)</div>
+  <div class="menu">
+   <div class="mrow"><i data-lucide="pencil"></i>가계부 이름</div>
+   <div class="mrow"><i data-lucide="users"></i>멤버·초대<span class="v num">2명<i data-lucide="chevron-right"></i></span></div>
+   <div class="mrow"><i data-lucide="tag"></i>카테고리 관리</div>
+   <div class="mrow"><i data-lucide="wallet"></i>주머니 관리</div>
+  </div>
+ </div>
+</template>
+<script>
+const CATS = [
+ ['식비','utensils-crossed',[['장보기','shopping-cart'],['외식','utensils'],['배달','bike'],['카페/간식','coffee']]],
+ ['주거','house',[['월세','key-round'],['관리비','building'],['공과금','zap']]],
+ ['통신','smartphone',[['휴대폰','smartphone'],['인터넷','wifi'],['구독','tv']]],
+ ['교통','bus',[['대중교통','tram-front'],['주유','fuel'],['주차','parking-meter'],['택시','car-taxi-front']]],
+ ['생활','shopping-basket',[['생필품','spray-can'],['가구/가전','sofa']]],
+ ['쇼핑','shopping-bag',[['의류','shirt'],['미용','scissors']]],
+ ['건강','heart-pulse',[['병원','hospital'],['약국','pill'],['운동','dumbbell']]],
+ ['문화·여가','ticket',[['취미','palette'],['공연','drama'],['여행','plane']]],
+];
+const SINGLE = [['경조사·선물','gift'],['교육','graduation-cap'],['보험','shield-check'],['반려동물','paw-print'],['육아','baby'],['대출이자','percent'],['기타','ellipsis']];
+const ICONS = ['utensils','coffee','pizza','wine','cake','shopping-cart','shopping-bag','shirt','scissors','gem','sofa','spray-can','house','key-round','zap','wifi','smartphone','laptop','bus','car','train-front','plane','fuel','bike','heart-pulse','pill','dumbbell','stethoscope','baby','dog','cat','paw-print','gift','heart','users','church','book','graduation-cap','palette','guitar','gamepad-2','film','camera','flower-2','wrench','briefcase','coins','receipt'];
+const tile = (n,i,on) => `<div class="tile${on?' on':''}"><span class="c"><i data-lucide="${i}"></i></span>${n}${on?'<span class="ck"><i data-lucide="check"></i></span>':''}</div>`;
+function fill(root){
+  root.querySelectorAll('[data-g="recent"]').forEach(g=>g.innerHTML=[['외식','utensils',1],['장보기','shopping-cart'],['카페/간식','coffee'],['대중교통','tram-front']].map(x=>tile(x[0],x[1],x[2])).join(''));
+  root.querySelectorAll('[data-g="sections"]').forEach(g=>{
+    let h=''; for (const [p,pi,ch] of CATS.slice(0,2)) h+=`<div class="sec-t"><i data-lucide="${pi}"></i>${p}</div><div class="grid">${ch.map(c=>tile(c[0],c[1])).join('')}</div>`;
+    h+=`<div class="sec-t">… 통신 · 교통 · 생활 · 쇼핑 · 건강 · 문화·여가 (스크롤)</div>`;
+    h+=`<div class="sec-t"><i data-lucide="layout-grid"></i>그 밖의 분류</div><div class="grid">${SINGLE.slice(0,7).map(c=>tile(c[0],c[1])).join('')}${'<div class="tile add"><span class="c"><i data-lucide="plus"></i></span>추가</div>'}</div>`;
+    g.innerHTML=h;});
+  root.querySelectorAll('[data-g="icons"]').forEach(g=>g.innerHTML=ICONS.slice(0,30).map((i,k)=>`<span class="ic-b${i==='dog'?' on':''}"><i data-lucide="${i}"></i></span>`).join(''));
+}
+const ROWS = [
+ ['clean','기본 테마(클린)',[['s-picker','① 카테고리 선택 시트 — 최근 4개 + 대분류별 소분류 아이콘 격자'],['s-add','② 카테고리 추가 — 이름 + 대분류 + 아이콘 고르기'],['s-home','③ 헤더 가계부 버튼(알약) + 가계부 1개일 때 홈 안내'],['s-switch','④ 가계부 전환 시트 — 추가 카드 2개 + 관리'],['s-manage','⑤ 설정 › 가계부 관리']]],
+ ['berry|cozy','베리 · 포근 (같은 화면, 색·강조 표현만 다름)',[['s-picker','베리',"berry"],['s-switch','베리',"berry"],['s-picker','포근',"cozy"],['s-switch','포근',"cozy"]]],
+];
+const rows=document.getElementById('rows');
+for (const [t,tn,screens] of ROWS){
+  rows.insertAdjacentHTML('beforeend',`<h2 class="row-t">${tn}</h2>`);
+  const r=document.createElement('div'); r.className='row';
+  for (const [id,cap,th] of screens){
+    const w=document.createElement('div'); if(cap) w.innerHTML=`<p class="cap">${cap}</p>`;
+    w.appendChild(document.getElementById(id).content.cloneNode(true));
+    w.querySelector('.phone').dataset.theme=th||t; fill(w); r.appendChild(w);
+  }
+  rows.appendChild(r);
+}
+lucide.createIcons();
+</script>
+</body></html>
