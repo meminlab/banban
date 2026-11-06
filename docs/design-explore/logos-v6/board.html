@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>반반 로고 6차(최종 후보) 시안 보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+* { box-sizing: border-box; }
+body { margin:0; padding: 28px; background:#E6E7EA; font-family:'Pretendard Variable',sans-serif; color:#1D1F23; word-break: keep-all; }
+h1 { font-size: 22px; margin: 0 0 4px; } .sub { margin: 0 0 18px; color:#4A4F57; font-size: 14px; }
+.grid { display:grid; grid-template-columns: 180px 150px 150px 250px 190px 130px; gap: 10px; align-items: stretch; }
+.h { font-size: 12px; font-weight: 700; color:#5B6068; padding: 0 4px; }
+.cell { border-radius: 14px; display:flex; align-items:center; justify-content:center; height: 150px; }
+.w { background:#fff; } .d { background:#131416; }
+.name { display:flex; flex-direction:column; justify-content:center; padding: 0 8px; background: transparent; align-items:flex-start; }
+.name b { font-size: 18px; } .name span { font-size: 13px; color:#4A4F57; margin-top: 6px; line-height: 19px; }
+.lock { display:flex; align-items:center; gap: 10px; font-weight: 800; font-size: 34px; letter-spacing: -0.04em; }
+.icons { gap: 14px; }
+.fav { flex-direction: column; gap: 10px; }
+.fav div { display:flex; gap: 10px; align-items:center; padding: 6px 10px; border-radius: 6px; }
+</style></head><body>
+<h1>반반 로고 6차 — b·a·n 얼굴 (5-3 윙크 + 4-1 반쪽 동전 주머니)</h1>
+<p class="sub">글자는 도형으로 그려 글꼴 필요 없음 · 파비콘 칸: 32px는 원본, 16px는 단순화본(-16.svg: 굵은 획, b → 점 눈) · 워드마크 Pretendard 800(OFL)</p>
+<div class="grid" id="g">
+<div class="h">시안</div><div class="h">밝은 바탕</div><div class="h">어두운 바탕</div><div class="h">심볼 + 워드마크</div><div class="h">앱 아이콘 96 · 48</div><div class="h">파비콘 32 · 16</div>
+</div>
+<script>
+const L = [
+ ['6-1-ban-nose','6-1. b·a·n 한 줄','b 눈 · a 코 · n 윙크가 가로로 "b a n" + u 입. 글자가 가장 또렷이 읽힘','#007F55'],
+ ['6-2-ban-mouth','6-2. b·n 눈 + a 입','b 눈과 n 윙크 아래 a가 크게 웃는 입. 요소 3개라 가장 단순','#007F55'],
+ ['6-3-ban-mouth-deep','6-3. 6-2 짙은 초록','같은 모양, 더 짙은 초록 + 앱 아이콘은 초록 바탕에 흰 주머니','#1E6B4F'],
+];
+const g = document.getElementById('g');
+for (const [k,n,desc,ink] of L) {
+  g.insertAdjacentHTML('beforeend', `
+  <div class="cell name"><b>${n}</b><span>${desc}</span></div>
+  <div class="cell w"><img src="logo-${k}.svg" width="96" height="96"></div>
+  <div class="cell d"><img src="logo-${k}-dark.svg" width="96" height="96"></div>
+  <div class="cell w"><span class="lock" style="color:${ink}"><img src="logo-${k}.svg" width="52" height="52">banban</span></div>
+  <div class="cell w icons"><img src="logo-${k}-appicon.svg" width="96" height="96"><img src="logo-${k}-appicon.svg" width="48" height="48"></div>
+  <div class="cell w fav"><div style="background:#F0F1F4"><img src="logo-${k}.svg" width="32" height="32"><img src="logo-${k}-16.svg" width="16" height="16"></div><div style="background:#2A2C30"><img src="logo-${k}-dark.svg" width="32" height="32"><img src="logo-${k}-16-dark.svg" width="16" height="16"></div></div>`);
+}
+</script>
+</body></html>
