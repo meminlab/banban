@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>반반 로고 7차 시안 보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+* { box-sizing: border-box; }
+body { margin:0; padding: 28px; background:#E6E7EA; font-family:'Pretendard Variable',sans-serif; color:#1D1F23; word-break: keep-all; }
+h1 { font-size: 22px; margin: 0 0 4px; } .sub { margin: 0 0 18px; color:#4A4F57; font-size: 14px; }
+.grid { display:grid; grid-template-columns: 180px 150px 150px 250px 190px 130px; gap: 10px; align-items: stretch; }
+.h { font-size: 12px; font-weight: 700; color:#5B6068; padding: 0 4px; }
+.cell { border-radius: 14px; display:flex; align-items:center; justify-content:center; height: 150px; }
+.w { background:#fff; } .d { background:#131416; }
+.name { display:flex; flex-direction:column; justify-content:center; padding: 0 8px; background: transparent; align-items:flex-start; }
+.name b { font-size: 18px; } .name span { font-size: 13px; color:#4A4F57; margin-top: 6px; line-height: 19px; }
+.lock { display:flex; align-items:center; gap: 10px; font-weight: 800; font-size: 34px; letter-spacing: -0.04em; }
+.icons { gap: 14px; }
+.fav { flex-direction: column; gap: 10px; }
+.fav div { display:flex; gap: 10px; align-items:center; padding: 6px 10px; border-radius: 6px; }
+</style></head><body>
+<h1>반반 로고 7차 — 덜어내기 (요소 3개 이내, 16px도 같은 파일)</h1>
+<p class="sub">A = ban 글자 중심 · B = 스마일 최소화 · 파비콘 칸도 원본 파일 그대로(단순화본 없음) · 워드마크 Pretendard 800(OFL)</p>
+<div class="grid" id="g">
+<div class="h">시안</div><div class="h">밝은 바탕</div><div class="h">어두운 바탕</div><div class="h">심볼 + 워드마크</div><div class="h">앱 아이콘 96 · 48</div><div class="h">파비콘 32 · 16</div>
+</div>
+<script>
+const L = [
+ ['7a-1-yeopjeon-b','A-1. 엽전 b','b 한 글자 = 줄기 + 반반 동전(가운데 엽전 네모 구멍이 b의 속). 요소 3개','#007F55'],
+ ['7a-2-ban-coin','A-2. ban','b·a·n 세 글자, a의 둥근 몸이 반반 동전. 글자가 그대로 로고','#007F55'],
+ ['7b-1-pouch-smile','B-1. 웃는 주머니','주머니 + 웃는 입 한 획 + 반쪽 동전. 4-1에서 눈을 덜어냄','#007F55'],
+ ['7b-2-coin-smile','B-2. 눈웃음 동전','두 톤 동전 하나 + 눈웃음 두 획. 실루엣 = 1a 그대로','#007F55'],
+];
+const g = document.getElementById('g');
+for (const [k,n,desc,ink] of L) {
+  g.insertAdjacentHTML('beforeend', `
+  <div class="cell name"><b>${n}</b><span>${desc}</span></div>
+  <div class="cell w"><img src="logo-${k}.svg" width="96" height="96"></div>
+  <div class="cell d"><img src="logo-${k}-dark.svg" width="96" height="96"></div>
+  <div class="cell w"><span class="lock" style="color:${ink}"><img src="logo-${k}.svg" width="52" height="52">banban</span></div>
+  <div class="cell w icons"><img src="logo-${k}-appicon.svg" width="96" height="96"><img src="logo-${k}-appicon.svg" width="48" height="48"></div>
+  <div class="cell w fav"><div style="background:#F0F1F4"><img src="logo-${k}.svg" width="32" height="32"><img src="logo-${k}.svg" width="16" height="16"></div><div style="background:#2A2C30"><img src="logo-${k}-dark.svg" width="32" height="32"><img src="logo-${k}-dark.svg" width="16" height="16"></div></div>`);
+}
+</script>
+</body></html>
