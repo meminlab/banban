@@ -10,6 +10,7 @@
 --           asset_net_worth = true (20261106160000 마이그레이션: 자산 종류 12개, 보관, 잔액 이력 트리거, 이력 직접 쓰기·자산 삭제 불가)
 --           category_icon = true (20261106170000 마이그레이션: category.icon 컬럼·기본 매핑 함수, 새 가계부 기본값에 아이콘)
 --           history_window = true (20261106180000 마이그레이션: 잔액 이력 범위 조회 함수, 로그인 사용자만 실행·권한 규칙 그대로)
+--           profile_theme = true (20261106190000 마이그레이션: profile.theme 기본 clean·허용 값 3종, set_my_theme 로그인 사용자만, profile 직접 수정 불가 그대로)
 --           (asset_balance_history 행이 추가되어 10행. 이력 테이블 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
@@ -62,7 +63,15 @@ select c.relname                                          as table_name,
         and has_function_privilege('authenticated', 'public.asset_balance_history_window(uuid,timestamptz)', 'execute')
         and not has_function_privilege('anon', 'public.asset_balance_history_window(uuid,timestamptz)', 'execute')
         and not (select prosecdef from pg_proc
-                  where oid = 'public.asset_balance_history_window(uuid,timestamptz)'::regprocedure)) as history_window
+                  where oid = 'public.asset_balance_history_window(uuid,timestamptz)'::regprocedure)) as history_window,
+       (exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'profile' and column_name = 'theme'
+                   and is_nullable = 'NO' and column_default like '''clean''%')
+        and to_regprocedure('public.set_my_theme(text)') is not null
+        and has_function_privilege('authenticated', 'public.set_my_theme(text)', 'execute')
+        and not has_function_privilege('anon', 'public.set_my_theme(text)', 'execute')
+        and not has_table_privilege('authenticated', 'public.profile', 'update')
+        and not exists (select 1 from public.profile where theme not in ('clean', 'berry', 'cozy'))) as profile_theme
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
