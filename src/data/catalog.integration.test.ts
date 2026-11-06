@@ -59,7 +59,7 @@ describe.skipIf(!enabled)('카테고리·주머니 저장소 (로컬 Supabase)',
 
   it('A가 바꾼 카테고리를 B가 다시 불러오면 본다 (추가·이름·순서·숨김)', async () => {
     as(A);
-    const parent = await catalog.addParentCategory({ ledgerId, type: 'expense', name: '술', sortOrder: 16 });
+    const { parent } = await catalog.addParentCategory({ ledgerId, type: 'expense', name: '술', sortOrder: 16 });
     const food = (await catalog.listCategories(ledgerId)).find((c) => c.name === '식비' && c.parent_id === null)!;
     const child = await catalog.addChildCategory({ ledgerId, type: 'expense', parentId: food.id, name: '야식', sortOrder: 5 });
     await catalog.updateCategory(child.id, { name: '밤참' });

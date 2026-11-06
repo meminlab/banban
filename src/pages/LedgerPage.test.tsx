@@ -28,7 +28,7 @@ vi.mock('../data/ledger', () => ({
 vi.mock('../data/profile', () => ({ getProfile: async () => null }));
 
 const c = (id: string, type: Category['type'], parent_id: string | null, name: string, sort_order = 1): Category => ({
-  id, ledger_id: 'L', type, parent_id, name, sort_order, is_hidden: false, created_at: '',
+  id, ledger_id: 'L', type, parent_id, name, sort_order, is_hidden: false, icon: null, created_at: '',
 });
 const CATEGORIES: Category[] = [
   c('food', 'expense', null, '식비', 1),
@@ -63,6 +63,7 @@ function t(o: Partial<Transaction>): Transaction {
 }
 
 vi.mock('../data/transaction', () => ({
+  listRecentCategoryIds: async () => [],
   getTransactionFormOptions: async () => ({ categories: CATEGORIES, pockets: POCKETS, members: MEMBERS }),
   listMonthTransactions: (ledgerId: string, month: string) => fake.list(ledgerId, month),
   getTransaction: async (id: string) => fake.transactions.find((x) => (x as Transaction).id === id) ?? null,

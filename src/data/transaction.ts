@@ -19,7 +19,7 @@ export async function getTransactionFormOptions(ledgerId: string): Promise<Trans
   const [categories, pockets, members] = await Promise.all([
     db
       .from('category')
-      .select('id, ledger_id, type, parent_id, name, sort_order, is_hidden, created_at')
+      .select('id, ledger_id, type, parent_id, name, sort_order, is_hidden, icon, created_at')
       .eq('ledger_id', ledgerId),
     db.from('pocket').select('id, ledger_id, name, scope, sort_order, is_hidden, created_at').eq('ledger_id', ledgerId),
     db
@@ -42,6 +42,22 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
   const { data, error } = await getSupabase().from('transaction').select(TRANSACTION_COLUMNS).eq('id', id).maybeSingle();
   if (error) throw error;
   return data as Transaction | null;
+}
+
+/**
+ * 이 멤버가 최근 입력한 내역의 카테고리 id (입력한 순서, 겹칠 수 있음). 카테고리 선택 시트의 "최근 쓴 것".
+ * 최근 50건만 본다(종류별 4개를 고르기에 충분).
+ */
+export async function listRecentCategoryIds(ledgerId: string, memberId: string): Promise<string[]> {
+  const { data, error } = await getSupabase()
+    .from('transaction')
+    .select('category_id')
+    .eq('ledger_id', ledgerId)
+    .eq('created_by', memberId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data as { category_id: string }[]).map((r) => r.category_id);
 }
 
 /** Supabase(PostgREST)는 한 번에 최대 1,000행만 돌려주므로 나눠서 다 읽는다 */

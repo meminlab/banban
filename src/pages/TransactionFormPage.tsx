@@ -1,20 +1,30 @@
+import { ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentUser } from '../app/auth';
 import { useLedgerId } from '../app/guards';
 import { ledgerReturnPath, type LedgerFlash } from '../app/routes';
+import { CategoryEditor, type CategoryEditorValues } from '../components/CategoryEditor';
+import { CategoryIcon } from '../components/CategoryIcon';
+import { CategoryPicker } from '../components/CategoryPicker';
 import { Dialog } from '../components/Dialog';
 import { Icon } from '../components/Icon';
+import { Sheet } from '../components/Sheet';
 import { StatusScreen } from '../components/StatusScreen';
+import { saveErrorMessage } from '../app/useSaving';
+import { addChildCategory, addParentCategory } from '../data/catalog';
 import {
   createTransaction,
   deleteTransaction,
   getTransaction,
   getTransactionFormOptions,
+  listRecentCategoryIds,
   updateTransaction,
   type TransactionFormOptions,
 } from '../data/transaction';
-import type { Transaction, TransactionType } from '../data/types';
+import type { Category, Transaction, TransactionType } from '../data/types';
+import { nextSortOrder } from '../domain/catalog';
+import { buildPickerModel, type ParentChoice } from '../domain/categoryPicker';
 import {
   FIELD_ORDER,
   MEMO_MAX,
@@ -156,13 +166,35 @@ function TransactionForm({
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
   const [failure, setFailure] = useState<'save' | 'delete' | null>(null);
   const [dialog, setDialog] = useState<'confirmDelete' | 'deleted' | null>(null);
+  // 카테고리 선택 시트 → 추가 화면. 추가한 카테고리는 이 화면 안에서 바로 고를 수 있게 목록에 더한다
+  const [categories, setCategories] = useState<Category[]>(options.categories);
+  const [catSheet, setCatSheet] = useState<null | 'pick' | 'add'>(null);
+  const [catBusy, setCatBusy] = useState(false);
+  const [catError, setCatError] = useState<string | null>(null);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    // "최근 쓴 것"은 없어도 고를 수 있으므로 실패하면 조용히 숨긴다
+    listRecentCategoryIds(ledgerId, myMemberId).then(
+      (ids) => alive && setRecentIds(ids),
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId, myMemberId]);
 
   // 처음 값이 숨김/나감 항목이어도 수정 화면에서 그대로 보이게 유지
   const keep = original ?? undefined;
   const groups = useMemo(
-    () => categoryGroups(options.categories, draft.type, keep?.type === draft.type ? keep.category_id : null),
-    [options.categories, draft.type, keep],
+    () => categoryGroups(categories, draft.type, keep?.type === draft.type ? keep.category_id : null),
+    [categories, draft.type, keep],
   );
+  const pickerModel = useMemo(() => buildPickerModel(groups, recentIds), [groups, recentIds]);
+  const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const selectedCategory = categoryById.get(draft.categoryId);
+  const selectedParent = selectedCategory?.parent_id ? categoryById.get(selectedCategory.parent_id) : undefined;
   const pockets = useMemo(() => pocketOptions(options.pockets, keep?.pocket_id), [options.pockets, keep]);
   const spenders = useMemo(() => spenderOptions(options.members, keep?.spender_id), [options.members, keep]);
   const memberById = useMemo(() => new Map(options.members.map((m) => [m.id, m])), [options.members]);
@@ -212,6 +244,47 @@ function TransactionForm({
     } catch {
       setBusy(null);
       setFailure('save'); // 입력값은 그대로 두고 다시 시도
+    }
+  };
+
+  const closeCategorySheet = useCallback(() => {
+    setCatSheet(null);
+    setCatError(null);
+  }, []);
+  const backToPicker = useCallback(() => {
+    setCatSheet('pick');
+    setCatError(null);
+  }, []);
+
+  // 추가 화면에서 미리 고를 대분류: 지금 고른 카테고리의 대분류 (없으면 고르지 않음)
+  const addInitialParent: ParentChoice | null =
+    selectedParent && selectedParent.type === draft.type && !selectedParent.is_hidden ? { kind: 'existing', id: selectedParent.id } : null;
+
+  const addCategory = async (v: CategoryEditorValues) => {
+    if (catBusy || !v.parent) return;
+    setCatBusy(true);
+    setCatError(null);
+    try {
+      let added: Category[];
+      let child: Category;
+      if (v.parent.kind === 'new') {
+        const siblings = categories.filter((c) => c.type === draft.type && c.parent_id === null);
+        const r = await addParentCategory({ ledgerId, type: draft.type, name: v.name, icon: v.icon, sortOrder: nextSortOrder(siblings) });
+        added = [r.parent, r.child];
+        child = r.child;
+      } else {
+        const parentId = v.parent.id;
+        const siblings = categories.filter((c) => c.parent_id === parentId);
+        child = await addChildCategory({ ledgerId, type: draft.type, parentId, name: v.name, icon: v.icon, sortOrder: nextSortOrder(siblings) });
+        added = [child];
+      }
+      setCategories((list) => [...list, ...added]);
+      set('categoryId', child.id); // 추가한 카테고리가 선택된 상태로 선택 시트에 돌아온다
+      setCatSheet('pick');
+    } catch (e) {
+      setCatError(saveErrorMessage(e));
+    } finally {
+      setCatBusy(false);
     }
   };
 
@@ -289,35 +362,36 @@ function TransactionForm({
         </div>
 
         <div className="field">
-          <label className="field__label" htmlFor={fieldId('categoryId')}>
+          <span className="field__label" id={`${fieldId('categoryId')}-label`}>
             카테고리
-          </label>
-          <select
+          </span>
+          <button
+            type="button"
             id={fieldId('categoryId')}
-            className="input"
-            value={draft.categoryId}
-            onChange={(e) => set('categoryId', e.target.value)}
+            className="category-field"
+            aria-haspopup="dialog"
+            aria-labelledby={`${fieldId('categoryId')}-label ${fieldId('categoryId')}-value`}
+            onClick={() => setCatSheet('pick')}
             {...errorProps('categoryId')}
           >
-            <option value="">{groups.length === 0 ? '고를 수 있는 카테고리가 없어요' : '카테고리 선택'}</option>
-            {groups.map(({ parent, children }) =>
-              children.length === 1 && children[0].name === parent.name ? (
-                <option key={children[0].id} value={children[0].id}>
-                  {children[0].name}
-                  {children[0].is_hidden || parent.is_hidden ? ' (숨김)' : ''}
-                </option>
-              ) : (
-                <optgroup key={parent.id} label={parent.name}>
-                  {children.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {parent.name} › {c.name}
-                      {c.is_hidden || parent.is_hidden ? ' (숨김)' : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              ),
+            {selectedCategory ? (
+              <>
+                <CategoryIcon category={selectedCategory} parent={selectedParent} size="row" />
+                <span className="category-field__value" id={`${fieldId('categoryId')}-value`}>
+                  {selectedParent && selectedParent.name !== selectedCategory.name ? (
+                    <span className="category-field__parent">{selectedParent.name} › </span>
+                  ) : null}
+                  {selectedCategory.name}
+                  {selectedCategory.is_hidden || selectedParent?.is_hidden ? ' (숨김)' : ''}
+                </span>
+              </>
+            ) : (
+              <span className="category-field__value category-field__value--empty" id={`${fieldId('categoryId')}-value`}>
+                {groups.length === 0 ? '고를 수 있는 카테고리가 없어요' : '카테고리 선택'}
+              </span>
             )}
-          </select>
+            <ChevronRight size={20} strokeWidth={2} aria-hidden="true" focusable="false" className="category-field__chevron" />
+          </button>
           {errorText('categoryId')}
         </div>
 
@@ -434,6 +508,39 @@ function TransactionForm({
           </section>
         )}
       </form>
+
+      {catSheet === 'pick' && (
+        <Sheet title={`${TYPE_LABEL[draft.type]} 카테고리`} onClose={closeCategorySheet}>
+          <CategoryPicker
+            model={pickerModel}
+            parentById={categoryById}
+            selectedId={draft.categoryId}
+            onSelect={(c) => {
+              set('categoryId', c.id);
+              closeCategorySheet();
+            }}
+            onAdd={() => setCatSheet('add')}
+          />
+        </Sheet>
+      )}
+      {catSheet === 'add' && (
+        <Sheet title="카테고리 추가" onClose={backToPicker}>
+          <CategoryEditor
+            categories={categories}
+            type={draft.type}
+            initialParent={addInitialParent}
+            busy={catBusy}
+            submitLabel="추가하기"
+            onSubmit={addCategory}
+          >
+            {catError && (
+              <p className="form-error" role="alert">
+                {catError}
+              </p>
+            )}
+          </CategoryEditor>
+        </Sheet>
+      )}
 
       {dialog === 'confirmDelete' && (
         <Dialog
