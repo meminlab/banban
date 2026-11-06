@@ -204,6 +204,15 @@ export function netWorthTrend(
   });
 }
 
+/**
+ * 추이에 필요한 잔액 이력의 시작 시각(ms) = end 기준 (months−1)개월 전 1일 00:00 KST (BANB-30)
+ * 이 시각 이후 이력 전부 + 자산마다 이 시각 직전 마지막 이력 1건이 있으면
+ * end 까지 months개월 추이·end 의 순자산·전월 대비·이번 달 기록 여부가 전체 이력으로 계산한 값과 같다
+ */
+export function trendWindowStart(end: YearMonth, months = 6): number {
+  return monthStartBoundary(addMonths(end, -(months - 1)));
+}
+
 export interface TrendScale {
   /** 세로 범위(위·아래 15% 여유 포함). 0부터 시작하지 않는다(design.md 5.19) */
   min: number;

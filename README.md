@@ -47,6 +47,7 @@ npm run dev                  # http://localhost:5173
 | `npm run test:db` | 스키마·권한 규칙 테스트 (Docker 필요. Postgres 컨테이너를 띄워 마이그레이션 적용 후 검사하고 지움). `STRICT=1`이면 테이블 자동 노출을 끈 프로젝트 조건으로 검사 |
 | `SUPABASE_URL=… SUPABASE_KEY=… npx vitest run src/data/catalog.integration.test.ts` | 카테고리·주머니 저장소 함수를 실제 Supabase API로 확인 (두 멤버 간 변경 반영, 숨김 후 지난 내역 이름, N1 거부). **로컬 Supabase 전용**. 환경변수가 없으면 `npm test`에서 건너뛴다 |
 | `node supabase/tests/api_flow.mjs` | 가입 → 가계부 생성 → 초대 → 참여 흐름을 실제 Supabase API로 확인. **로컬 Supabase(`npx supabase start`) 전용** — 테스트 계정을 만들므로 운영 프로젝트에는 돌리지 않는다. `SUPABASE_URL`, `SUPABASE_KEY`(publishable) 필요 |
+| `SUPABASE_URL=… SUPABASE_KEY=… SUPABASE_SECRET_KEY=… npx vitest run src/data/asset.integration.test.ts` | 잔액 이력 범위 조회(BANB-30)를 실제 Supabase API로 확인 — 조회 상한 1000행에서 이력 1,500건 자산·오래 안 바뀐 자산의 추이 값이 전체 이력과 같은지. **로컬 Supabase 전용**(지난 시각 이력을 넣으려고 로컬 secret key 사용). 환경변수가 없으면 `npm test`에서 건너뛴다 |
 | `node supabase/tests/asset_flow.mjs` | 자산 추가·수정·보관·되살리기·잔액 이력·값 검증·외부인 차단을 실제 Supabase API로 확인. **로컬 Supabase 전용**, 환경변수는 위와 같음 |
 | `node supabase/tests/transaction_flow.mjs` | 내역 입력 → 다른 멤버가 수정(마지막 수정자 바뀜) → 삭제 → 삭제된 내역 저장 시 0행 흐름을 실제 Supabase API로 확인. 로컬 Supabase 전용, 환경변수는 위와 같음 |
 
@@ -73,10 +74,10 @@ npm run dev                  # http://localhost:5173
       - `20261106150000_multi_ledger.sql` — 여러 가계부·1인 5개 상한·마지막으로 본 가계부
       - `20261106160000_asset_net_worth.sql` — 자산 종류 12개(부채 3종 포함), 삭제 대신 보관(`archived_at`, 서버 시각), 잔액 이력(`asset_balance_history`, 트리거 기록·직접 쓰기 불가). 기존 자산은 적용 시각에 현재 잔액으로 이력 1행씩 채움
       - `20261106170000_category_icon.sql` — 카테고리 아이콘(`category.icon`, Lucide 이름, null 허용). 기본 매핑 함수 `default_category_icon` + 새 가계부 기본값에 아이콘. 기존 가계부는 이름이 기본값과 같은 카테고리만 채움(이름 바꾼 것·직접 만든 것은 비워 둠 → 앱이 대분류 아이콘/첫 글자로 표시)
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, `category_icon=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, `category_icon=true`, `history_window=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
-   5. `supabase/tests/30_multi_ledger_test.sql`, `supabase/tests/40_asset_net_worth_test.sql`, `supabase/tests/50_category_icon_test.sql` — 여러 가계부 / 자산 이력·보관·권한 / 카테고리 아이콘 테스트 (같은 방식)
+   5. `supabase/tests/30_multi_ledger_test.sql`, `supabase/tests/40_asset_net_worth_test.sql`, `supabase/tests/50_category_icon_test.sql`, `supabase/tests/60_asset_history_window_test.sql` — 여러 가계부 / 자산 이력·보관·권한 / 카테고리 아이콘 / 잔액 이력 범위 조회 테스트 (같은 방식)
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
 3. 프로젝트 설정 → API Keys에서 URL, publishable key를 복사해 `.env.local`과 호스팅 환경변수에 넣기
 4. 구글 로그인 설정 — 아래 "구글 로그인 설정" 참고

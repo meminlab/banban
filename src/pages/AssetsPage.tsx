@@ -29,6 +29,7 @@ import {
   needsMonthlyCheck,
   netWorthChange,
   netWorthTrend,
+  trendWindowStart,
   type OwnerView,
 } from '../domain/netWorth';
 
@@ -70,14 +71,14 @@ export function AssetsPage() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([listAssets(ledgerId), listBalanceHistory(ledgerId), listMembers(ledgerId)]).then(
+    Promise.all([listAssets(ledgerId), listBalanceHistory(ledgerId, trendWindowStart(ym)), listMembers(ledgerId)]).then(
       ([assets, history, members]) => alive && setState({ status: 'ready', assets, history, members }),
       () => alive && setState({ status: 'error' }),
     );
     return () => {
       alive = false;
     };
-  }, [ledgerId, attempt]);
+  }, [ledgerId, ym, attempt]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
 

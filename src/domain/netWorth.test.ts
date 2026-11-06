@@ -13,6 +13,7 @@ import {
   trendRatio,
   trendScale,
   trendSegments,
+  trendWindowStart,
   type OwnerView,
 } from './netWorth';
 
@@ -359,5 +360,108 @@ describe('홈 우리집 순자산 카드 (BANB-27, QA v4 HM)', () => {
   it('HM-08 순자산 음수', () => {
     const debt = [mk('빚', 'loan', null, [['2026-11-02T09:00:00', 9_999_999_999]])];
     expect(homeNetWorth(debt, history, '2026-11', NOW)).toMatchObject({ kind: 'value', net: -9_999_999_999 });
+  });
+});
+
+// ── BANB-30 추이에 필요한 범위만 받은 이력으로도 값이 같다
+
+/** 서버 함수 asset_balance_history_window 와 같은 규칙: since 이후 전부 + 자산마다 since 직전 마지막 1건 */
+function historyWindow(all: readonly AssetBalanceHistory[], since: number): AssetBalanceHistory[] {
+  const before = new Map<string, AssetBalanceHistory>();
+  const after: AssetBalanceHistory[] = [];
+  for (const h of all) {
+    const t = Date.parse(h.changed_at);
+    if (t >= since) {
+      after.push(h);
+      continue;
+    }
+    const prev = before.get(h.asset_id);
+    const pt = prev ? Date.parse(prev.changed_at) : -Infinity;
+    if (!prev || t > pt || (t === pt && h.id > prev.id)) before.set(h.asset_id, h);
+  }
+  return [...before.values(), ...after];
+}
+
+describe('잔액 이력 범위 조회 (BANB-30)', () => {
+  it('창 시작 = 5개월 전 1일 00:00 KST', () => {
+    expect(trendWindowStart('2026-11')).toBe(Date.parse(kst('2026-06-01T00:00:00')));
+    expect(trendWindowStart('2026-03')).toBe(Date.parse(kst('2025-10-01T00:00:00')));
+    expect(trendWindowStart('2026-11', 12)).toBe(Date.parse(kst('2025-12-01T00:00:00')));
+  });
+
+  // 자산 1개에 이력 1,500건 + 6개월 넘게 안 바뀐 자산 + 창 이전에 끝난 부채 + 창 안에서 보관한 자산
+  let id = 0;
+  const all: AssetBalanceHistory[] = [];
+  const row = (asset: string, at: string, balance: number, by: string | null = 'ma') =>
+    all.push({ id: ++id, asset_id: asset, ledger_id: 'L9', balance, changed_by: by, changed_at: kst(at) });
+  const base = Date.parse(kst('2025-02-01T09:00:00'));
+  for (let i = 0; i < 1500; i++) {
+    // 10시간 간격 → 2025-02-01 ~ 2026-10-19
+    const at = new Date(base + i * 10 * 3600_000 + 9 * 3600_000).toISOString().slice(0, 19);
+    row('활발통장', at, 1_000_000 + ((i * 7919) % 50_000) * 100);
+  }
+  row('오래된집', '2024-03-01T09:00:00', 400_000_000, null);
+  row('오래된집', '2024-03-01T09:00:00', 410_000_000); // 같은 시각이면 id 큰 쪽이 나중
+  row('옛대출', '2025-01-10T09:00:00', 50_000_000);
+  row('옛대출', '2025-04-10T09:00:00', 30_000_000);
+  row('보관차', '2025-03-01T09:00:00', 15_000_000, 'mb');
+  row('활발통장', '2026-11-03T09:00:00', 2_222_000); // 이번 달 사람이 남긴 기록
+
+  const asset = (aid: string, kind: AssetKind, owner: string | null, archived: string | null = null): Asset => {
+    const last = all.filter((h) => h.asset_id === aid).at(-1)!;
+    return {
+      id: aid,
+      ledger_id: 'L9',
+      name: aid,
+      kind,
+      owner_id: owner,
+      balance: last.balance,
+      memo: null,
+      archived_at: archived ? kst(archived) : null,
+      created_at: all.find((h) => h.asset_id === aid)!.changed_at,
+      updated_at: last.changed_at,
+    };
+  };
+  const assets = [
+    asset('활발통장', 'checking', 'ma'),
+    asset('오래된집', 'real_estate', null),
+    asset('옛대출', 'loan', null),
+    asset('보관차', 'vehicle', 'mb', '2026-08-15T12:00:00'),
+  ];
+
+  it('테스트 데이터: 자산 1개 이력 1,000건 초과, 잘라 받으면 훨씬 적다', () => {
+    expect(all.filter((h) => h.asset_id === '활발통장').length).toBeGreaterThan(1000);
+    expect(historyWindow(all, trendWindowStart('2026-11')).length).toBeLessThan(all.length / 2);
+  });
+
+  it.each(['2026-11', '2026-10', '2026-08', '2026-05', '2025-09', '2027-02'] as const)(
+    '%s 기준 6개월 추이·순자산·전월 대비가 전체 이력으로 계산한 값과 같다 (합친·사람별·공동)',
+    (end) => {
+      const part = historyWindow(all, trendWindowStart(end));
+      for (const v of ['all', 'ma', 'mb', null] as OwnerView[]) {
+        const a = filterByOwner(assets, v);
+        expect(netWorthTrend(a, part, NOW, 6, end)).toEqual(netWorthTrend(a, all, NOW, 6, end));
+        expect(netWorthChange(a, part, end, NOW)).toEqual(netWorthChange(a, all, end, NOW));
+      }
+      expect(homeNetWorth(assets, part, end, NOW)).toEqual(homeNetWorth(assets, all, end, NOW));
+    },
+  );
+
+  it('6개월 넘게 안 바뀐 자산·부채가 추이의 모든 달에 들어간다', () => {
+    const part = historyWindow(all, trendWindowStart('2026-11'));
+    expect(part.filter((h) => h.asset_id === '오래된집')).toHaveLength(1);
+    const house = netWorthTrend([assets[1]], part, NOW).map((p) => p.net);
+    expect(house).toEqual([410_000_000, 410_000_000, 410_000_000, 410_000_000, 410_000_000, 410_000_000]);
+    const loan = netWorthTrend([assets[2]], part, NOW).map((p) => p.net);
+    expect(loan).toEqual([-30_000_000, -30_000_000, -30_000_000, -30_000_000, -30_000_000, -30_000_000]);
+    // 8월 중 보관한 차: 6·7월에만 들어간다
+    const car = netWorthTrend([assets[3]], part, NOW).map((p) => p.net);
+    expect(car).toEqual([15_000_000, 15_000_000, null, null, null, 0]);
+  });
+
+  it('월초 안내 판단도 같다', () => {
+    const part = historyWindow(all, trendWindowStart('2026-11'));
+    expect(needsMonthlyCheck(part, NOW)).toBe(needsMonthlyCheck(all, NOW));
+    expect(needsMonthlyCheck(part, NOW)).toBe(false);
   });
 });
