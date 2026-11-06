@@ -178,3 +178,65 @@ export function needsMonthlyCheck(history: readonly AssetBalanceHistory[], now: 
   const start = monthStartBoundary(currentYearMonth(now));
   return !history.some((h) => h.changed_by !== null && Date.parse(h.changed_at) >= start);
 }
+
+// ── 월별 추이 (BANB-26)
+
+export interface TrendPoint {
+  ym: YearMonth;
+  /** 그 달 순자산(지난 달 = 월말 값, 이번 달 = 현재 값). 이력이 시작되기 전 달은 null(표시 안 함) */
+  net: number | null;
+}
+
+/**
+ * 이번 달까지 최근 n개월(기본 6) 순자산. 오래된 달이 앞.
+ * 보기(합친/사람별)는 assets 를 filterByOwner 로 거른 뒤 넘긴다 — 종류·소유자는 현재 값 기준(Q11)
+ */
+export function netWorthTrend(
+  assets: readonly Asset[],
+  history: readonly AssetBalanceHistory[],
+  now: Date = new Date(),
+  months = 6,
+): TrendPoint[] {
+  const end = currentYearMonth(now);
+  return Array.from({ length: months }, (_, i) => {
+    const ym = addMonths(end, i - (months - 1));
+    return { ym, net: netWorthForMonth(assets, history, ym, now)?.net ?? null };
+  });
+}
+
+export interface TrendScale {
+  /** 세로 범위(위·아래 15% 여유 포함). 0부터 시작하지 않는다(design.md 5.19) */
+  min: number;
+  max: number;
+  /** 값이 0을 가로지르면 0 기준선을 그린다 */
+  crossesZero: boolean;
+}
+
+/** 그래프 세로 범위. 값이 하나도 없으면 null */
+export function trendScale(values: readonly (number | null)[]): TrendScale | null {
+  const present = values.filter((v): v is number => v !== null);
+  if (present.length === 0) return null;
+  const lo = Math.min(...present);
+  const hi = Math.max(...present);
+  const span = hi - lo || Math.abs(hi) || 1;
+  return { min: lo - span * 0.15, max: hi + span * 0.15, crossesZero: lo < 0 && hi > 0 };
+}
+
+/** 값 → 세로 위치 비율(0 = 위, 1 = 아래) */
+export function trendRatio(value: number, scale: TrendScale): number {
+  return (scale.max - value) / (scale.max - scale.min);
+}
+
+/** 이어진 달끼리 묶은 선 구간(사이에 빈 달이 있으면 끊는다). 값은 points 의 index */
+export function trendSegments(points: readonly TrendPoint[]): number[][] {
+  const segs: number[][] = [];
+  let cur: number[] = [];
+  points.forEach((p, i) => {
+    if (p.net === null) {
+      if (cur.length) segs.push(cur);
+      cur = [];
+    } else cur.push(i);
+  });
+  if (cur.length) segs.push(cur);
+  return segs;
+}

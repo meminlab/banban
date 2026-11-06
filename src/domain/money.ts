@@ -33,3 +33,17 @@ export function parseWonInput(raw: string): ParseWonResult {
   if (value > MAX_WON) return { ok: false, reason: 'too_large' };
   return { ok: true, value };
 }
+
+/**
+ * 화면낭독·요약용 큰 금액 읽기 (design.md 5.19 예: "1억 9,824만 원"). 만 원 아래는 버린다.
+ * 1만 원 미만은 그대로 "9,500원". 음수는 "마이너스 " 를 붙인다
+ */
+export function formatWonKorean(n: number): string {
+  const sign = n < 0 ? '마이너스 ' : '';
+  const abs = Math.trunc(Math.abs(n));
+  const eok = Math.floor(abs / 100_000_000);
+  const man = Math.floor((abs % 100_000_000) / 10_000);
+  if (eok === 0 && man === 0) return `${sign}${abs.toLocaleString('ko-KR')}원`;
+  const parts = [eok > 0 ? `${eok.toLocaleString('ko-KR')}억` : '', man > 0 ? `${man.toLocaleString('ko-KR')}만` : ''];
+  return `${sign}${parts.filter(Boolean).join(' ')} 원`;
+}

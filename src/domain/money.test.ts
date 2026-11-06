@@ -1,4 +1,4 @@
-import { formatWon, formatWonInput, parseWonInput, MAX_WON } from './money';
+import { formatWon, formatWonInput, formatWonKorean, parseWonInput, MAX_WON } from './money';
 
 describe('formatWon', () => {
   it('천 단위 쉼표', () => {
@@ -42,4 +42,18 @@ describe('parseWonInput', () => {
     ['10,000,000,000', 'too_large'],
     ['99999999999999999999', 'too_large'],
   ])('%s 는 실패 (%s)', (raw, reason) => expect(parseWonInput(raw)).toEqual({ ok: false, reason }));
+});
+
+describe('formatWonKorean (화면낭독용)', () => {
+  it.each([
+    [198_240_000, '1억 9,824만 원'],
+    [206_500_000, '2억 650만 원'],
+    [100_000_000, '1억 원'],
+    [1_700_000, '170만 원'],
+    [9_500, '9,500원'],
+    [0, '0원'],
+    [-29_999_999_997, '마이너스 299억 9,999만 원'],
+  ])('%d → %s', (n, text) => {
+    expect(formatWonKorean(n)).toBe(text);
+  });
 });

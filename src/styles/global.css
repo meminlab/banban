@@ -15,6 +15,9 @@
   --color-delta-down: var(--color-text-sub);
   --color-chart-bar: var(--color-primary);
   --color-chart-track: #e5e8ec;
+  --color-chart-line: var(--color-primary);
+  --color-chart-grid: var(--color-border);
+  --color-chart-zero: #868e96; /* design.md border-strong 자리 (3:1 이상) */
   --tabbar-height: 60px;
   --topbar-height: 56px;
   --touch: 48px;
@@ -736,3 +739,24 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
 .asset-form__buttons { display: flex; gap: 8px; }
 .asset-form__archive { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .asset-form__save { flex: 1; }
+
+/* ── 월별 추이 (BANB-26, design.md 5.19) */
+.trend { gap: 8px; }
+.trend__cap { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 0; }
+.trend__cap-label { color: var(--color-text-sub); font-size: 0.8125rem; }
+.trend__cap-value { font-size: 0.9375rem; font-weight: 700; }
+.trend__cap-value.is-negative { color: var(--color-negative); }
+.trend__plot { height: 120px; padding: 12px 0 8px; border-bottom: 1px solid var(--color-chart-grid); }
+.trend__area { position: relative; height: 100%; }
+.trend__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.trend__svg polyline { stroke: var(--color-chart-line); stroke-width: 2.5px; stroke-linejoin: round; stroke-linecap: round; }
+.trend__guide { position: absolute; bottom: -8px; width: 0; border-left: 1px solid var(--color-chart-grid); }
+.trend__zero { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed var(--color-chart-zero); }
+.trend__zero > span { position: absolute; right: 0; bottom: 2px; font-size: 0.6875rem; line-height: 1; color: var(--color-text-weak); }
+.trend__dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--color-surface); border: 2px solid var(--color-chart-line); }
+.trend__dot.is-selected { width: 12px; height: 12px; background: var(--color-chart-line); border-color: var(--color-surface); box-shadow: 0 0 0 1px var(--color-chart-line); }
+.trend__months { display: grid; grid-template-columns: repeat(6, 1fr); margin-top: -4px; }
+.trend__month { min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--color-text-weak); font-size: 0.75rem; cursor: pointer; }
+.trend__month.is-selected { color: var(--color-text); font-weight: 700; }
+.trend__month:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+.trend__note { margin: 0; color: var(--color-text-weak); font-size: 0.8125rem; }

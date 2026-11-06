@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_ARCHIVED_PATH, assetPath, type AssetFlash } from '../app/routes';
 import { AssetKindIcon } from '../components/AssetKindIcon';
+import { NetWorthTrend } from '../components/NetWorthTrend';
 import { listAssets, listBalanceHistory, restoreAsset } from '../data/asset';
 import { listMembers } from '../data/member';
 import type { Asset, AssetBalanceHistory, Member } from '../data/types';
@@ -26,6 +27,7 @@ import {
   isLiability,
   needsMonthlyCheck,
   netWorthChange,
+  netWorthTrend,
   type OwnerView,
 } from '../domain/netWorth';
 
@@ -56,7 +58,7 @@ function readDismissed(key: string): boolean {
   }
 }
 
-/** 자산 탭: 보기 전환 · 월초 안내 · 순자산 · 자산 구성 · 자산/부채 목록 · 보관한 자산 (design.md 5.22) */
+/** 자산 탭: 보기 전환 · 월초 안내 · 순자산 · 월별 추이 · 자산 구성 · 자산/부채 목록 · 보관한 자산 (design.md 5.22) */
 export function AssetsPage() {
   const ledgerId = useLedgerId();
   const location = useLocation();
@@ -247,6 +249,8 @@ export function AssetsPage() {
             history={history}
             ym={ym}
           />
+          {/* 보기(합친/칩)가 바뀌면 선택한 달을 이번 달로 되돌린다 */}
+          <NetWorthTrend key={`${mode}:${view ?? 'shared'}`} points={netWorthTrend(viewAssets, history)} />
           <CompositionCard assets={active} />
           <div ref={listRef} className="asset-lists">
             <div className="section-head">
