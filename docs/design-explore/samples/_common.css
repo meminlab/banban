@@ -1,0 +1,11 @@
+/* BANB-22 비교용 정적 목업 공통 틀. 앱 코드 아님. */
+* { box-sizing: border-box; }
+body { margin: 0; padding: 28px; background: #D9DBDF; font-family: 'Pretendard Variable', Pretendard, -apple-system, system-ui, sans-serif; }
+.board-head { font: 700 20px/28px 'Pretendard Variable', sans-serif; color: #1D1F23; margin: 0 0 4px; }
+.board-sub { font: 500 14px/20px 'Pretendard Variable', sans-serif; color: #4A4F57; margin: 0 0 20px; }
+.row { display: flex; gap: 28px; align-items: flex-start; }
+.phone { width: 360px; height: 760px; overflow: hidden; position: relative; border-radius: 28px; box-shadow: 0 10px 36px rgb(0 0 0 / .18); }
+.cap { font: 600 13px/18px 'Pretendard Variable', sans-serif; color: #4A4F57; margin: 0 0 8px 4px; }
+.num { font-variant-numeric: tabular-nums; }
+svg.lucide { width: 20px; height: 20px; stroke-width: 2; flex: none; }
+body, .phone { word-break: keep-all; }
