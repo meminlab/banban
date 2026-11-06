@@ -101,6 +101,23 @@ npm run dev                  # http://localhost:5173
 - 로그아웃은 설정(또는 `/start`) 맨 아래. 이 기기에서만 로그아웃된다
 - 구글 이름·프로필 이미지는 로그인할 때마다 DB 트리거가 `profile` 테이블에 저장한다(화면은 읽기만)
 
+## 샘플 가계부 (화면 확인용 데이터)
+
+내역·자산이 채워진 화면을 보기 위한 **"샘플 가계부"** 하나를 만든다. 스크립트: `supabase/seed/sample_ledger.sql`
+
+- 멤버: `kicmi032@gmail.com`(소유자) + `opiw0101@gmail.com`. **두 계정 모두 운영 앱에 한 번 이상 로그인**해 있어야 한다(`auth.users`에서 이메일로 찾음, 없으면 `SAMPLE_USER_NOT_FOUND`로 멈춤). 다른 계정으로 바꾸려면 파일 위쪽 `c_owner_email` / `c_partner_email`만 고친다
+- 내용: 실행일(KST) 기준 최근 3개월(이번 달은 오늘까지). 지출 월 50건 안팎(고정지출: 월세·관리비·통신비·구독·보험, 공동/개인 주머니·두 사람 고르게), 수입(두 사람 월급·부수입·상여), 저축(적금·청약·투자·비상금). 경계 사례: 메모 100자, 290만 원·400만 원, 100원, 메모 없는 내역. 자산 7개(종류 6가지 모두, 공동/개인, 잔액 0원 1개, 이름 20자 1개)
+- 다시 실행하면 **이름 "샘플 가계부" + 소유자가 만든 가계부만** 지우고 새로 만든다(하위 내역·자산은 함께 삭제). 다른 가계부는 건드리지 않는다. 한 트랜잭션이라 실패하면 아무것도 바뀌지 않는다
+- 1인 가계부 상한(5개)에 걸리면 `SAMPLE_LEDGER_LIMIT`으로 멈춘다
+- 마지막으로 본 가계부(`user_preference`)는 바꾸지 않는다 → 앱 상단 가계부 전환에서 "샘플 가계부"를 고른다
+
+실행 (DB 관리자 계정)
+- psql: `psql "<접속 문자열>" -v ON_ERROR_STOP=1 -f supabase/seed/sample_ledger.sql`
+- 또는 Supabase SQL Editor에 파일 전체를 붙여넣고 Run
+- 로컬 확인(Docker, 운영 아님): `bash supabase/seed/check_local.sh` — 두 번 실행해도 샘플 1개, 기존 데이터 행 수 그대로, 상한이면 멈추고 그대로인지 검사
+
+지우기만 하기: `delete from public.ledger where name = '샘플 가계부' and created_by = (select id from auth.users where email = 'kicmi032@gmail.com');`
+
 ## 배포 (Cloudflare Pages)
 
 1. Cloudflare 대시보드 → Workers & Pages → Create → Pages → GitHub 연결 → `meminlab/banban`
