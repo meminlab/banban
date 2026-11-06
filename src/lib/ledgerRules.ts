@@ -98,7 +98,7 @@ export function parseLedgerError(error: unknown): { code: LedgerErrorCode; limit
 export function joinErrorMessage(code: LedgerErrorCode, limit: number | null): string {
   switch (code) {
     case 'MEMBER_LIMIT_REACHED':
-      return `현재 최대 ${limit ?? 2}명까지 참여할 수 있어요.`;
+      return `현재 최대 ${limit ?? 4}명까지 참여할 수 있어요.`;
     case 'INVITE_EXPIRED':
       return '초대 코드가 만료됐어요. 초대한 사람에게 새 코드를 받아 주세요.';
     case 'INVITE_NOT_FOUND':

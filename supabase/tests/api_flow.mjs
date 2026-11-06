@@ -26,8 +26,10 @@ const anon = createClient(url, key, opts);
 const A = await signUp('a');
 const B = await signUp('b');
 const C = await signUp('c');
+const D = await signUp('d');
+const E = await signUp('e');
 const X = await signUp('x');
-step('4개 계정 가입');
+step('6개 계정 가입');
 
 // A: 가계부 생성
 const { data: ledgerId, error: e1 } = await A.rpc('create_ledger', { p_name: '우리집', p_display_name: 'A' });
@@ -63,10 +65,15 @@ const { data: members } = await B.from('member').select('id, display_name, role'
 assert.deepEqual(members.map((m) => `${m.display_name}:${m.role}`), ['A:owner', 'B:member']);
 step('B 초대 코드로 참여, 같은 가계부가 보임');
 
-// C: 상한 초과
-const { error: e4 } = await C.rpc('join_ledger', { p_code: invite.code, p_display_name: 'C' });
+// C·D 참여 → 4명, E: 상한 초과
+for (const [c, name] of [[C, 'C'], [D, 'D']]) {
+  const { error } = await c.rpc('join_ledger', { p_code: invite.code, p_display_name: name });
+  assert.equal(error, null, `${name} 참여 실패: ${error?.message}`);
+}
+const { error: e4 } = await E.rpc('join_ledger', { p_code: invite.code, p_display_name: 'E' });
 assert.match(e4?.message ?? '', /MEMBER_LIMIT_REACHED/);
-step('C는 상한(2명) 초과로 참여 거부');
+assert.equal(e4?.details, '4');
+step('C·D까지 4명 참여, E(5번째)는 상한(4명) 초과로 참여 거부');
 
 // B가 입력한 내역을 A가 봄, 작성자는 B로 기록
 const child = cats.find((c) => c.type === 'expense' && c.name === '외식');

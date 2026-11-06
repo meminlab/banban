@@ -5,6 +5,7 @@
 --           invite_rules = true (20261105010000 마이그레이션 적용 여부)
 --           leave_rpc = true (20261106120000 마이그레이션: 나가기·다시 참여·보관)
 --           n1_rule = true (20261106130000 마이그레이션: 내역에 쓰인 소분류는 대분류로 못 바꿈)
+--           member_limit_4 = true (20261106140000 마이그레이션: 기본 상한 4, 기존 가계부 모두 4, 멤버는 못 바꿈)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
        has_table_privilege('anon', c.oid, 'select')       as anon_select,
@@ -19,9 +20,16 @@ select c.relname                                          as table_name,
        exists (select 1 from pg_trigger t
                 where t.tgrelid = 'auth.users'::regclass and t.tgname = 'profile_sync_after_auth_user') as profile_sync,
        (select prosrc like '%CATEGORY_IN_USE_MUST_STAY_CHILD%' from pg_proc
-         where oid = 'public.category_before_write()'::regprocedure) as n1_rule
+         where oid = 'public.category_before_write()'::regprocedure) as n1_rule,
+       ((select column_default from information_schema.columns
+          where table_schema = 'public' and table_name = 'ledger' and column_name = 'member_limit') = '4'
+        and not exists (select 1 from public.ledger where member_limit <> 4)
+        and not has_column_privilege('authenticated', 'public.ledger', 'member_limit', 'update')) as member_limit_4
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
   and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile')
 order by c.relname;
+
+-- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)
+select member_limit, count(*) as ledgers from public.ledger group by member_limit order by member_limit;

@@ -69,7 +69,8 @@ npm run dev                  # http://localhost:5173
       - `20261106000000_profile.sql` — 사용자 프로필(구글 이름·이미지) 테이블과 자동 저장 트리거
       - `20261106120000_ledger_leave_rejoin.sql` — 가계부 나가기(owner 자동 승계·보관), 다시 참여 시 예전 멤버 연결, 보관된 가계부 초대 무효
       - `20261106130000_category_in_use_stays_child.sql` — 내역에 쓰인 소분류는 대분류로 바꿀 수 없게 (적용 전 대분류를 가리키는 내역이 있으면 멈춤)
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+      - `20261106140000_member_limit_four.sql` — 가계부 인원 상한 2명 → 4명 (기본값 + 기존 가계부 모두)
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
@@ -123,7 +124,7 @@ npm run dev                  # http://localhost:5173
 
 | 테이블 | 내용 | 주요 규칙 |
 |---|---|---|
-| `ledger` | 가계부 | `member_limit` 기본 2 (클라이언트에서 변경 불가) |
+| `ledger` | 가계부 | `member_limit` 기본 4 (클라이언트에서 변경 불가) |
 | `member` | 멤버 | role `owner`/`member`, 사용자당 참여 중인 가계부 1개, 나가기는 `left_at` 기록(행 유지 → 그 사람 내역 보존) |
 | `invite` | 초대 | 코드(8자리)·만료(발급+7일)는 서버가 기록, 새로 발급하면 이전 것 `is_revoked`, 유효 초대는 가계부당 1개, 멤버는 무효화만 가능(되살리기·만료 연장 불가) |
 | `category` | 카테고리 | type `expense`/`income`/`saving`, 대분류(`parent_id` null) > 소분류 2단계만(자기 자신·소분류 있는 대분류는 부모 지정 불가, 부모와 type 같아야 함), 숨김 |
