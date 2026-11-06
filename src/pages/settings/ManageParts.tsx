@@ -1,4 +1,5 @@
 /** 카테고리·주머니 관리 화면 공통 부품 */
+import type { ReactNode } from 'react';
 
 export function SheetError({ message }: { message: string | null }) {
   if (!message) return null;
@@ -13,15 +14,19 @@ export function ItemButton({
   item,
   level,
   badge,
+  leading,
   onClick,
 }: {
   item: { name: string; is_hidden: boolean };
   level: 'parent' | 'child' | 'flat';
   badge?: string;
+  /** 이름 앞 장식 (카테고리 아이콘) */
+  leading?: ReactNode;
   onClick: () => void;
 }) {
   return (
     <button type="button" className={`manage-row manage-row--${level}${item.is_hidden ? ' is-hidden' : ''}`} onClick={onClick}>
+      {leading}
       <span className="manage-row__name">{item.name}</span>
       {badge && <Badge text={badge} />}
       {item.is_hidden && <Badge text="숨김" muted />}

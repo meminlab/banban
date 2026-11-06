@@ -4,15 +4,16 @@ import { SETTINGS_PATH } from '../../app/routes';
 import { useLoad } from '../../app/useLoad';
 import { useSaving } from '../../app/useSaving';
 import { BackHeader } from '../../components/BackHeader';
+import { CategoryEditor } from '../../components/CategoryEditor';
+import { CategoryIcon } from '../../components/CategoryIcon';
 import { Sheet } from '../../components/Sheet';
 import { StatusScreen } from '../../components/StatusScreen';
 import { addChildCategory, addParentCategory, listCategories, saveOrder, updateCategory } from '../../data/catalog';
 import type { Category, TransactionType } from '../../data/types';
 import { buildCategoryTree, moveItem, nextSortOrder, positionOf, TRANSACTION_TYPES, TYPE_LABEL } from '../../domain/catalog';
 import { HideButton, ItemButton, OrderButtons, SheetError } from './ManageParts';
-import { NameForm } from './NameForm';
 
-type SheetState = null | { kind: 'addParent' } | { kind: 'addChild'; parentId: string } | { kind: 'edit'; id: string };
+type SheetState = null | { kind: 'add'; parentId: string | null } | { kind: 'edit'; id: string };
 
 export function CategorySettingsPage() {
   const ledgerId = useLedgerId();
@@ -43,7 +44,6 @@ export function CategorySettingsPage() {
   }
 
   const editing = sheet?.kind === 'edit' ? byId.get(sheet.id) : undefined;
-  const addParentOf = sheet?.kind === 'addChild' ? byId.get(sheet.parentId) : undefined;
 
   return (
     <div className="shell">
@@ -65,7 +65,7 @@ export function CategorySettingsPage() {
             </button>
           ))}
         </div>
-        <p className="hint">항목을 누르면 이름·순서를 바꾸거나 숨길 수 있어요. 숨긴 항목은 내역 입력에서 빠지고, 지난 내역에는 그대로 보여요.</p>
+        <p className="hint">항목을 누르면 이름·아이콘·순서를 바꾸거나 숨길 수 있어요. 숨긴 항목은 내역 입력에서 빠지고, 지난 내역에는 그대로 보여요.</p>
 
         <section id="category-panel" role="tabpanel" aria-labelledby={`tab-${type}`}>
           {tree.length === 0 ? (
@@ -74,11 +74,21 @@ export function CategorySettingsPage() {
             <ul className="manage-list">
               {tree.map(({ category: parent, children }) => (
                 <li key={parent.id} className="manage-group">
-                  <ItemButton item={parent} level="parent" onClick={() => setSheet({ kind: 'edit', id: parent.id })} />
+                  <ItemButton
+                    item={parent}
+                    level="parent"
+                    leading={<CategoryIcon category={parent} size="row" />}
+                    onClick={() => setSheet({ kind: 'edit', id: parent.id })}
+                  />
                   <ul className="manage-list manage-list--children">
                     {children.map((child) => (
                       <li key={child.id}>
-                        <ItemButton item={child} level="child" onClick={() => setSheet({ kind: 'edit', id: child.id })} />
+                        <ItemButton
+                          item={child}
+                          level="child"
+                          leading={<CategoryIcon category={child} parent={parent} size="inline" />}
+                          onClick={() => setSheet({ kind: 'edit', id: child.id })}
+                        />
                       </li>
                     ))}
                     <li>
@@ -86,7 +96,7 @@ export function CategorySettingsPage() {
                         type="button"
                         className="manage-add"
                         aria-label={`${parent.name}에 소분류 추가`}
-                        onClick={() => setSheet({ kind: 'addChild', parentId: parent.id })}
+                        onClick={() => setSheet({ kind: 'add', parentId: parent.id })}
                       >
                         + 소분류 추가
                       </button>
@@ -98,7 +108,7 @@ export function CategorySettingsPage() {
           )}
         </section>
 
-        <button type="button" className="button button--secondary button--block" onClick={() => setSheet({ kind: 'addParent' })}>
+        <button type="button" className="button button--secondary button--block" onClick={() => setSheet({ kind: 'add', parentId: null })}>
           + {TYPE_LABEL[type]} 대분류 추가
         </button>
 
@@ -107,53 +117,48 @@ export function CategorySettingsPage() {
         </p>
       </main>
 
-      {sheet?.kind === 'addParent' && (
-        <Sheet title={`${TYPE_LABEL[type]} 대분류 추가`} onClose={closeSheet}>
-          <SheetError message={saving.error} />
-          <NameForm
-            autoFocus
-            submitLabel="추가"
+      {sheet?.kind === 'add' && (
+        <Sheet title="카테고리 추가" onClose={closeSheet}>
+          <CategoryEditor
+            categories={all}
+            type={type}
+            onTypeChange={setType}
+            initialParent={sheet.parentId ? { kind: 'existing', id: sheet.parentId } : { kind: 'new' }}
             busy={saving.busy}
-            hint="같은 이름의 소분류가 함께 만들어져요."
-            onSubmit={async (name) => {
-              const siblings = all.filter((c) => c.type === type && c.parent_id === null);
-              const ok = await save(() => addParentCategory({ ledgerId, type, name, sortOrder: nextSortOrder(siblings) }), '추가했어요');
+            submitLabel="추가하기"
+            onSubmit={async ({ name, icon, parent }) => {
+              if (!parent) return;
+              let ok: boolean;
+              if (parent.kind === 'new') {
+                const siblings = all.filter((c) => c.type === type && c.parent_id === null);
+                ok = await save(() => addParentCategory({ ledgerId, type, name, icon, sortOrder: nextSortOrder(siblings) }), '추가했어요');
+              } else {
+                const siblings = all.filter((c) => c.parent_id === parent.id);
+                ok = await save(
+                  () => addChildCategory({ ledgerId, type, parentId: parent.id, name, icon, sortOrder: nextSortOrder(siblings) }),
+                  '추가했어요',
+                );
+              }
               if (ok) closeSheet();
             }}
-          />
-        </Sheet>
-      )}
-
-      {sheet?.kind === 'addChild' && addParentOf && (
-        <Sheet title={`${addParentOf.name}에 소분류 추가`} onClose={closeSheet}>
-          <SheetError message={saving.error} />
-          <NameForm
-            autoFocus
-            submitLabel="추가"
-            busy={saving.busy}
-            onSubmit={async (name) => {
-              const siblings = all.filter((c) => c.parent_id === addParentOf.id);
-              const ok = await save(
-                () =>
-                  addChildCategory({ ledgerId, type: addParentOf.type, parentId: addParentOf.id, name, sortOrder: nextSortOrder(siblings) }),
-                '추가했어요',
-              );
-              if (ok) closeSheet();
-            }}
-          />
+          >
+            <SheetError message={saving.error} />
+          </CategoryEditor>
         </Sheet>
       )}
 
       {editing && (
-        <Sheet title={editing.parent_id ? '소분류' : '대분류'} onClose={closeSheet}>
+        <Sheet title={editing.parent_id ? '카테고리 수정' : '대분류 수정'} onClose={closeSheet}>
           <SheetError message={saving.error} />
-          <NameForm
+          <CategoryEditor
             key={editing.id}
-            initial={editing.name}
-            submitLabel="이름 저장"
+            categories={all}
+            type={editing.type}
+            editing={editing}
             busy={saving.busy}
-            onSubmit={async (name) => {
-              if (await save(() => updateCategory(editing.id, { name }))) closeSheet();
+            submitLabel="저장"
+            onSubmit={async ({ name, icon }) => {
+              if (await save(() => updateCategory(editing.id, { name, icon }))) closeSheet();
             }}
           />
           <OrderButtons

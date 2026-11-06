@@ -6,7 +6,7 @@
 import { getSupabase } from './supabase';
 import type { Category, Pocket, PocketScope, TransactionType } from './types';
 
-const CATEGORY_COLUMNS = 'id, ledger_id, type, parent_id, name, sort_order, is_hidden, created_at';
+const CATEGORY_COLUMNS = 'id, ledger_id, type, parent_id, name, sort_order, is_hidden, icon, created_at';
 const POCKET_COLUMNS = 'id, ledger_id, name, scope, sort_order, is_hidden, created_at';
 
 /** 저장 실패 원인. 화면은 이것으로 안내 문구를 고른다 */
@@ -43,42 +43,52 @@ export interface NewCategory {
   type: TransactionType;
   name: string;
   sortOrder: number;
+  /** 안 고르면 null (화면은 첫 글자로 그림) */
+  icon?: string | null;
 }
 
 /**
  * 대분류 추가. 명세 규칙("소분류가 없는 대분류는 같은 이름의 소분류 1개")에 따라
  * 같은 이름의 소분류도 함께 만든다. 소분류를 못 만들면 방금 만든 대분류를 지워 되돌린다.
  */
-export async function addParentCategory(input: NewCategory): Promise<Category> {
+export async function addParentCategory(input: NewCategory): Promise<{ parent: Category; child: Category }> {
   const db = getSupabase();
   const { data, error } = await db
     .from('category')
-    .insert({ ledger_id: input.ledgerId, type: input.type, parent_id: null, name: input.name, sort_order: input.sortOrder })
+    .insert({ ledger_id: input.ledgerId, type: input.type, parent_id: null, name: input.name, sort_order: input.sortOrder, icon: input.icon ?? null })
     .select(CATEGORY_COLUMNS);
   if (error) throw toCatalogError(error);
   const parent = expectOne(data) as Category;
 
   const child = await db
     .from('category')
-    .insert({ ledger_id: input.ledgerId, type: input.type, parent_id: parent.id, name: input.name, sort_order: 1 });
+    .insert({ ledger_id: input.ledgerId, type: input.type, parent_id: parent.id, name: input.name, sort_order: 1, icon: input.icon ?? null })
+    .select(CATEGORY_COLUMNS);
   if (child.error) {
     await db.from('category').delete().eq('id', parent.id); // 아직 아무 데도 안 쓰인 대분류
     throw toCatalogError(child.error);
   }
-  return parent;
+  return { parent, child: expectOne(child.data) as Category };
 }
 
 export async function addChildCategory(input: NewCategory & { parentId: string }): Promise<Category> {
   const { data, error } = await getSupabase()
     .from('category')
-    .insert({ ledger_id: input.ledgerId, type: input.type, parent_id: input.parentId, name: input.name, sort_order: input.sortOrder })
+    .insert({
+      ledger_id: input.ledgerId,
+      type: input.type,
+      parent_id: input.parentId,
+      name: input.name,
+      sort_order: input.sortOrder,
+      icon: input.icon ?? null,
+    })
     .select(CATEGORY_COLUMNS);
   if (error) throw toCatalogError(error);
   return expectOne(data) as Category;
 }
 
-/** 바꿀 수 있는 항목: 이름·숨김 (parent_id·type 은 바꾸지 않는다) */
-export type CategoryPatch = Partial<Pick<Category, 'name' | 'is_hidden'>>;
+/** 바꿀 수 있는 항목: 이름·숨김·아이콘 (parent_id·type 은 바꾸지 않는다) */
+export type CategoryPatch = Partial<Pick<Category, 'name' | 'is_hidden' | 'icon'>>;
 
 export async function updateCategory(id: string, patch: CategoryPatch): Promise<void> {
   const { data, error } = await getSupabase().from('category').update(patch).eq('id', id).select('id');

@@ -20,6 +20,7 @@ const cat = (id: string, type: Category['type'], parent_id: string | null, name:
   parent_id,
   name,
   sort_order,
+  icon: null,
   is_hidden,
   created_at: '',
 });

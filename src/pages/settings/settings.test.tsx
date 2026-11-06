@@ -52,15 +52,15 @@ vi.mock('../../data/catalog', async (importOriginal) => {
       if (fake.loadFail) throw new real.CatalogError('FAILED');
       return structuredClone(fake.pockets);
     }),
-    addParentCategory: vi.fn(async (i: { ledgerId: string; type: Category['type']; name: string; sortOrder: number }) => {
+    addParentCategory: vi.fn(async (i: { ledgerId: string; type: Category['type']; name: string; sortOrder: number; icon?: string | null }) => {
       maybeFail();
       const id = `new-${fake.seq + 1}`;
-      fake.categories.push({ id, ledger_id: i.ledgerId, type: i.type, parent_id: null, name: i.name, sort_order: i.sortOrder, is_hidden: false, created_at: now() });
-      fake.categories.push({ id: `${id}-c`, ledger_id: i.ledgerId, type: i.type, parent_id: id, name: i.name, sort_order: 1, is_hidden: false, created_at: now() });
+      fake.categories.push({ id, ledger_id: i.ledgerId, type: i.type, parent_id: null, name: i.name, sort_order: i.sortOrder, is_hidden: false, icon: i.icon ?? null, created_at: now() });
+      fake.categories.push({ id: `${id}-c`, ledger_id: i.ledgerId, type: i.type, parent_id: id, name: i.name, sort_order: 1, is_hidden: false, icon: i.icon ?? null, created_at: now() });
     }),
-    addChildCategory: vi.fn(async (i: { ledgerId: string; type: Category['type']; parentId: string; name: string; sortOrder: number }) => {
+    addChildCategory: vi.fn(async (i: { ledgerId: string; type: Category['type']; parentId: string; name: string; sortOrder: number; icon?: string | null }) => {
       maybeFail();
-      fake.categories.push({ id: `new-${fake.seq + 1}`, ledger_id: i.ledgerId, type: i.type, parent_id: i.parentId, name: i.name, sort_order: i.sortOrder, is_hidden: false, created_at: now() });
+      fake.categories.push({ id: `new-${fake.seq + 1}`, ledger_id: i.ledgerId, type: i.type, parent_id: i.parentId, name: i.name, sort_order: i.sortOrder, is_hidden: false, icon: i.icon ?? null, created_at: now() });
     }),
     updateCategory: vi.fn(async (id: string, patch: Partial<Category>) => {
       maybeFail();
@@ -85,7 +85,7 @@ vi.mock('../../data/catalog', async (importOriginal) => {
 const catalog = await import('../../data/catalog');
 
 function c(id: string, type: Category['type'], parent: string | null, name: string, sort: number, hidden = false): Category {
-  return { id, ledger_id: 'L', type, parent_id: parent, name, sort_order: sort, is_hidden: hidden, created_at: '2026-11-05T00:00:00Z' };
+  return { id, ledger_id: 'L', type, parent_id: parent, name, sort_order: sort, is_hidden: hidden, icon: null, created_at: '2026-11-05T00:00:00Z' };
 }
 function p(id: string, name: string, scope: Pocket['scope'], sort: number): Pocket {
   return { id, ledger_id: 'L', name, scope, sort_order: sort, is_hidden: false, created_at: '2026-11-05T00:00:00Z' };
@@ -149,11 +149,21 @@ describe('카테고리 관리', () => {
     const user = userEvent.setup();
     const { container } = renderAt('/settings/categories');
     await user.click(await screen.findByRole('button', { name: '식비에 소분류 추가' }));
-    const dialog = screen.getByRole('dialog', { name: '식비에 소분류 추가' });
+    const dialog = screen.getByRole('dialog', { name: '카테고리 추가' });
+    // 연 곳의 대분류가 미리 선택돼 있다
+    expect(within(dialog).getByRole('radio', { name: '식비' })).toBeChecked();
     await user.type(within(dialog).getByLabelText('이름'), '  배달 ');
-    await user.click(within(dialog).getByRole('button', { name: '추가' }));
+    await user.click(within(dialog).getByRole('radio', { name: '자전거' }));
+    await user.click(within(dialog).getByRole('button', { name: '추가하기' }));
 
-    expect(catalog.addChildCategory).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', parentId: 'food', name: '배달', sortOrder: 3 });
+    expect(catalog.addChildCategory).toHaveBeenCalledWith({
+      ledgerId: 'L',
+      type: 'expense',
+      parentId: 'food',
+      name: '배달',
+      icon: 'bike',
+      sortOrder: 3,
+    });
     expect(await screen.findByRole('status')).toHaveTextContent('추가했어요');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(rowNames(container).slice(0, 4)).toEqual(['식비', '장보기', '외식', '배달']);
@@ -164,10 +174,12 @@ describe('카테고리 관리', () => {
     const { container } = renderAt('/settings/categories');
     await user.click(await screen.findByRole('button', { name: '+ 지출 대분류 추가' }));
     const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveTextContent('같은 이름의 소분류가 함께 만들어져요');
+    expect(within(dialog).getByRole('radio', { name: '새 대분류' })).toBeChecked();
+    expect(dialog).toHaveTextContent('같은 이름의 소분류도 함께');
     await user.type(within(dialog).getByLabelText('이름'), '술');
-    await user.click(within(dialog).getByRole('button', { name: '추가' }));
-    expect(catalog.addParentCategory).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', name: '술', sortOrder: 3 });
+    // 아이콘을 안 고르면 null (첫 글자로 보임)
+    await user.click(within(dialog).getByRole('button', { name: '추가하기' }));
+    expect(catalog.addParentCategory).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', name: '술', icon: null, sortOrder: 3 });
     await screen.findByText('추가했어요');
     expect(rowNames(container).slice(-2)).toEqual(['술', '술']);
   });
@@ -181,23 +193,42 @@ describe('카테고리 관리', () => {
     await user.click(await screen.findByRole('button', { name: '식비에 소분류 추가' }));
     const dialog = screen.getByRole('dialog');
     await user.type(within(dialog).getByLabelText('이름'), name);
-    await user.click(within(dialog).getByRole('button', { name: '추가' }));
+    // 저장 버튼이 꺼지고 이유를 한 줄 보여 준다
+    expect(within(dialog).getByRole('button', { name: '추가하기' })).toBeDisabled();
     expect(within(dialog).getByRole('alert')).toHaveTextContent(message);
     expect(within(dialog).getByLabelText('이름')).toHaveAttribute('aria-invalid', 'true');
     expect(catalog.addChildCategory).not.toHaveBeenCalled();
   });
 
-  it('이름을 바꿀 수 있다', async () => {
+  it('같은 대분류에 같은 이름이 있으면 추가하지 않는다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/categories');
+    await user.click(await screen.findByRole('button', { name: '식비에 소분류 추가' }));
+    const dialog = screen.getByRole('dialog');
+    await user.type(within(dialog).getByLabelText('이름'), '외식');
+    expect(within(dialog).getByRole('button', { name: '추가하기' })).toBeDisabled();
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('같은 대분류에 같은 이름이 이미 있어요.');
+    // 다른 대분류를 고르면 저장할 수 있다
+    await user.click(within(within(dialog).getByRole('group', { name: '어디에 넣을까요' })).getByRole('radio', { name: '보험' }));
+    expect(within(dialog).getByRole('button', { name: '추가하기' })).toBeEnabled();
+  });
+
+  it('이름·아이콘을 바꿀 수 있다 (기본 카테고리도)', async () => {
+    fake.categories.find((x) => x.id === 'eatout')!.icon = 'utensils';
     const user = userEvent.setup();
     renderAt('/settings/categories');
     await user.click(await screen.findByRole('button', { name: /^외식/ }));
-    const dialog = screen.getByRole('dialog', { name: '소분류' });
+    const dialog = screen.getByRole('dialog', { name: '카테고리 수정' });
     const input = within(dialog).getByLabelText('이름');
     expect(input).toHaveValue('외식');
+    expect(within(dialog).getByRole('radio', { name: '포크와 나이프' })).toHaveAttribute('aria-checked', 'true');
+    // 수정에서는 대분류를 바꾸지 않는다
+    expect(within(dialog).queryByRole('radio', { name: '새 대분류' })).not.toBeInTheDocument();
     await user.clear(input);
     await user.type(input, '바깥밥');
-    await user.click(within(dialog).getByRole('button', { name: '이름 저장' }));
-    expect(catalog.updateCategory).toHaveBeenCalledWith('eatout', { name: '바깥밥' });
+    await user.click(within(dialog).getByRole('radio', { name: '피자' }));
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+    expect(catalog.updateCategory).toHaveBeenCalledWith('eatout', { name: '바깥밥', icon: 'pizza' });
     expect(await screen.findByRole('button', { name: /^바깥밥/ })).toBeInTheDocument();
   });
 

@@ -13,6 +13,7 @@ import {
 function cat(id: string, parent: string | null, sort: number, extra: Partial<Category> = {}): Category {
   return {
     id,
+    icon: null,
     ledger_id: 'L',
     type: 'expense',
     parent_id: parent,
