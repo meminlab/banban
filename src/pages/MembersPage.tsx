@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../app/auth';
 import { copyText } from '../app/clipboard';
 import { useLedgerId } from '../app/guards';
-import { SETTINGS_PATH, START_PATH } from '../app/routes';
+import { useLedgers } from '../app/ledgers';
+import { SETTINGS_PATH } from '../app/routes';
 import { useLoad } from '../app/useLoad';
 import { StatusScreen } from '../components/StatusScreen';
 import { SubPageTopbar } from '../components/SubPageTopbar';
@@ -50,7 +51,7 @@ export function MembersPage() {
           limit={ledger.member_limit}
           onIssued={(next) => setData({ ...state.data, invite: next })}
         />
-        <LeaveSection isLast={active.length <= 1} />
+        <LeaveSection ledgerId={ledgerId} isLast={active.length <= 1} />
       </main>
     </div>
   );
@@ -201,8 +202,9 @@ function InviteSection({
   );
 }
 
-function LeaveSection({ isLast }: { isLast: boolean }) {
+function LeaveSection({ ledgerId, isLast }: { ledgerId: string; isLast: boolean }) {
   const navigate = useNavigate();
+  const { reload } = useLedgers();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -211,9 +213,10 @@ function LeaveSection({ isLast }: { isLast: boolean }) {
     setBusy(true);
     setError(false);
     try {
-      await leaveLedger();
-      // 시작 화면이 참여 상태를 새로 확인한다
-      navigate(START_PATH, { replace: true });
+      await leaveLedger(ledgerId);
+      // 남은 가계부 중 가장 최근에 참여한 곳으로 전환, 없으면 시작 화면 (RequireLedger 가 보낸다)
+      await reload();
+      navigate('/', { replace: true });
     } catch {
       setError(true);
       setBusy(false);

@@ -15,6 +15,10 @@ export const LOGIN_PATH = '/login';
 /** 참여한 가계부가 없을 때: 가계부 만들기 / 초대코드 입력 */
 export const START_PATH = '/start';
 
+/** 가계부 추가: 새 가계부 만들기 / 초대코드로 참여 (이미 가계부가 있을 때, 전환 목록에서) */
+export const LEDGER_CREATE_PATH = '/ledgers/new';
+export const LEDGER_JOIN_PATH = '/ledgers/join';
+
 /** 가계부 탭 */
 export const LEDGER_PATH = '/ledger';
 /** 내역 입력 */

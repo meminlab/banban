@@ -20,7 +20,11 @@ vi.mock('../data/auth', () => ({
   signInWithGoogle: async () => {},
   signOut: async () => {},
 }));
-vi.mock('../data/ledger', () => ({ getMyLedgerId: async () => 'L' }));
+vi.mock('../data/ledger', () => ({
+  listMyLedgers: async () => [{ id: 'L', name: '우리집', memberCount: 2, joinedAt: '2026-11-01T00:00:00Z' }],
+  getLastLedgerId: async () => 'L',
+  rememberLedger: async () => {},
+}));
 vi.mock('../data/profile', () => ({ getProfile: async () => null }));
 
 const c = (id: string, type: Category['type'], parent_id: string | null, name: string, sort_order = 1): Category => ({

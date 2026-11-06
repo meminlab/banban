@@ -70,7 +70,7 @@ npm run dev                  # http://localhost:5173
       - `20261106120000_ledger_leave_rejoin.sql` — 가계부 나가기(owner 자동 승계·보관), 다시 참여 시 예전 멤버 연결, 보관된 가계부 초대 무효
       - `20261106130000_category_in_use_stays_child.sql` — 내역에 쓰인 소분류는 대분류로 바꿀 수 없게 (적용 전 대분류를 가리키는 내역이 있으면 멈춤)
       - `20261106140000_member_limit_four.sql` — 가계부 인원 상한 2명 → 4명 (기본값 + 기존 가계부 모두)
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 9행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
@@ -125,18 +125,21 @@ npm run dev                  # http://localhost:5173
 | 테이블 | 내용 | 주요 규칙 |
 |---|---|---|
 | `ledger` | 가계부 | `member_limit` 기본 4 (클라이언트에서 변경 불가) |
-| `member` | 멤버 | role `owner`/`member`, 사용자당 참여 중인 가계부 1개, 나가기는 `left_at` 기록(행 유지 → 그 사람 내역 보존) |
+| `member` | 멤버 | role `owner`/`member`, 사용자당 참여 중인 가계부 최대 5개(`user_ledger_limit()`), 같은 가계부에는 현재 멤버 행 1개만, 나가기는 `left_at` 기록(행 유지 → 그 사람 내역 보존) |
 | `invite` | 초대 | 코드(8자리)·만료(발급+7일)는 서버가 기록, 새로 발급하면 이전 것 `is_revoked`, 유효 초대는 가계부당 1개, 멤버는 무효화만 가능(되살리기·만료 연장 불가) |
 | `category` | 카테고리 | type `expense`/`income`/`saving`, 대분류(`parent_id` null) > 소분류 2단계만(자기 자신·소분류 있는 대분류는 부모 지정 불가, 부모와 type 같아야 함), 숨김 |
 | `pocket` | 주머니 | scope `shared`/`personal`, 숨김 |
 | `transaction` | 내역 | 금액 정수 1~9,999,999,999, `occurred_on` 날짜, 소분류만, 지출이면 주머니 필수, `is_fixed`는 지출만, 메모 100자, `source` 기본 `manual`, 작성자·마지막 수정자 자동 기록 |
 | `profile` | 사용자 프로필 | 로그인 사용자 1명당 1행. 구글 이름(1~100자, 없으면 이메일 앞부분)·이미지(https만). `auth.users`가 생기거나 바뀔 때 트리거가 저장, 클라이언트는 읽기만. 나 + 내가 현재 멤버인 가계부에 참여했던 사람만 조회 |
+| `user_preference` | 사용자 설정 | 마지막으로 본 가계부(`last_ledger_id`). 본인만 읽기, 쓰기는 `set_last_ledger` RPC(현재 멤버인 가계부만)와 만들기·참여 RPC가 자동 기록. 나가면 그 가계부였을 때 지워짐 |
 | `asset` | 자산 | kind `checking`/`installment_saving`/`deposit`/`investment`/`cash`/`other`, `owner_id` null = 공동, 잔액 정수 0~9,999,999,999 |
 
 권한 규칙
 - 모든 테이블 RLS 사용. **해당 가계부의 현재 멤버만** 읽기·쓰기 가능, 비로그인은 전부 차단
-- 가계부 만들기·참여·나가기는 RPC로만: `create_ledger(name, display_name)`, `join_ledger(code, display_name)`, `leave_ledger()`
-  - 오류 코드: `ALREADY_IN_LEDGER`, `INVITE_NOT_FOUND`, `INVITE_EXPIRED`, `MEMBER_LIMIT_REACHED`(details = 현재 상한 값), `NOT_IN_LEDGER`, `NOT_AUTHENTICATED`
+- 가계부 만들기·참여·나가기·전환 기록은 RPC로만: `create_ledger(name, display_name)`, `join_ledger(code, display_name)`, `leave_ledger(ledger_id)`, `set_last_ledger(ledger_id)`
+  - 오류 코드: `INVITE_NOT_FOUND`, `INVITE_EXPIRED`, `MEMBER_LIMIT_REACHED`(details = 가계부 인원 상한), `LEDGER_LIMIT_REACHED`(details = 1인 가계부 상한), `NOT_IN_LEDGER`, `NOT_AUTHENTICATED`
+  - 여러 가계부: 한 사람이 여러 가계부를 만들고 참여할 수 있다. 1인 상한은 **현재 참여 중인 가계부 수**(만든 것 + 참여한 것, 나간·보관된 가계부 제외)로 기본 5개. 값은 `public.user_ledger_limit()` 한 곳에서만 정한다(바꾸려면 DB 관리자가 이 함수만 `create or replace`). `member` 트리거가 새로 참여·다시 참여·만들기를 모두 검사하고, 사용자 단위 잠금으로 동시 요청도 상한을 넘지 않는다(`bash supabase/tests/ledger_limit_concurrency.sh`로 로컬 확인)
+  - 만들거나 참여하면(이미 멤버인 가계부의 링크 포함) 그 가계부가 마지막으로 본 가계부로 기록된다. 앱은 마지막으로 본 가계부 → (멤버가 아니게 됐으면) 가장 최근에 참여한 가계부 → 없으면 시작 화면 순으로 연다
   - 인원 상한은 `ledger.member_limit` 값으로만 정한다(화면·API로 변경 불가, DB 관리자가 SQL로 변경). 동시 참여도 가계부 행 잠금으로 상한을 넘지 않는다
   - 나가기: 행은 남기고 `left_at` 기록 → 그 사람 내역 유지, 화면에 "(나감)". owner가 나가면 남은 멤버 중 가장 먼저 참여한 사람이 owner. 마지막 멤버가 나가면 가계부는 보관(현재 멤버 0명 → 아무도 못 봄)되고 초대는 모두 무효
   - 다시 참여: 같은 가계부에 예전 멤버 행이 있으면 되살린다(새 행 X) → 과거 내역이 다시 그 사람 이름으로 보인다. 이때 참여 시각은 다시 참여한 시각
