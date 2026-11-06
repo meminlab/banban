@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>B. 핀테크 클린</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="_common.css">
+<style>
+.phone { --bg:#FFFFFF; --gap:#F2F4F6; --sunken:#F2F4F6; --text:#191C21; --sub:#5F6670; --weak:#8B929C;
+  --primary:#00875A; --primary-soft:#E6F4EE; --primary-strong:#006B47; --g2:#4FB389; --g3:#A5DABF; --g4:#DCEFE5; --income:#3366CC; --saving:#00875A;
+  background: var(--bg); color: var(--text); letter-spacing: -0.01em; }
+.top { height: 56px; display:flex; align-items:center; justify-content:space-between; padding: 0 12px 0 20px; }
+.top .name { font-weight: 700; font-size: 20px; display:flex; align-items:center; gap: 4px; }
+.top .acts { display:flex; gap: 4px; } .ib { width:40px; height:40px; display:flex; align-items:center; justify-content:center; color: var(--sub); }
+.hero { padding: 12px 20px 24px; }
+.hero .m { font-size: 15px; color: var(--sub); font-weight: 500; display:flex; align-items:center; gap: 2px; }
+.hero .big { font-size: 40px; line-height: 48px; font-weight: 700; letter-spacing: -0.03em; margin: 6px 0 6px; }
+.hero .cmp { font-size: 14px; color: var(--sub); }
+.hero .cmp b { color: var(--primary-strong); }
+.stack { display:flex; height: 12px; border-radius: 6px; overflow:hidden; margin: 20px 0 12px; gap: 2px; }
+.legend { display:grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; font-size: 13px; color: var(--sub); }
+.legend span { display:flex; align-items:center; gap: 6px; } .legend i { width: 8px; height: 8px; border-radius: 2px; display:inline-block; }
+.legend em { font-style: normal; margin-left:auto; color: var(--text); font-weight: 600; }
+.divider { height: 12px; background: var(--gap); }
+.sec { padding: 20px; }
+.sec h3 { margin: 0 0 14px; font-size: 18px; font-weight: 700; }
+.kv { display:flex; justify-content:space-between; align-items:center; padding: 9px 0; font-size: 16px; }
+.kv .l { display:flex; align-items:center; gap: 12px; }
+.sq { width: 36px; height: 36px; border-radius: 10px; background: var(--sunken); display:flex; align-items:center; justify-content:center; color: var(--sub); }
+.kv b { font-weight: 700; }
+.tabbar { position:absolute; bottom:0; left:0; right:0; height: 60px; background:#fff; border-top:1px solid #EEF0F2; display:flex; }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 3px; font-size: 11px; color: var(--weak); font-weight: 600; }
+.tab.on { color: var(--text); }
+.tab.on svg { color: var(--primary); }
+/* 입력: 키패드 우선 */
+.in-top { height: 56px; display:flex; align-items:center; padding: 0 8px; justify-content:space-between; }
+.tabs2 { display:flex; gap: 20px; padding: 4px 20px 0; font-size: 17px; font-weight: 700; color: var(--weak); }
+.tabs2 .on { color: var(--text); border-bottom: 2px solid var(--text); padding-bottom: 6px; }
+.amt { padding: 28px 20px 8px; }
+.amt .q { font-size: 15px; color: var(--sub); margin-bottom: 8px; }
+.amt .v { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 48px; }
+.amt .v .caret { display:inline-block; width:2px; height:38px; background: var(--primary); vertical-align: -4px; margin-left: 2px; }
+.amt .hint { font-size: 14px; color: var(--weak); margin-top: 6px; }
+.quick { display:flex; gap: 8px; padding: 6px 20px 0; }
+.quick span { flex:1; text-align:center; font-size: 13px; font-weight: 600; padding: 8px 0; border-radius: 8px; background: var(--sunken); color: var(--sub); }
+.meta { margin: 16px 20px 0; border-radius: 14px; background: var(--sunken); padding: 4px 16px; }
+.meta .kv { font-size: 15px; padding: 11px 0; }
+.meta .kv + .kv { border-top: 1px solid #E5E8EB; }
+.meta .kv .k { color: var(--sub); } .meta .kv .v { font-weight: 600; display:flex; align-items:center; gap: 4px; }
+.pad { position:absolute; left:0; right:0; bottom: 72px; display:grid; grid-template-columns: repeat(3,1fr); }
+.pad span { height: 46px; display:flex; align-items:center; justify-content:center; font-size: 22px; font-weight: 600; }
+.cta { position:absolute; left:16px; right:16px; bottom: 14px; height: 54px; border-radius: 14px; background: var(--primary); color:#fff; font-weight: 700; font-size: 17px; display:flex; align-items:center; justify-content:center; }
+</style></head><body>
+<p class="board-head">B. 핀테크 클린</p>
+<p class="board-sub">흰 바탕, 화면 맨 위 큰 숫자, 섹션 구분은 회색 띠. 초록은 한 계열 농도로만 #00875A</p>
+<div class="row">
+<div><p class="cap">홈 (월 요약)</p>
+<div class="phone">
+  <div class="top"><div class="name">우리집 가계부<i data-lucide="chevron-down"></i></div><div class="acts"><div class="ib"><i data-lucide="bell"></i></div><div class="ib"><i data-lucide="menu"></i></div></div></div>
+  <div class="hero">
+    <div class="m">11월에 쓴 돈<i data-lucide="chevron-right" style="width:16px;height:16px"></i></div>
+    <div class="big num">2,835,500원</div>
+    <div class="cmp">지난달보다 <b>124,000원 덜</b> 썼어요</div>
+    <div class="stack"><div style="width:26%;background:var(--primary)"></div><div style="width:24%;background:var(--g2)"></div><div style="width:14%;background:var(--g3)"></div><div style="width:11%;background:var(--g4)"></div><div style="width:25%;background:#E5E8EB"></div></div>
+    <div class="legend num">
+      <span><i style="background:var(--primary)"></i>식비<em>742,000</em></span>
+      <span><i style="background:var(--g2)"></i>주거·통신<em>680,000</em></span>
+      <span><i style="background:var(--g3)"></i>생활<em>391,200</em></span>
+      <span><i style="background:var(--g4)"></i>교통<em>214,800</em></span>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec">
+    <h3>11월 흐름</h3>
+    <div class="kv num"><span class="l"><span class="sq"><i data-lucide="arrow-down-left"></i></span>수입</span><b style="color:var(--income)">+5,620,000원</b></div>
+    <div class="kv num"><span class="l"><span class="sq"><i data-lucide="piggy-bank"></i></span>저축</span><b style="color:var(--saving)">1,500,000원</b></div>
+    <div class="kv num"><span class="l"><span class="sq"><i data-lucide="wallet"></i></span>남은 돈</span><b>1,284,500원</b></div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec" style="padding-bottom:0">
+    <h3>함께 쓴 비율</h3>
+    <div style="display:flex;height:36px;border-radius:10px;overflow:hidden;font-size:13px;font-weight:700" class="num"><div style="width:49%;background:var(--primary);color:#fff;display:flex;align-items:center;padding-left:12px">민지 49%</div><div style="width:51%;background:var(--g4);color:var(--primary-strong);display:flex;align-items:center;justify-content:flex-end;padding-right:12px">준호 51%</div></div>
+  </div>
+  <div class="tabbar"><div class="tab on"><i data-lucide="house"></i>홈</div><div class="tab"><i data-lucide="calendar-days"></i>가계부</div><div class="tab"><i data-lucide="wallet"></i>자산</div></div>
+</div></div>
+<div><p class="cap">내역 입력 (키패드 먼저)</p>
+<div class="phone">
+  <div class="in-top"><div class="ib"><i data-lucide="chevron-left"></i></div><div class="ib"><i data-lucide="x"></i></div></div>
+  <div class="tabs2"><span class="on">지출</span><span>수입</span><span>저축</span></div>
+  <div class="amt"><div class="q">얼마를 썼나요?</div><div class="v num">12,800원<span class="caret"></span></div><div class="hint">만 이천팔백 원</div></div>
+  <div class="quick"><span>+1만</span><span>+5만</span><span>+10만</span><span>지우기</span></div>
+  <div class="meta">
+    <div class="kv"><span class="k">카테고리</span><span class="v"><i data-lucide="utensils" style="width:16px;height:16px"></i>식비<i data-lucide="chevron-right" style="width:16px;height:16px;color:#8B929C"></i></span></div>
+    <div class="kv"><span class="k">주머니 · 사람</span><span class="v">공동소비 · 민지<i data-lucide="chevron-right" style="width:16px;height:16px;color:#8B929C"></i></span></div>
+    <div class="kv num"><span class="k">날짜</span><span class="v">11월 6일 금요일<i data-lucide="chevron-right" style="width:16px;height:16px;color:#8B929C"></i></span></div>
+  </div>
+  <div class="pad num"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>00</span><span>0</span><span><i data-lucide="delete"></i></span></div>
+  <div class="cta">저장</div>
+</div></div>
+</div>
+<script>lucide.createIcons();</script>
+</body></html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>D. 그래픽 디자이너 감성</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="_common.css">
+<style>
+.phone { --paper:#F3F2EE; --ink:#111318; --sub:#4E5159; --cobalt:#2335D9; --lime:#E4FF3A; --blush:#FFC9E0; --grey:#E1E0DA;
+  background: var(--paper); color: var(--ink); }
+.disp { font-family: 'Space Grotesk', 'Pretendard Variable', sans-serif; font-variant-numeric: tabular-nums; }
+.top { display:flex; justify-content:space-between; align-items:center; padding: 16px 16px 0 20px; }
+.top .n { font-weight: 800; font-size: 15px; display:flex; align-items:center; gap: 4px; }
+.ib { width:44px; height:44px; display:flex; align-items:center; justify-content:center; }
+.block { margin: 10px 12px 0; background: var(--cobalt); color: #fff; border-radius: 6px; padding: 18px 18px 20px; position: relative; overflow:hidden; }
+.block .mo { font-size: 13px; letter-spacing: .12em; font-weight: 700; opacity: .9; }
+.block .lbl { font-size: 15px; font-weight: 600; margin-top: 18px; }
+.block .big { font-size: 46px; line-height: 50px; font-weight: 700; letter-spacing: -0.04em; color: var(--lime); margin-top: 4px; }
+.block .big small { font-size: 22px; letter-spacing: 0; margin-left: 4px; }
+.block .ring { position:absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 999px; border: 22px solid rgb(255 255 255 / .12); }
+.trio { display:grid; grid-template-columns: repeat(3,1fr); margin: 8px 12px 0; gap: 8px; }
+.trio > div { border-radius: 6px; padding: 12px; background: #fff; }
+.trio .k { font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--sub); }
+.trio .v { font-size: 15px; font-weight: 700; margin-top: 6px; }
+.grid { display:grid; grid-template-columns: 1.3fr 1fr; grid-template-rows: 92px 64px; gap: 8px; margin: 8px 12px 0; }
+.tile { border-radius: 6px; padding: 12px; display:flex; flex-direction:column; justify-content:space-between; }
+.tile .k { font-size: 13px; font-weight: 700; } .tile .v { font-size: 20px; font-weight: 700; }
+.who { margin: 8px 12px 0; display:flex; gap: 8px; }
+.who > div { flex:1; border-radius: 6px; padding: 12px; border: 2px solid var(--ink); }
+.who .k { font-size: 13px; font-weight: 700; } .who .v { font-size: 18px; font-weight: 700; margin-top: 2px; }
+.tabbar { position:absolute; bottom: 12px; left: 12px; right: 12px; height: 60px; background: var(--ink); border-radius: 6px; display:flex; align-items:center; padding: 0 6px; }
+.tab { flex:1; color:#B9BBC2; font-size: 13px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap: 6px; height: 46px; }
+.tab.on { color: var(--ink); background: var(--lime); border-radius: 4px; }
+.plus { width: 46px; height: 46px; border-radius: 4px; background: #fff; display:flex; align-items:center; justify-content:center; color: var(--ink); }
+/* 입력 */
+.in { background: var(--ink); color: #fff; height: 100%; }
+.in .top .n { color: #fff; }
+.types { display:flex; gap: 0; margin: 12px 16px 0; border: 2px solid #fff; border-radius: 6px; overflow:hidden; }
+.types span { flex:1; text-align:center; padding: 10px 0; font-weight: 800; font-size: 15px; }
+.types .on { background: var(--lime); color: var(--ink); }
+.in .amt { padding: 26px 20px 4px; }
+.in .amt .k { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #B9BBC2; }
+.in .amt .v { font-size: 56px; line-height: 60px; font-weight: 700; letter-spacing: -0.04em; color: var(--lime); margin-top: 6px; }
+.in .amt .v small { font-size: 22px; color: #fff; margin-left: 4px; letter-spacing: 0; }
+.cat-grid { display:grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin: 18px 16px 0; }
+.cg { height: 64px; border-radius: 6px; border: 1.5px solid #4A4D55; padding: 10px; display:flex; flex-direction:column; justify-content:space-between; font-weight: 700; font-size: 14px; }
+.cg.on { background: #fff; color: var(--ink); border-color: #fff; }
+.cg svg.lucide { width: 18px; height: 18px; }
+.rowx { display:flex; gap: 6px; margin: 10px 16px 0; flex-wrap: wrap; }
+.tag { height: 36px; padding: 0 14px; display:inline-flex; align-items:center; border-radius: 999px; border: 1.5px solid #4A4D55; font-weight: 700; font-size: 14px; }
+.tag.on { background: var(--blush); color: var(--ink); border-color: var(--blush); }
+.go { position:absolute; left:16px; right:16px; bottom: 16px; height: 60px; border-radius: 6px; background: var(--lime); color: var(--ink); display:flex; align-items:center; justify-content:space-between; padding: 0 20px; font-weight: 800; font-size: 18px; }
+</style></head><body>
+<p class="board-head">D. 그래픽 디자이너 감성</p>
+<p class="board-sub">코발트 블록 + 라임 숫자, 각진 모서리·굵은 타이포. 입력은 어두운 화면에 큰 숫자 하나</p>
+<div class="row">
+<div><p class="cap">홈 (월 요약)</p>
+<div class="phone">
+  <div class="top"><div class="n">우리집 가계부<i data-lucide="chevron-down"></i></div><div class="ib"><i data-lucide="menu"></i></div></div>
+  <div class="block"><div class="ring"></div>
+    <div class="mo disp">NOV 2026</div>
+    <div class="lbl">이번 달 남은 돈</div>
+    <div class="big disp">1,284,500<small>원</small></div>
+  </div>
+  <div class="trio">
+    <div><div class="k">수입</div><div class="v disp" style="color:#2B47A8">5,620,000</div></div>
+    <div><div class="k">지출</div><div class="v disp">2,835,500</div></div>
+    <div><div class="k">저축</div><div class="v disp" style="color:#2E6B55">1,500,000</div></div>
+  </div>
+  <div class="grid">
+    <div class="tile" style="background:var(--lime);grid-row:span 2"><span class="k">식비 26%</span><span class="v disp">742,000</span></div>
+    <div class="tile" style="background:var(--blush)"><span class="k">주거·통신</span><span class="v disp">680,000</span></div>
+    <div class="tile" style="background:var(--grey);flex-direction:row;align-items:center"><span class="k">생활</span><span class="v disp" style="font-size:16px">391,200</span></div>
+  </div>
+  <div class="who">
+    <div><div class="k">민지 49%</div><div class="v disp">1,402,300</div></div>
+    <div><div class="k">준호 51%</div><div class="v disp">1,433,200</div></div>
+  </div>
+  <div class="tabbar"><div class="tab on"><i data-lucide="house"></i>홈</div><div class="tab"><i data-lucide="calendar-days"></i>가계부</div><div class="plus"><i data-lucide="plus"></i></div><div class="tab"><i data-lucide="wallet"></i>자산</div></div>
+</div></div>
+<div><p class="cap">내역 입력</p>
+<div class="phone"><div class="in">
+  <div class="top"><div class="n">새 내역</div><div class="ib"><i data-lucide="x"></i></div></div>
+  <div class="types"><span class="on">지출</span><span>수입</span><span>저축</span></div>
+  <div class="amt"><div class="k disp">AMOUNT</div><div class="v disp">12,800<small>원</small></div></div>
+  <div class="cat-grid">
+    <div class="cg on"><i data-lucide="utensils"></i>식비</div><div class="cg"><i data-lucide="coffee"></i>카페</div><div class="cg"><i data-lucide="shopping-basket"></i>생활</div>
+    <div class="cg"><i data-lucide="bus"></i>교통</div><div class="cg"><i data-lucide="house"></i>주거</div><div class="cg"><i data-lucide="gift"></i>경조사</div>
+  </div>
+  <div class="rowx"><span class="tag on">공동소비</span><span class="tag">개인용돈</span><span class="tag">여행</span></div>
+  <div class="rowx"><span class="tag on">민지</span><span class="tag">준호</span><span class="tag disp" style="margin-left:auto">11.06 FRI</span></div>
+  <div class="go">저장<i data-lucide="arrow-right"></i></div>
+</div></div></div>
+</div>
+<script>lucide.createIcons();</script>
+</body></html>
