@@ -175,10 +175,8 @@ svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
 
 /* 로그인·시작 */
 .hero-wrap { position:absolute; inset:0; display:flex; flex-direction:column; padding:72px 24px 24px; background:var(--color-surface); }
-.logo { height:44px; display:flex; align-items:center; }
-.logo svg { display:block; height:44px; width:auto; }
-.lg-p { fill:#007F55; } .lg-w { fill:#007F55; } .lg-c { fill:#E0A526; } .lg-d { fill:#F6D27A; }
-[data-mode="dark"] .lg-p { fill:#3FC08A; } [data-mode="dark"] .lg-w { fill:#F2F4F6; } [data-mode="dark"] .lg-c { fill:#F2C14E; } [data-mode="dark"] .lg-d { fill:#FBE3A4; }
+.logo { display:flex; align-items:center; gap:12px; font-weight:800; font-size:22px; letter-spacing:-0.03em; }
+.logo img { width:64px; height:64px; display:block; }
 .big-t { font-size:26px; line-height:34px; font-weight:700; letter-spacing:-0.01em; margin-top:28px !important; }
 .lead-t { font-size:16px; line-height:24px; color:var(--color-text-sub); margin-top:8px !important; }
 .peek { margin-top:32px; border-radius:20px; background:var(--color-bg); padding:18px 20px; }
@@ -266,7 +264,7 @@ svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
 .dim { color:var(--color-text-weak); }
 </style></head><body>
 <h1 class="board-t">반반 화면 시안 — 로그인 · 시작 · 가계부 탭 · 내역 입력 · 설정 · 가계부 관리</h1>
-<p class="lead">기준: 디자인 시스템 v1.2(`docs/design.md`) · 360×760 · 기본 테마 클린(맨 아래 줄에 베리·포근·다크). 내역·금액·주머니는 샘플 가계부(BANB-23 `supabase/seed/sample_ledger.sql`)의 2026년 11월 1~6일 데이터. 사람 이름(민지·준호)은 홈·자산 시안(`assets-home.html`)과 맞춘 표시용. 로고는 BANB-22 확정안 B-1 웃는 주머니(`docs/brand/`).</p>
+<p class="lead">기준: 디자인 시스템 v1.2(`docs/design.md`) · 360×760 · 기본 테마 클린(맨 아래 줄에 베리·포근·다크). 내역·금액·주머니는 샘플 가계부(BANB-23 `supabase/seed/sample_ledger.sql`)의 2026년 11월 1~6일 데이터. 사람 이름(민지·준호)은 홈·자산 시안(`assets-home.html`)과 맞춘 표시용. 로고는 BANB-22 확정안 B-1 "웃는 주머니"(`docs/design-explore/logos-v7/logo-7b-1-pouch-smile-appicon.svg`, 모든 테마에서 같은 로고).</p>
 <div id="rows"></div>
 <script>
 /* ── 도우미 ── */
@@ -328,15 +326,14 @@ const calCard = (sel = 5) => {
 
 /* 1. 로그인 */
 const peek = `<div class="peek"><p class="k">11월 남은 돈</p><p class="a num">1,723,000<span class="u">원</span></p><div class="bar"><i style="width:58%;background:var(--color-member-1)"></i><i style="width:42%;background:var(--color-member-2)"></i></div></div>`;
-let _lg = 0; const LOGO_SVG = (n) => `<svg viewBox="8 0 253.1 64" height="44" role="img" aria-label="반반 banban"><mask id="lgm${n}" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><path d="M22 42Q32 54 42 42" fill="none" stroke="#000" stroke-width="5.5" stroke-linecap="round"/></mask><path d="M31 3A10 10 0 0 0 31 23Z" class="lg-c"/><path d="M33 3A10 10 0 0 1 33 23Z" class="lg-d"/><path d="M15 27H49Q54 27 54 32V41A22 22 0 0 1 10 41V32Q10 27 15 27Z" class="lg-p" mask="url(#lgm${n})"/><g transform="translate(73.003 60) scale(0.027248)"><path d="M110 0H444V-176H454C498 -78 594 16 760 16C1002 16 1196 -174 1196 -542C1196 -924 990 -1100 762 -1100C588 -1100 496 -998 454 -900H446V-1448H110ZM440 -544C440 -724 514 -836 646 -836C778 -836 850 -720 850 -544C850 -364 776 -248 646 -248C516 -248 440 -364 440 -544ZM1242.08 -302C1242.08 -86 1392.08 20 1600.08 20C1752.08 20 1856.08 -42 1916.08 -152H1924.08V0H2242.08V-738C2242.08 -972 2032.08 -1100 1764.08 -1100C1460.08 -1100 1296.08 -942 1282.08 -750H1596.08C1610.08 -822 1666.08 -860 1756.08 -860C1848.08 -860 1904.08 -818 1904.08 -742V-654C1858.08 -652 1722.08 -647 1644.08 -642C1428.08 -628 1242.08 -542 1242.08 -302ZM1562.08 -316C1562.08 -388 1616.08 -434 1700.08 -444C1750.08 -449 1865.08 -454 1906.08 -456V-386C1908.08 -278 1816.08 -204 1702.08 -204C1620.08 -204 1562.08 -242 1562.08 -316ZM2704.16 -622C2704.16 -748 2778.16 -824 2890.16 -824C3002.16 -824 3068.16 -750 3068.16 -628V0H3404.16V-692C3406.16 -938 3256.16 -1100 3028.16 -1100C2868.16 -1100 2748.16 -1020 2698.16 -888H2686.16V-1086H2366.16V0H2704.16ZM3536.24 0H3870.24V-176H3880.24C3924.24 -78 4020.24 16 4186.24 16C4428.24 16 4622.24 -174 4622.24 -542C4622.24 -924 4416.24 -1100 4188.24 -1100C4014.24 -1100 3922.24 -998 3880.24 -900H3872.24V-1448H3536.24ZM3866.24 -544C3866.24 -724 3940.24 -836 4072.24 -836C4204.24 -836 4276.24 -720 4276.24 -544C4276.24 -364 4202.24 -248 4072.24 -248C3942.24 -248 3866.24 -364 3866.24 -544ZM4668.32 -302C4668.32 -86 4818.32 20 5026.32 20C5178.32 20 5282.32 -42 5342.32 -152H5350.32V0H5668.32V-738C5668.32 -972 5458.32 -1100 5190.32 -1100C4886.32 -1100 4722.32 -942 4708.32 -750H5022.32C5036.32 -822 5092.32 -860 5182.32 -860C5274.32 -860 5330.32 -818 5330.32 -742V-654C5284.32 -652 5148.32 -647 5070.32 -642C4854.32 -628 4668.32 -542 4668.32 -302ZM4988.32 -316C4988.32 -388 5042.32 -434 5126.32 -444C5176.32 -449 5291.32 -454 5332.32 -456V-386C5334.32 -278 5242.32 -204 5128.32 -204C5046.32 -204 4988.32 -242 4988.32 -316ZM6130.4 -622C6130.4 -748 6204.4 -824 6316.4 -824C6428.4 -824 6494.4 -750 6494.4 -628V0H6830.4V-692C6832.4 -938 6682.4 -1100 6454.4 -1100C6294.4 -1100 6174.4 -1020 6124.4 -888H6112.4V-1086H5792.4V0H6130.4Z" class="lg-w"/></g></svg>`; /* BANB-22 확정 로고 B-1 (docs/brand/banban-lockup-*.svg, 색은 테마와 상관없이 고정) */
-const login = (state) => phone(`<div class="hero-wrap"><div class="logo">${LOGO_SVG(++_lg)}</div><p class="big-t">둘이 함께 쓰는<br>우리집 가계부</p><p class="lead-t">함께 쓴 돈과 모은 돈을 한 곳에서 봐요.</p>${peek}<div style="flex:1"></div>
+const login = (state) => phone(`<div class="hero-wrap"><div class="logo"><img src="../design-explore/logos-v7/logo-7b-1-pouch-smile-appicon.svg" alt="">반반</div><p class="big-t">둘이 함께 쓰는<br>우리집 가계부</p><p class="lead-t">함께 쓴 돈과 모은 돈을 한 곳에서 봐요.</p>${peek}<div style="flex:1"></div>
   ${state === 'err' ? `<div class="notice bad" style="margin-bottom:12px">${I('circle-alert')}<span>로그인하지 못했어요. 잠시 후 다시 시도해 주세요.</span></div><div class="notice" style="margin-bottom:16px">${I('info')}<span>카카오톡에서 열었다면 오른쪽 위 ⋮ → "다른 브라우저로 열기"를 눌러 주세요.</span></div>` : ''}
   ${state === 'busy' ? `<div class="gbtn btn off" style="border-color:transparent">${I('loader-circle','s16')}구글로 이동하는 중…</div>` : `<div class="gbtn"><span class="g">G</span>구글 계정으로 시작하기</div>`}
   <p style="text-align:center;font-size:12px;color:var(--color-text-weak);margin-top:12px">가입하면 이용약관과 개인정보 처리방침에 동의하게 돼요.</p></div>`);
 const loading = phone(`<div class="hero-wrap" style="align-items:center;justify-content:center;padding:0"><span style="color:var(--color-primary)">${I('loader-circle','s24')}</span><p style="margin-top:12px;color:var(--color-text-sub)">불러오는 중…</p></div>`);
 
 /* 2. 시작 */
-const start = phone(`<div class="hero-wrap" style="padding-top:56px"><div class="logo">${LOGO_SVG(++_lg)}</div><p class="big-t">가계부를 시작해 볼까요?</p><p class="lead-t">새로 만들거나, 받은 초대코드로 함께해요.</p>
+const start = phone(`<div class="hero-wrap" style="padding-top:56px"><div class="logo"><img src="../design-explore/logos-v7/logo-7b-1-pouch-smile-appicon.svg" alt="">반반</div><p class="big-t">가계부를 시작해 볼까요?</p><p class="lead-t">새로 만들거나, 받은 초대코드로 함께해요.</p>
   <div style="display:flex;flex-direction:column;gap:12px;margin-top:28px"><div class="choice"><span class="ibx">${I('book-plus')}</span><div><b>새 가계부 만들기</b><span>이름만 정하면 바로 시작</span></div>${I('chevron-right')}</div>
   <div class="choice"><span class="ibx">${I('ticket')}</span><div><b>초대코드로 참여</b><span>받은 8자리 코드나 링크로</span></div>${I('chevron-right')}</div></div>
   <div style="flex:1"></div><p style="text-align:center;font-size:14px;color:var(--color-text-sub)">kicmi032@gmail.com · <span style="color:var(--color-primary);font-weight:600">로그아웃</span></p></div>`);
@@ -465,7 +462,7 @@ const manageErr = phone(`${sub('가계부 관리')}<div class="scroll full"><div
 /* ── 배치 ── */
 const ROWS = [
   ['1. 로그인', [
-    ['L1 기본', login(), '로고(가로 조합, 높이 44) → 한 줄 소개 → 앱 화면 맛보기 카드(정적 그림) → 구글 버튼 1개. 버튼은 엄지가 닿는 아래.'],
+    ['L1 기본', login(), '로고 B-1 + 앱 이름 → 한 줄 소개 → 앱 화면 맛보기 카드(정적 그림) → 구글 버튼 1개. 버튼은 엄지가 닿는 아래.'],
     ['L2 처리 중', login('busy'), '누르면 비활성 + 문구 유지("구글로 이동하는 중…"), 중복 누름 막기.'],
     ['L3 오류 · 카카오톡 인앱', login('err'), '실패는 빨간 상자(위험 연한 바탕), 인앱 브라우저 안내는 회색 안내 상자. 둘 다 버튼 위.'],
     ['L4 로그인 확인 중 (앱 첫 로딩)', loading, '가운데 LoaderCircle(primary) + "불러오는 중…". 0.3초 안에 끝나면 안 보이게.'],
