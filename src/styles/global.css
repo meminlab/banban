@@ -420,3 +420,51 @@ button { font: inherit; }
 .tx-row__amount { flex: none; font-weight: 700; }
 .tx-row__amount--income { color: #1d4ed8; }
 .tx-row__amount--saving { color: var(--color-primary); }
+/* ── 폼 (BANB-5: 가계부 만들기·참여·이름·초대) */
+:root { --color-success: #1b6e3a; --color-notice-bg: #fff6e0; }
+.form-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; }
+.form-card__title { margin: 0; font-size: 1rem; }
+.form-card__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.form-card .form-error { margin: 0; }
+.form-success { margin: 0; color: var(--color-success); font-size: 0.9375rem; }
+.field__input {
+  min-height: var(--touch);
+  padding: 0 12px;
+  border: 1px solid #8a94a3; /* 흰 배경 대비 3:1 이상 */
+  border-radius: 12px;
+  font: inherit;
+  font-size: 1rem; /* iOS 확대 방지 */
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.field__input:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 1px; }
+.field__input[aria-invalid='true'] { border-color: var(--color-danger); }
+.field__input--code { font-size: 1.25rem; letter-spacing: 0.2em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.button--danger-outline { background: var(--color-surface); color: var(--color-danger); border-color: var(--color-danger); }
+
+/* ── 설정 메뉴 */
+.section-title__sub { font-weight: 400; }
+.menu-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 16px; overflow: hidden; }
+.menu-list li + li { border-top: 1px solid var(--color-border); }
+.menu-list__item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 56px; padding: 0 16px; color: var(--color-text); text-decoration: none;
+}
+.menu-list__item:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+.menu-list__value { color: var(--color-text-sub); font-size: 0.9375rem; text-align: right; word-break: break-all; }
+
+/* ── 멤버·초대 */
+.member-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--color-border); border-radius: 16px; }
+.member-list__item { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 16px; }
+.member-list__item + .member-list__item { border-top: 1px solid var(--color-border); }
+.member-list__item.is-left { color: var(--color-text-sub); }
+.member-list__name { flex: 1; word-break: break-all; }
+.badge { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: var(--color-bg); color: var(--color-text-sub); }
+.badge--primary { background: #e3f1ed; color: var(--color-primary); }
+.invite-code { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: 0.15em; text-align: center; font-variant-numeric: tabular-nums; user-select: all; }
+.invite-link { margin: 0; padding: 8px 12px; border-radius: 8px; background: var(--color-bg); font-size: 0.875rem; word-break: break-all; user-select: all; }
+.notice { margin: 0; padding: 12px; border-radius: 12px; background: var(--color-notice-bg); font-size: 0.9375rem; line-height: 1.5; }
+/* BANB-8 의 .confirm(삭제 확인, 빨간 배경)과 구분 */
+.inline-confirm { display: flex; flex-direction: column; gap: 12px; padding: 12px; border-radius: 12px; background: var(--color-bg); }
+.inline-confirm p { margin: 0; line-height: 1.5; }
+.members .leave { margin-top: auto; }

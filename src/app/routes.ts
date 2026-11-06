@@ -21,3 +21,9 @@ export const TRANSACTION_NEW_PATH = '/ledger/new';
 export const transactionPath = (id: string) => `/ledger/${id}`;
 /** 입력 화면을 닫고 가계부 탭으로 돌아갈 때 알려 줄 결과 (location.state.flash) */
 export type LedgerFlash = 'saved' | 'deleted';
+/** 설정 > 가계부 이름 */
+export const LEDGER_NAME_PATH = '/settings/name';
+/** 설정 > 멤버·초대 */
+export const MEMBERS_PATH = '/settings/members';
+/** 초대 링크: /join/<코드> (lib/ledgerRules JOIN_PATH_PREFIX 와 같음) */
+export const JOIN_PATH = '/join/:code';

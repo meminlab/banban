@@ -66,6 +66,7 @@ npm run dev                  # http://localhost:5173
       - `20261105000000_init.sql` — 스키마·권한 규칙
       - `20261105010000_category_depth_invite_rules.sql` — 카테고리 2단계, 초대 만료·무효 규칙 보강
       - `20261106000000_profile.sql` — 사용자 프로필(구글 이름·이미지) 테이블과 자동 저장 트리거
+      - `20261106120000_ledger_leave_rejoin.sql` — 가계부 나가기(owner 자동 승계·보관), 다시 참여 시 예전 멤버 연결, 보관된 가계부 초대 무효
    2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `invite_rules=true`, `profile_sync=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
@@ -91,6 +92,7 @@ npm run dev                  # http://localhost:5173
 
 로그인 흐름
 - 구글 로그인 후 `/login`으로 돌아온다(PKCE). 세션은 브라우저 localStorage에 저장돼 새로고침해도 유지된다
+- 초대 링크는 `/join/<코드>`. 로그인 전이면 코드를 기억해 두고 로그인 후 참여 화면으로 이어 간다
 - 로그인 안 했으면 모든 화면이 `/login`으로 간다. 로그인 후 참여한 가계부가 있으면 홈, 없으면 `/start`(가계부 만들기 / 초대코드 입력)
 - 로그아웃은 설정(또는 `/start`) 맨 아래. 이 기기에서만 로그아웃된다
 - 구글 이름·프로필 이미지는 로그인할 때마다 DB 트리거가 `profile` 테이블에 저장한다(화면은 읽기만)
@@ -129,8 +131,12 @@ npm run dev                  # http://localhost:5173
 
 권한 규칙
 - 모든 테이블 RLS 사용. **해당 가계부의 현재 멤버만** 읽기·쓰기 가능, 비로그인은 전부 차단
-- 가계부 만들기·참여는 RPC로만: `create_ledger(name, display_name)`, `join_ledger(code, display_name)`
-  - 오류 코드: `ALREADY_IN_LEDGER`, `INVITE_NOT_FOUND`, `INVITE_EXPIRED`, `MEMBER_LIMIT_REACHED`, `NOT_AUTHENTICATED`
+- 가계부 만들기·참여·나가기는 RPC로만: `create_ledger(name, display_name)`, `join_ledger(code, display_name)`, `leave_ledger()`
+  - 오류 코드: `ALREADY_IN_LEDGER`, `INVITE_NOT_FOUND`, `INVITE_EXPIRED`, `MEMBER_LIMIT_REACHED`(details = 현재 상한 값), `NOT_IN_LEDGER`, `NOT_AUTHENTICATED`
+  - 인원 상한은 `ledger.member_limit` 값으로만 정한다(화면·API로 변경 불가, DB 관리자가 SQL로 변경). 동시 참여도 가계부 행 잠금으로 상한을 넘지 않는다
+  - 나가기: 행은 남기고 `left_at` 기록 → 그 사람 내역 유지, 화면에 "(나감)". owner가 나가면 남은 멤버 중 가장 먼저 참여한 사람이 owner. 마지막 멤버가 나가면 가계부는 보관(현재 멤버 0명 → 아무도 못 봄)되고 초대는 모두 무효
+  - 다시 참여: 같은 가계부에 예전 멤버 행이 있으면 되살린다(새 행 X) → 과거 내역이 다시 그 사람 이름으로 보인다. 이때 참여 시각은 다시 참여한 시각
+  - 보관된 가계부의 초대 코드로는 참여 불가(`INVITE_NOT_FOUND`)
 - 다른 가계부의 카테고리·주머니·멤버는 참조 불가 (복합 외래키)
 - 사용 중인 카테고리·주머니는 삭제 불가 → 숨김 처리
 - 가계부 생성 시 기본 카테고리(대분류 27 / 소분류 43)와 기본 주머니 4개 자동 생성

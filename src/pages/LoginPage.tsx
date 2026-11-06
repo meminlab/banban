@@ -3,6 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../app/auth';
 import { signInWithGoogle } from '../data/auth';
 import { StatusScreen } from '../components/StatusScreen';
+import { readPendingInvite } from '../data/pendingInvite';
+import { JOIN_PATH_PREFIX } from '../lib/ledgerRules';
 
 /** 구글에서 돌아올 때 붙어 오는 오류 (?error=… 또는 #error=…) */
 function readOAuthError(search: string, hash: string): boolean {
@@ -17,7 +19,11 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(() => readOAuthError(search, hash));
 
-  if (auth.status === 'signedIn') return <Navigate to="/" replace />;
+  if (auth.status === 'signedIn') {
+    // 초대 링크로 들어왔다가 로그인한 경우 참여 화면으로 이어 간다
+    const pending = readPendingInvite();
+    return <Navigate to={pending ? `${JOIN_PATH_PREFIX}${pending}` : '/'} replace />;
+  }
   if (auth.status === 'loading') return <StatusScreen kind="loading" message="로그인 상태를 확인하고 있어요" />;
 
   async function handleGoogle() {
