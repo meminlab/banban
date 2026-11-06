@@ -3,8 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- 브라우저 막대·홈 화면 앱 상태 표시줄 색: 흰 상단바와 이어지게 흰색 -->
     <meta name="theme-color" content="#ffffff" />
     <title>반반 가계부</title>
+
+    <!-- 홈 화면에 추가 (전체 화면 실행) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="반반" />
+    <!-- default: 흰 바탕 검은 글자 상태 표시줄, 본문은 상태 표시줄 아래에서 시작 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div id="root"></div>
