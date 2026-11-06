@@ -14,6 +14,13 @@ export function getSupabase(): SupabaseClient {
   if (!url || !anonKey) {
     throw new Error('VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY 환경변수가 없습니다. .env.example 참고');
   }
-  client = createClient(url, anonKey);
+  client = createClient(url, anonKey, {
+    auth: {
+      flowType: 'pkce', // 구글 로그인 후 ?code= 로 돌아와 세션으로 교환
+      persistSession: true, // localStorage 저장 → 새로고침해도 로그인 유지
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
   return client;
 }

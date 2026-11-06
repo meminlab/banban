@@ -17,7 +17,7 @@
 
 ```
 src/
-  app/          라우팅, 탭 정의
+  app/          라우팅, 탭 정의, 로그인 상태(auth.tsx), 화면 접근 규칙(guards.tsx)
   components/   공통 UI (상단바·하단 탭·아이콘)
   pages/        화면 (홈 / 가계부 / 자산 / 설정)
   data/         저장소 접근은 여기서만 (supabase 클라이언트, DB 행 타입)
@@ -62,11 +62,35 @@ npm run dev                  # http://localhost:5173
    1. `supabase/migrations/` 의 파일을 **이름 순서대로, 각각 한 번만** 실행 (다시 실행하면 "already exists" 오류)
       - `20261105000000_init.sql` — 스키마·권한 규칙
       - `20261105010000_category_depth_invite_rules.sql` — 카테고리 2단계, 초대 만료·무효 규칙 보강
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 7행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `invite_rules=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+      - `20261106000000_profile.sql` — 사용자 프로필(구글 이름·이미지) 테이블과 자동 저장 트리거
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 8행 모두 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `invite_rules=true`, `profile_sync=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    - Supabase CLI를 쓰면 `supabase link` 후 `supabase db push`로 1번을 대신할 수 있다
 3. 프로젝트 설정 → API Keys에서 URL, publishable key를 복사해 `.env.local`과 호스팅 환경변수에 넣기
-4. (로그인 이슈에서) Authentication → Providers → Google 설정
+4. 구글 로그인 설정 — 아래 "구글 로그인 설정" 참고
+
+## 구글 로그인 설정 (최초 1회, 계정 주인이 직접)
+
+비밀 값(Client Secret)은 Supabase 대시보드에만 넣는다. 레포·`.env`·이슈 댓글에 남기지 않는다.
+
+1. **Google Cloud Console** (https://console.cloud.google.com) → 프로젝트 선택/생성
+   1. APIs & Services → **OAuth consent screen**: User type `External`, 앱 이름 `반반`, 지원 이메일 입력. 공개 상태가 `Testing`이면 Test users에 로그인할 구글 계정을 추가해야 로그인된다(또는 `In production`으로 게시 — 이름·이메일·프로필 기본 범위만 쓰므로 심사 없음)
+   2. APIs & Services → **Credentials → Create credentials → OAuth client ID** → 유형 `Web application`
+      - Authorized JavaScript origins: `https://banban-nzh.pages.dev`
+      - Authorized redirect URIs: `https://ryubtqzwqswmsrbiuorp.supabase.co/auth/v1/callback`
+   3. 만들어진 **Client ID / Client Secret** 복사
+2. **Supabase 대시보드** → Authentication
+   1. **Sign In / Providers → Google**: Enable, Client ID·Client Secret 붙여넣기 → Save
+   2. **URL Configuration**
+      - Site URL: `https://banban-nzh.pages.dev`
+      - Redirect URLs에 추가: `https://banban-nzh.pages.dev/login`, `https://*.banban-nzh.pages.dev/login` (PR 미리보기), `http://localhost:5173/login` (로컬 개발)
+3. 확인: 운영 주소에서 "구글 계정으로 로그인" → 구글 계정 선택 → 앱으로 돌아와 "가계부 시작하기" 화면이 보이면 끝
+
+로그인 흐름
+- 구글 로그인 후 `/login`으로 돌아온다(PKCE). 세션은 브라우저 localStorage에 저장돼 새로고침해도 유지된다
+- 로그인 안 했으면 모든 화면이 `/login`으로 간다. 로그인 후 참여한 가계부가 있으면 홈, 없으면 `/start`(가계부 만들기 / 초대코드 입력)
+- 로그아웃은 설정(또는 `/start`) 맨 아래. 이 기기에서만 로그아웃된다
+- 구글 이름·프로필 이미지는 로그인할 때마다 DB 트리거가 `profile` 테이블에 저장한다(화면은 읽기만)
 
 ## 배포 (Cloudflare Pages)
 
@@ -87,6 +111,7 @@ npm run dev                  # http://localhost:5173
 | `category` | 카테고리 | type `expense`/`income`/`saving`, 대분류(`parent_id` null) > 소분류 2단계만(자기 자신·소분류 있는 대분류는 부모 지정 불가, 부모와 type 같아야 함), 숨김 |
 | `pocket` | 주머니 | scope `shared`/`personal`, 숨김 |
 | `transaction` | 내역 | 금액 정수 1~9,999,999,999, `occurred_on` 날짜, 소분류만, 지출이면 주머니 필수, `is_fixed`는 지출만, 메모 100자, `source` 기본 `manual`, 작성자·마지막 수정자 자동 기록 |
+| `profile` | 사용자 프로필 | 로그인 사용자 1명당 1행. 구글 이름(1~100자, 없으면 이메일 앞부분)·이미지(https만). `auth.users`가 생기거나 바뀔 때 트리거가 저장, 클라이언트는 읽기만. 나 + 내가 현재 멤버인 가계부에 참여했던 사람만 조회 |
 | `asset` | 자산 | kind `checking`/`installment_saving`/`deposit`/`investment`/`cash`/`other`, `owner_id` null = 공동, 잔액 정수 0~9,999,999,999 |
 
 권한 규칙

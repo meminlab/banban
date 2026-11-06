@@ -105,3 +105,88 @@ button { font: inherit; }
 }
 .placeholder h2 { margin: 0 0 8px; font-size: 1rem; color: var(--color-text); }
 .placeholder p { margin: 0; line-height: 1.5; }
+
+/* ── 공통 버튼 */
+.button {
+  min-height: var(--touch);
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.button:focus-visible, .option-card:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.button:disabled { cursor: default; opacity: 0.6; }
+.button--primary { background: var(--color-primary); color: #fff; }
+.button--secondary { background: var(--color-surface); color: var(--color-text); border-color: var(--color-border); }
+.button--block { width: 100%; }
+
+.form-error { margin: 0 0 12px; color: var(--color-danger); font-size: 0.9375rem; }
+.hint { margin: 0; color: var(--color-text-sub); font-size: 0.875rem; }
+.content--no-tabbar { padding-bottom: calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
+
+/* ── 상태 화면 (불러오는 중 / 오류) */
+.status-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+  color: var(--color-text-sub);
+}
+.status-screen p { margin: 0; line-height: 1.5; }
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+/* ── 로그인 */
+.login {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 20px calc(32px + env(safe-area-inset-bottom));
+}
+.login__brand { margin-top: 20vh; }
+.login__logo { margin: 0 0 12px; font-size: 2.25rem; font-weight: 800; color: var(--color-primary); }
+.login__title { margin: 0 0 8px; font-size: 1.375rem; }
+.login__desc { margin: 0; color: var(--color-text-sub); line-height: 1.5; }
+
+/* ── 프로필 */
+.profile-card { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; }
+.profile-card__name { margin: 0; font-weight: 700; word-break: break-all; }
+.profile-card__sub { margin: 4px 0 0; color: var(--color-text-sub); font-size: 0.875rem; word-break: break-all; }
+.avatar { flex: none; border-radius: 50%; object-fit: cover; background: var(--color-bg); }
+.avatar--initial { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-primary); }
+
+/* ── 시작 화면 */
+.start__options { display: flex; flex-direction: column; gap: 12px; }
+.option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 72px;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+.option-card:disabled { cursor: default; background: var(--color-bg); }
+.option-card__title { font-weight: 700; }
+.option-card__desc { color: var(--color-text-sub); font-size: 0.875rem; }
+.settings .button--block, .start > .button--block { margin-top: auto; }
