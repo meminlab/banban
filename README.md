@@ -102,6 +102,16 @@ npm run dev                  # http://localhost:5173
 3. 환경변수: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `NODE_VERSION=22`
 4. 이후 `main`에 머지하면 자동 배포. 주소를 직접 입력하거나 새로고침해도 SPA로 처리된다(404.html이 없으면 Pages가 index.html을 돌려줌)
 
+## 홈 화면에 추가 (전체 화면 실행)
+
+홈 화면 아이콘으로 열면 주소창·아래 도구 막대 없이 앱처럼 뜬다. 오프라인·푸시 알림은 없다(서비스 워커 없음).
+
+- 아이폰 사파리: 공유 → 홈 화면에 추가 / 안드로이드 크롬: 메뉴 → 홈 화면에 추가(또는 앱 설치)
+- 아이폰은 홈 화면 앱과 사파리가 로그인 저장소를 따로 쓴다 → 홈 화면 앱에서 처음 한 번은 다시 로그인해야 할 수 있다
+- 설정 파일: `public/manifest.webmanifest`, 아이폰용 설정은 `index.html`의 `apple-*` 메타 태그
+- 노치·홈 바: `viewport-fit=cover` + `global.css`의 `--safe-top` / `--safe-bottom` 여백(상단바·하단 탭·로그인·상태 화면에 적용)
+- 아이콘: `public/icons/` (초록 배경 + 흰 글자 "반반"). 바꿀 때만 `python3 scripts/make-icons.py <Pretendard-ExtraBold.otf>`로 다시 만든다(Pillow 필요, 글꼴은 OFL 라이선스 Pretendard)
+
 ## 데이터 모델
 
 전체 스키마: `supabase/migrations/20261105000000_init.sql` (명세 BANB-2 "확정 명세"의 용어를 코드 이름으로 그대로 사용)
