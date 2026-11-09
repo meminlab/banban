@@ -1,3 +1,4 @@
+import { Calendar, List, ListFilter } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
@@ -6,6 +7,8 @@ import {
   type LedgerFlash,
   type TransactionFormState,
 } from '../app/routes';
+import { CategoryIcon } from '../components/CategoryIcon';
+import { MonthNav } from '../components/MonthNav';
 import { Sheet } from '../components/Sheet';
 import { getTransactionFormOptions, listMonthTransactions, type TransactionFormOptions } from '../data/transaction';
 import type { Transaction, TransactionType } from '../data/types';
@@ -19,6 +22,7 @@ import {
   compactWon,
   dailyTotals,
   dayOfMonth,
+  filterResultSummary,
   filterTransactions,
   knownFilter,
   formatDayLabel,
@@ -26,7 +30,10 @@ import {
   parseLedgerQuery,
   pocketFilterOptions,
   spenderFilterOptions,
+  sumExpense,
   toggleFilter,
+  txRowText,
+  UNKNOWN_CATEGORY,
   type DayTotals,
   type FilterKey,
   type FilterOption,
@@ -34,6 +41,7 @@ import {
   type LedgerQuery,
 } from '../domain/ledgerView';
 import { addMonths, formatYearMonth, isInMonth, type YearMonth } from '../domain/month';
+import { MINUS } from '../domain/format';
 import { TYPE_LABEL, TYPE_ORDER, formatNumber, memberLabel, todayKST } from '../domain/transactionForm';
 
 const FLASH_TEXT: Record<LedgerFlash, string> = {
@@ -123,57 +131,32 @@ export function LedgerPage() {
         </p>
       )}
 
-      <div className="month-nav">
+      <MonthNav month={query.month} onMove={(d) => setQuery({ month: addMonths(query.month, d), day: null })}>
+        {query.view === 'list' ? (
+          <button type="button" className="icon-button" aria-label="달력으로 보기" onClick={() => setQuery({ view: 'calendar' })}>
+            <Calendar size={24} strokeWidth={2} aria-hidden="true" />
+          </button>
+        ) : (
+          <button type="button" className="icon-button" aria-label="목록으로 보기" onClick={() => setQuery({ view: 'list' })}>
+            <List size={24} strokeWidth={2} aria-hidden="true" />
+          </button>
+        )}
         <button
           type="button"
-          className="icon-button"
-          aria-label="이전 달"
-          onClick={() => setQuery({ month: addMonths(query.month, -1), day: null })}
-        >
-          <span aria-hidden="true">‹</span>
-        </button>
-        <h2 className="month-nav__label" aria-live="polite">
-          {formatYearMonth(query.month)}
-        </h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="다음 달"
-          onClick={() => setQuery({ month: addMonths(query.month, 1), day: null })}
-        >
-          <span aria-hidden="true">›</span>
-        </button>
-      </div>
-
-      <div className="ledger-toolbar">
-        <div className="view-toggle" role="group" aria-label="보기 방식">
-          {(['list', 'calendar'] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              className={`view-toggle__item${query.view === v ? ' is-active' : ''}`}
-              aria-pressed={query.view === v}
-              onClick={() => setQuery({ view: v })}
-            >
-              {v === 'list' ? '목록' : '달력'}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className={`button button--small filter-button${filterCount > 0 ? ' is-active' : ''}`}
+          className="icon-button filter-button"
           onClick={() => setFilterOpen(true)}
           aria-haspopup="dialog"
           aria-label={filterCount > 0 ? `필터 (${filterCount}개 적용 중)` : '필터'}
         >
-          필터{filterCount > 0 && <span className="filter-button__count"> {filterCount}</span>}
+          <ListFilter size={24} strokeWidth={2} aria-hidden="true" />
+          {filterCount > 0 && <span className="filter-button__dot" aria-hidden="true" />}
         </button>
-      </div>
+      </MonthNav>
       {filterCount > 0 && (
         <p className="filter-status">
-          <span>필터 {filterCount}개 적용 중</span>
+          <span>{data ? filterResultText(filtered) : `필터 ${filterCount}개 적용 중`}</span>
           <button type="button" className="button--link" onClick={() => setQuery({ filter: EMPTY_FILTER })}>
-            필터 초기화
+            지우기
           </button>
         </p>
       )}
@@ -195,7 +178,7 @@ export function LedgerPage() {
       {data && data.items.length === 0 && (
         <div className="empty">
           <p className="empty__title">이 달에 입력한 내역이 없어요</p>
-          <p className="hint">오른쪽 아래 ＋ 버튼으로 내역을 입력해 보세요.</p>
+          <p className="hint">아래 ＋ 버튼으로 내역을 입력해 보세요.</p>
         </div>
       )}
       {data && data.items.length > 0 && filtered.length === 0 && query.view === 'list' && (
@@ -241,47 +224,89 @@ function NoMatch({ onReset }: { onReset: () => void }) {
   );
 }
 
+/** "필터 결과 12건 · 지출 182,000" (design.md 5.23) — 지금 보이는 필터 결과 목록과 같은 값 */
+function filterResultText(items: Transaction[]): string {
+  const { count, expense } = filterResultSummary(items);
+  return `필터 결과 ${count}건 · 지출 ${formatNumber(expense)}`;
+}
+
 // ── 내역 한 줄
 
 function useLabels(options: TransactionFormOptions) {
   return useMemo(() => {
     const categoryById = new Map(options.categories.map((c) => [c.id, c]));
-    const pocketById = new Map(options.pockets.map((p) => [p.id, p]));
     const memberById = new Map(options.members.map((m) => [m.id, m]));
-    return {
-      category(id: string) {
-        const child = categoryById.get(id);
-        if (!child) return '알 수 없음';
-        const parent = child.parent_id ? categoryById.get(child.parent_id) : undefined;
-        return parent && parent.name !== child.name ? `${parent.name} › ${child.name}` : child.name;
-      },
-      pocket: (id: string | null) => (id ? (pocketById.get(id)?.name ?? '알 수 없음') : null),
-      member: (id: string) => memberLabel(memberById.get(id)),
+    return (t: Transaction) => {
+      const category = categoryById.get(t.category_id);
+      const parent = category?.parent_id ? categoryById.get(category.parent_id) : null;
+      return { ...txRowText(t, categoryById, memberLabel(memberById.get(t.spender_id))), category, parent };
     };
   }, [options]);
 }
 
 type Labels = ReturnType<typeof useLabels>;
 
+/** 내역 행 (design.md 5.3 v1.4): [아이콘] 제목(메모·소분류) / "대분류 · 사람" — 배지 없음. 금액은 수입만 포인트 색 */
 function TxRow({ t, labels, returnState }: { t: Transaction; labels: Labels; returnState: TransactionFormState }) {
-  const pocket = labels.pocket(t.pocket_id);
-  const sub = [pocket, labels.member(t.spender_id), t.memo].filter(Boolean).join(' · ');
+  const { title, sub, category, parent } = labels(t);
   return (
     <li>
       <Link to={transactionPath(t.id)} state={returnState} className="tx-row">
+        <CategoryIcon category={category ?? { name: UNKNOWN_CATEGORY, icon: null }} parent={parent} />
         <span className="tx-row__main">
-          <span className="tx-row__title">{labels.category(t.category_id)}</span>
-          <span className="tx-row__sub">
-            <span className={`tx-badge tx-badge--${t.type}`}>{TYPE_LABEL[t.type]}</span>
-            {t.is_fixed && <span className="tx-badge tx-badge--fixed">고정</span>}
-            <span className="tx-row__meta">{sub}</span>
-          </span>
+          <span className="tx-row__title">{title}</span>
+          {sub && <span className="tx-row__sub">{sub}</span>}
         </span>
         <span className={`tx-row__amount tx-row__amount--${t.type}`}>
           <Money amount={t.amount} type={t.type} />
         </span>
       </Link>
     </li>
+  );
+}
+
+/** 날짜 하루 = 카드 1장. 머리 "11월 6일 (금)" + 오른쪽 그날 지출 합(지출 없는 날은 비움) */
+function DayCard({
+  date,
+  items,
+  labels,
+  returnState,
+  titleId,
+}: {
+  date: string;
+  items: Transaction[];
+  labels: Labels;
+  returnState: TransactionFormState;
+  titleId: string;
+}) {
+  const expense = sumExpense(items);
+  return (
+    <section aria-labelledby={titleId} className="day-group">
+      <div className="day-group__head">
+        <h3 id={titleId} className="day-group__title">
+          {formatDayLabel(date)}
+          {date === todayKST() && ' 오늘'}
+        </h3>
+        {expense > 0 && (
+          <span className="day-group__total money">
+            <span aria-hidden="true">
+              {MINUS}
+              {formatNumber(expense)}
+            </span>
+            <span className="sr-only">지출 {formatNumber(expense)}원</span>
+          </span>
+        )}
+      </div>
+      {items.length === 0 ? (
+        <p className="hint day-detail__hint">이 날은 내역이 없어요.</p>
+      ) : (
+        <ul className="tx-list">
+          {items.map((t) => (
+            <TxRow key={t.id} t={t} labels={labels} returnState={returnState} />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -301,16 +326,7 @@ function MonthList({
   return (
     <div className="day-groups">
       {groups.map((g) => (
-        <section key={g.date} aria-labelledby={`day-${g.date}`} className="day-group">
-          <h3 id={`day-${g.date}`} className="day-group__title">
-            {formatDayLabel(g.date)}
-          </h3>
-          <ul className="tx-list">
-            {g.items.map((t) => (
-              <TxRow key={t.id} t={t} labels={labels} returnState={returnState} />
-            ))}
-          </ul>
-        </section>
+        <DayCard key={g.date} date={g.date} items={g.items} labels={labels} returnState={returnState} titleId={`day-${g.date}`} />
       ))}
     </div>
   );
@@ -394,6 +410,7 @@ function CalendarView({
                       </span>
                       {t && t.expense > 0 && <span className="calendar__amt calendar__amt--expense">−{compactWon(t.expense)}</span>}
                       {t && t.income > 0 && <span className="calendar__amt calendar__amt--income">+{compactWon(t.income)}</span>}
+                      {t && t.saving > 0 && <span className="calendar__saving" aria-hidden="true" />}
                     </button>
                   </td>
                 );
@@ -402,27 +419,16 @@ function CalendarView({
           ))}
         </tbody>
       </table>
-      <p className="hint calendar__legend">−지출 · +수입 (만·억 단위로 줄여 표시)</p>
+      <p className="hint calendar__legend">
+        −지출 · +수입 · <span className="calendar__saving calendar__saving--legend" aria-hidden="true" /> 저축
+      </p>
 
       {filtered && items.length === 0 ? (
         <NoMatch onReset={onResetFilter} />
       ) : selected === null ? (
         <p className="hint day-detail__hint">날짜를 누르면 그날 내역이 보여요.</p>
       ) : (
-        <section aria-labelledby="day-detail-title" className="day-group">
-          <h3 id="day-detail-title" className="day-group__title">
-            {formatDayLabel(selected)}
-          </h3>
-          {dayItems.length === 0 ? (
-            <p className="hint day-detail__hint">이 날은 내역이 없어요.</p>
-          ) : (
-            <ul className="tx-list">
-              {dayItems.map((t) => (
-                <TxRow key={t.id} t={t} labels={labels} returnState={returnState} />
-              ))}
-            </ul>
-          )}
-        </section>
+        <DayCard date={selected} items={dayItems} labels={labels} returnState={returnState} titleId="day-detail-title" />
       )}
     </>
   );

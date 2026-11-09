@@ -1,4 +1,4 @@
-import { addMonths, currentYearMonth, formatYearMonth, isInMonth, monthRange } from './month';
+import { addMonths, currentYearMonth, formatMonthLabel, formatYearMonth, isInMonth, monthRange } from './month';
 
 describe('month (KST)', () => {
   it('UTC 기준 전날 15:00 이후는 KST로 다음 날 → 월이 넘어간다', () => {
@@ -24,5 +24,12 @@ describe('month (KST)', () => {
 
   it('표시 형식', () => {
     expect(formatYearMonth('2026-01')).toBe('2026년 1월');
+  });
+
+  it('월 이동 줄: 올해는 연도 없이, 다른 해만 연도 (design.md 5.23)', () => {
+    expect(formatMonthLabel('2026-11', '2026-11')).toBe('11월');
+    expect(formatMonthLabel('2026-01', '2026-11')).toBe('1월');
+    expect(formatMonthLabel('2025-11', '2026-11')).toBe('2025년 11월');
+    expect(formatMonthLabel('2027-01', '2026-12')).toBe('2027년 1월');
   });
 });

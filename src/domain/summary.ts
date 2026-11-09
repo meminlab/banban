@@ -172,3 +172,8 @@ export function computeMonthSummary(
     expenseBy: { spender, pocket, scope, fixed: fixedRows, topCategories },
   };
 }
+
+/** 지금 멤버 수(나간 멤버 제외). 홈 "누가 썼나"는 1명 이하이면 숨긴다 (design.md 5.23) */
+export function activeMemberCount(members: readonly Pick<SummaryMember, 'left_at'>[]): number {
+  return members.filter((m) => !m.left_at).length;
+}

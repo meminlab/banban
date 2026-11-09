@@ -48,25 +48,3 @@ export function pickCurrentLedgerId(ledgers: MyLedger[], lastLedgerId: string | 
 function compareTime(a: string, b: string): number {
   return new Date(a).getTime() - new Date(b).getTime();
 }
-
-/** 헤더 알약의 멤버 아바타 묶음 (design.md 5.6): 지금 멤버를 참여 순으로 최대 `max`명 + 나머지 수 */
-export interface HeaderAvatars {
-  /** 이니셜(이름 첫 글자), 참여 순 */
-  initials: string[];
-  /** 보이지 않는 나머지 멤버 수 ("+1") */
-  more: number;
-}
-
-export function headerAvatars(
-  members: readonly { display_name: string; joined_at: string; left_at: string | null }[],
-  max = 3,
-): HeaderAvatars {
-  const active = members
-    .filter((m) => m.left_at === null)
-    .slice()
-    .sort((a, b) => a.joined_at.localeCompare(b.joined_at));
-  return {
-    initials: active.slice(0, max).map((m) => m.display_name.trim().charAt(0) || '?'),
-    more: Math.max(0, active.length - max),
-  };
-}

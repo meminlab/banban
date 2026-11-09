@@ -367,7 +367,7 @@ describe('내역 수정·삭제', () => {
   async function openEntry() {
     const user = userEvent.setup();
     renderAt('/ledger');
-    await user.click(await screen.findByRole('link', { name: /식비 › 외식/ }));
+    await user.click(await screen.findByRole('link', { name: /저녁/ }));
     await screen.findByRole('heading', { level: 1, name: '내역 수정' });
     return user;
   }

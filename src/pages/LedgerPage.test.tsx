@@ -83,6 +83,8 @@ function renderAt(path: string) {
 }
 
 const listItems = () => screen.queryAllByRole('link').filter((a) => a.classList.contains('tx-row'));
+/** 행 글자 (아이콘 원의 첫 글자 대체 표시는 장식이라 뺀다) */
+const rowText = (a: Element) => a.textContent!.slice(a.querySelector('.cat-icon')?.textContent?.length ?? 0);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -102,28 +104,38 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe('가계부 탭: 목록', () => {
-  it('이번 달(KST) 내역을 날짜별로 묶어 보여 준다: 유형·금액·카테고리·주머니·사람·고정', async () => {
+  it('이번 달(KST) 내역을 날짜 카드로: 제목(메모·소분류) / "대분류 · 사람", 배지 없음, 그날 지출 합', async () => {
     renderAt('/ledger');
     expect(await screen.findByRole('heading', { name: '11월 5일 (목)' })).toBeInTheDocument();
     expect(fake.list).toHaveBeenCalledWith('L', '2026-11');
-    expect(screen.getByRole('heading', { level: 2, name: '2026년 11월' })).toBeInTheDocument();
+    // 월 이동 줄: 올해는 "11월" (화면낭독은 연도까지)
+    expect(screen.getByRole('heading', { level: 2, name: '2026년 11월' })).toHaveTextContent(/^11월$/);
+    // 보기 전환·필터 = 아이콘 버튼 2개, 이달 3칸 합계 없음
+    expect(screen.getByRole('button', { name: '달력으로 보기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '필터' }).querySelector('.filter-button__dot')).toBeNull();
+    expect(screen.queryByText(/필터 결과/)).not.toBeInTheDocument();
 
     const nov5 = screen.getByRole('region', { name: '11월 5일 (목)' });
-    const rent = within(nov5).getByRole('link', { name: /주거 › 월세/ });
-    expect(rent).toHaveTextContent('지출');
-    expect(rent).toHaveTextContent('고정');
-    expect(rent).toHaveTextContent('공동소비 · 씨 (나감)');
-    expect(rent).toHaveTextContent('−700,000원');
-    expect(within(nov5).getByRole('link', { name: /급여/ })).toHaveTextContent('+3,000,000원');
+    const rent = within(nov5).getByRole('link', { name: /월세/ });
+    expect(rowText(rent)).toBe('월세주거 · 씨 (나감)−700,000원'); // 주머니·고정·유형 배지 없음
+    expect(rowText(within(nov5).getByRole('link', { name: /급여/ }))).toBe('급여에이+3,000,000원');
+    expect(nov5).toHaveTextContent('−700,000'); // 그날 지출 합 (수입 제외)
 
     const nov3 = screen.getByRole('region', { name: '11월 3일 (화)' });
-    expect(within(nov3).getAllByRole('link').map((a) => a.textContent)).toEqual([
-      '식비 › 장보기지출개인용돈 · 에이−50,000원',
-      '식비 › 외식지출공동소비 · 비 · 저녁−32,000원',
+    expect(within(nov3).getAllByRole('link').map(rowText)).toEqual([
+      '장보기식비 · 에이−50,000원',
+      '저녁식비 · 비−32,000원',
     ]);
+    expect(nov3).toHaveTextContent('−82,000');
     // 날짜 순서: 최근이 위
     const headings = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent);
     expect(headings).toEqual(['11월 5일 (목)', '11월 3일 (화)']);
+  });
+
+  it('다른 해는 월 이동 줄에 연도까지', async () => {
+    renderAt('/ledger?month=2025-12');
+    await screen.findByText('이 달에 입력한 내역이 없어요');
+    expect(screen.getByRole('heading', { level: 2, name: '2025년 12월' })).toHaveTextContent('2025년 12월');
   });
 
   it('말일 내역은 그 달에만 보인다 (월 이동)', async () => {
@@ -146,8 +158,9 @@ describe('가계부 탭: 목록', () => {
     await screen.findByRole('heading', { name: '11월 5일 (목)' });
     await user.click(screen.getByRole('button', { name: '다음 달' }));
     expect(await screen.findByText('이 달에 입력한 내역이 없어요')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '달력' }));
+    await user.click(screen.getByRole('button', { name: '달력으로 보기' }));
     expect(screen.getByText('이 달에 입력한 내역이 없어요')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '목록으로 보기' })).toBeInTheDocument();
   });
 
   it('불러오기 실패 → 다시 시도', async () => {
@@ -180,14 +193,17 @@ describe('가계부 탭: 필터', () => {
     await user.click(within(sheet).getByRole('button', { name: '2건 보기' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(listItems().map((a) => a.textContent)).toEqual([
-      '식비 › 장보기지출개인용돈 · 에이−50,000원',
-      '식비 › 외식지출공동소비 · 비 · 저녁−32,000원',
+    expect(listItems().map(rowText)).toEqual([
+      '장보기식비 · 에이−50,000원',
+      '저녁식비 · 비−32,000원',
     ]);
-    expect(screen.getByText('필터 4개 적용 중')).toBeInTheDocument();
+    // 필터 결과 한 줄 = 지금 목록과 같은 건수·지출 합, 필터 아이콘에 점
+    expect(screen.getByText('필터 결과 2건 · 지출 82,000')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '필터 (4개 적용 중)' }).querySelector('.filter-button__dot')).not.toBeNull();
 
-    await user.click(screen.getByRole('button', { name: '필터 초기화' }));
+    await user.click(screen.getByRole('button', { name: '지우기' }));
     expect(listItems()).toHaveLength(4);
+    expect(screen.queryByText(/필터 결과/)).not.toBeInTheDocument();
   });
 
   it('주머니 필터: 주머니 없는 수입은 빠진다. 맞는 게 없으면 안내', async () => {
@@ -214,7 +230,7 @@ describe('가계부 탭: 필터 유지 (BANB-20)', () => {
 
     await user.click(screen.getByRole('button', { name: '이전 달' }));
     await screen.findByText('조건에 맞는 내역이 없어요');
-    expect(screen.getByText('필터 1개 적용 중')).toBeInTheDocument(); // 달을 옮겨도 필터 유지
+    expect(screen.getByText('필터 결과 0건 · 지출 0')).toBeInTheDocument(); // 달을 옮겨도 필터 유지
 
     await user.click(screen.getByRole('button', { name: '필터 (1개 적용 중)' }));
     const chip = within(screen.getByRole('dialog')).getByRole('checkbox', { name: '씨 (나감)' });
@@ -245,7 +261,7 @@ describe('가계부 탭: 필터 유지 (BANB-20)', () => {
     await screen.findByRole('heading', { name: '11월 5일 (목)' });
     expect(listItems()).toHaveLength(4);
     expect(screen.getByRole('button', { name: '필터' })).toBeInTheDocument();
-    expect(screen.queryByText(/필터 \d+개 적용 중/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/필터 결과/)).not.toBeInTheDocument();
   });
 });
 
@@ -254,7 +270,7 @@ describe('가계부 탭: 달력', () => {
     const user = userEvent.setup();
     renderAt('/ledger');
     await screen.findByRole('heading', { name: '11월 5일 (목)' });
-    await user.click(screen.getByRole('button', { name: '달력' }));
+    await user.click(screen.getByRole('button', { name: '달력으로 보기' }));
 
     const cal = screen.getByRole('table', { name: '2026년 11월 달력' });
     const nov5 = within(cal).getByRole('button', { name: '11월 5일 (목), 지출 700,000원, 수입 3,000,000원' });
@@ -269,6 +285,16 @@ describe('가계부 탭: 달력', () => {
     expect(nov5).toHaveAttribute('aria-pressed', 'true');
     const detail = screen.getByRole('region', { name: '11월 5일 (목)' });
     expect(within(detail).getAllByRole('link')).toHaveLength(2);
+  });
+
+  it('저축이 있는 날은 회색 점 + 범례, 칸 이름에 저축 금액 (5.14)', async () => {
+    fake.transactions.push(t({ occurred_on: '2026-11-04', type: 'saving', amount: 500000, category_id: 'fund', pocket_id: null }));
+    renderAt('/ledger?view=calendar');
+    const cal = await screen.findByRole('table', { name: '2026년 11월 달력' });
+    const nov4 = within(cal).getByRole('button', { name: '11월 4일 (수), 저축 500,000원' });
+    expect(nov4.querySelector('.calendar__saving')).not.toBeNull();
+    expect(within(cal).getByRole('button', { name: /11월 3일/ }).querySelector('.calendar__saving')).toBeNull();
+    expect(screen.getByText(/저축$/, { selector: '.calendar__legend' })).toBeInTheDocument();
   });
 
   it('필터는 달력 합계에도 적용된다', async () => {
@@ -296,6 +322,6 @@ describe('가계부 탭 → 수정 화면', () => {
     await user.click(screen.getByRole('button', { name: '닫기' }));
     const cal = await screen.findByRole('table', { name: '2026년 10월 달력' });
     expect(within(cal).getByRole('button', { name: /10월 31일/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('필터 1개 적용 중')).toBeInTheDocument();
+    expect(screen.getByText('필터 결과 1건 · 지출 12,000')).toBeInTheDocument();
   });
 });

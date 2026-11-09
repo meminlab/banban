@@ -1,4 +1,4 @@
-import { computeMonthSummary, type SummaryRefs, type SummaryTransaction } from './summary';
+import { activeMemberCount, computeMonthSummary, type SummaryRefs, type SummaryTransaction } from './summary';
 
 const refs: SummaryRefs = {
   members: [
@@ -161,5 +161,13 @@ describe('computeMonthSummary', () => {
     expect(odd.expenseBy.pocket).toMatchObject([{ label: '알 수 없음', amount: 5000 }]);
     expect(odd.expenseBy.scope.at(-1)).toMatchObject({ label: '알 수 없음', amount: 5000 });
     expect(odd.expenseBy.topCategories).toMatchObject([{ label: '알 수 없음', amount: 5000 }]);
+  });
+});
+
+describe('activeMemberCount', () => {
+  it('나간 멤버는 세지 않는다', () => {
+    expect(activeMemberCount([{ left_at: null }, { left_at: '2026-10-01T00:00:00Z' }])).toBe(1);
+    expect(activeMemberCount([{ left_at: null }, { left_at: null }])).toBe(2);
+    expect(activeMemberCount([])).toBe(0);
   });
 });

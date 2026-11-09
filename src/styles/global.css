@@ -116,7 +116,7 @@ button { font: inherit; }
 .tabbar__add:focus-visible { outline-offset: 2px; }
 
 /* 탭 화면 카드 공통 — 강조 표현 토큰(design.md 1.5)만 쓴다. 클린: 화면 끝까지·모서리 0·그림자 없음 */
-.shell--tabs :is(.summary-card, .asset-card, .home-nw, .home .breakdown) {
+.shell--tabs :is(.summary-card, .asset-card, .home-nw, .home .who-spent, .home .breakdown, .ledger .day-group) {
   margin-inline: calc(var(--card-gutter) - var(--content-pad));
   border: var(--card-border);
   border-radius: var(--card-radius);
@@ -227,23 +227,46 @@ button { font: inherit; }
 
 /* ── 홈: 월 요약 */
 .home { display: flex; flex-direction: column; gap: var(--space-3); }
-.month-nav { display: flex; align-items: center; justify-content: space-between; }
-.month-nav .icon-button { font-size: 1.75rem; line-height: 1; }
+/* 월 이동 줄 (design.md 5.23): 카드 아닌 바탕 위 한 줄, 높이 48. 가운데 ‹ 11월 ›, 가계부 탭은 오른쪽에 아이콘 버튼 */
+.month-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 48px; margin-top: -8px; }
+.month-nav__center { grid-column: 2; display: flex; align-items: center; gap: 4px; }
+.month-nav__actions { grid-column: 3; justify-self: end; display: flex; align-items: center; margin-right: -10px; }
+.month-nav .icon-button { color: var(--color-text); }
 .month-nav .icon-button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
-.month-nav__label { margin: 0; font-size: 1.0625rem; font-weight: 700; }
+.month-nav__label { margin: 0; min-width: 3.5em; text-align: center; font-size: 1.0625rem; font-weight: 700; white-space: nowrap; }
 .home__status { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0; color: var(--color-text-sub); text-align: center; }
 .home__status p { margin: 0; line-height: 1.5; }
 .home__empty { margin: 12px 0 0; color: var(--color-text-sub); }
 /* 요약 카드 바탕·라벨은 테마 토큰(design.md 1.1 hero-bg/hero-label). 위 공통 카드 규칙(:is 안 .home .breakdown 때문에 0,3,0)의 surface를 덮도록 같은 무게로 쓴다 (BANB-34) */
 .shell--tabs .home .summary-card { background: var(--color-hero-bg); }
 
-.summary-card { padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; }
-/* 2칸씩. 금액이 칸보다 길면 그 항목만 한 줄 전체로 내려간다 (금액 자체는 줄바꿈 안 함, BANB-10 D-1) */
-.summary-card__grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 12px; }
-.summary-item { flex: 1 1 calc(50% - 6px); min-width: max-content; }
-.summary-item dt { color: var(--color-hero-label); font-size: 0.875rem; }
-.summary-item dd { margin: 4px 0 0; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.summary-item dd.is-negative { color: var(--color-negative); }
+/* 이번 달 카드 (design.md 5.23 홈 3): 라벨 / hero 금액 / 한 줄 요약 — 3줄 */
+.summary-card { padding: 24px 20px; border: 1px solid var(--color-border); border-radius: 16px; }
+.summary-card__label { margin: 0; color: var(--color-hero-label); font-size: 0.9375rem; font-weight: 500; }
+.summary-card__value { margin: 4px 0 0; font: var(--font-amount-hero); white-space: nowrap; }
+.summary-card__value--long { font-size: 1.75rem; line-height: 2.25rem; }
+.summary-card__value.is-negative { color: var(--color-negative); }
+/* 덩어리("수입 4,200,000 ·") 안에서는 끊지 않고, 넘치면 덩어리 단위로 다음 줄 (저축부터) */
+.summary-card__line { margin: 16px 0 0; color: var(--color-text-sub); font-size: 0.875rem; line-height: 1.5; }
+.summary-card__part { white-space: nowrap; }
+.summary-card__part b { color: var(--color-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.summary-card__part b.is-income { color: var(--color-primary-strong); }
+
+/* 누가 썼나 (design.md 5.23 홈 4): 제목 + 합계 / 나눔 막대 / 한 줄 범례. % 없음 */
+.who-spent { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+.who-spent__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.who-spent__title { margin: 0; font-size: 1.0625rem; font-weight: 700; }
+.who-spent__total { color: var(--color-text-sub); font-size: 0.9375rem; font-weight: 600; }
+.who-spent__empty { margin: 0; color: var(--color-text-sub); font-size: 0.875rem; }
+.who-spent__bar { display: flex; gap: 3px; height: 12px; }
+.who-spent__bar > span { min-width: 4px; flex-basis: 0; border-radius: var(--radius-full); }
+.who-spent__legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; color: var(--color-text-sub); font-size: 0.9375rem; }
+.who-spent__legend li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.who-spent__dot { width: 8px; height: 8px; flex: none; border-radius: 50%; }
+.who-spent__color--1 { background: var(--color-member-1); }
+.who-spent__color--2 { background: var(--color-member-2); }
+.who-spent__color--3 { background: var(--color-member-3); }
+.who-spent__color--4 { background: var(--color-member-4); }
 
 .breakdown { display: flex; flex-direction: column; gap: 16px; }
 .breakdown__title { margin: 0; font-size: 1rem; }
@@ -391,15 +414,15 @@ button { font: inherit; }
 .spinner--small { width: 24px; height: 24px; }
 .section-title { margin: 0 0 8px; font-size: 0.9375rem; color: var(--color-text-sub); }
 .tx-list { margin: 0; padding: 0 0 72px; list-style: none; }
-.tx-row { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 8px 4px; border-bottom: 1px solid var(--color-border); color: var(--color-text); text-decoration: none; }
+/* 내역 행 (design.md 5.3 v1.4): 아이콘 40 · 제목 15/600 · 보조 "대분류 · 사람" 13 · 금액 17/700. 구분선 없음 */
+.tx-row { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0; color: var(--color-text); text-decoration: none; }
+.tx-row:active { background: var(--color-surface-sunken); }
 .tx-row__main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.tx-row__title { font-weight: 700; }
-.tx-row__sub { display: flex; align-items: center; gap: 4px; min-width: 0; color: var(--color-text-sub); font-size: 0.8125rem; }
-.tx-row__meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tx-row__title { overflow-wrap: anywhere; }
-.tx-row__amount { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tx-row__amount--income { color: var(--color-income); }
-.tx-row__amount--saving { color: var(--color-saving); }
+.tx-row__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9375rem; font-weight: 600; }
+.tx-row__sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-sub); font-size: 0.8125rem; }
+.tx-row__amount { flex: none; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* 금액 색은 수입만 포인트 색, 지출·저축은 기본 글자색 (design.md 1.2 v1.4) */
+.tx-row__amount--income { color: var(--color-primary-strong); }
 /* ── 폼 (BANB-5: 가계부 만들기·참여·이름·초대) */
 .form-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; }
 .form-card__title { margin: 0; font-size: 1rem; }
@@ -572,27 +595,24 @@ button { font: inherit; }
 /* ── 가계부 탭: 월 달력·목록·필터 (BANB-9) */
 .ledger { display: flex; flex-direction: column; gap: 12px; }
 .ledger .tx-list { padding-bottom: 0; }
-.ledger-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.view-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: var(--control-radius); background: var(--color-surface-sunken); }
-.view-toggle__item {
-  min-width: 64px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px;
-  background: transparent; color: var(--color-text-sub); font-weight: 700; cursor: pointer;
-}
-.view-toggle__item.is-active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
-.view-toggle__item:focus-visible, .calendar__day:focus-visible, .button--link:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
-.filter-button { background: var(--color-surface); color: var(--color-text); border-color: var(--color-border); }
-.filter-button.is-active { border-color: var(--color-primary); color: var(--color-primary); }
-.filter-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 0 0 0 12px; border-radius: 12px; background: var(--color-primary-soft); color: var(--color-primary-strong); font-size: 0.875rem; font-weight: 700; }
+.calendar__day:focus-visible, .button--link:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+/* 필터 아이콘 버튼: 필터가 걸리면 primary 점 6px (design.md 5.23) */
+.filter-button { position: relative; }
+.filter-button__dot { position: absolute; top: 10px; right: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 2px var(--color-bg); }
+/* 필터 결과 한 줄 "필터 결과 12건 · 지출 182,000" (13 text-sub) + 지우기 */
+.filter-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -8px 0 0; color: var(--color-text-sub); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.filter-status .button--link { margin-right: -12px; font-size: 0.875rem; font-weight: 600; text-decoration: none; }
 .button--link { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--color-primary); font: inherit; text-decoration: underline; cursor: pointer; }
 .filter-group { min-width: 0; }
 .filter-actions { position: sticky; bottom: 0; padding-top: 12px; background: var(--color-surface); }
 
-.day-groups { display: flex; flex-direction: column; gap: 16px; }
-.day-group__title { margin: 0; padding: 4px 4px 6px; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; color: var(--color-text-sub); }
+/* 날짜 하루 = 카드 1장 (design.md 5.3): 머리 13/600 text-weak + 오른쪽 그날 지출 합 */
+.day-groups { display: flex; flex-direction: column; gap: var(--space-3); }
+.day-group { padding: 8px 20px; border-radius: var(--radius-lg); background: var(--color-surface); }
+.day-group__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-top: 8px; }
+.day-group__title { margin: 0; font-size: 0.8125rem; font-weight: 600; color: var(--color-text-weak); }
+.day-group__total { font-size: 0.8125rem; font-weight: 600; color: var(--color-text-weak); }
 .day-detail__hint { padding: 16px 4px; text-align: center; }
-
-/* 분류 배지는 모두 기본 배지 한 가지 (design.md 5.13, 9절) */
-.tx-badge { flex: none; padding: 1px 6px; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 700; background: var(--color-surface-sunken); color: var(--color-text-sub); }
 
 /* 360px 기준 한 칸 ≈ 46px */
 .calendar { width: 100%; table-layout: fixed; border-collapse: collapse; }
@@ -609,14 +629,17 @@ button { font: inherit; }
 .calendar__num { font-size: 0.875rem; font-weight: 700; line-height: 1.3; }
 .calendar__amt { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.6875rem; font-weight: 700; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; line-height: 1.3; }
 .calendar__amt--expense { color: var(--color-text); }
-.calendar__amt--income { color: var(--color-income); }
+.calendar__amt--income { color: var(--color-primary-strong); }
 .calendar__legend { font-size: 0.75rem; text-align: right; }
+/* 저축이 있는 날: 날짜 아래 5px 회색 점 (design.md 5.14 v1.4). 장식 — 칸 aria-label에 저축 금액 */
+.calendar__saving { width: 5px; height: 5px; flex: none; border-radius: 50%; background: var(--color-text-sub); }
+.calendar__saving--legend { display: inline-block; vertical-align: middle; margin-bottom: 2px; }
 /* ── 가계부 전환 (BANB-17) — 지금 스타일로 단순하게, 리디자인에서 다듬는다 */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-/* 가계부 전환 알약 버튼 (design.md 5.6·5.18): 회색 알약 + 멤버 아바타 묶음 + 이름 + ChevronsUpDown */
+/* 가계부 전환 알약 버튼 (design.md 5.23·5.18): 회색 알약 + 이름 + ChevronsUpDown (v1.4: 멤버 아바타 없음) */
 .ledger-switch {
   flex: 0 1 auto;
   min-width: 0;
@@ -638,7 +661,7 @@ button { font: inherit; }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 0 5px;
+  padding: 0 10px 0 14px;
   border-radius: var(--radius-full);
   background: var(--color-surface-sunken);
   transition: background var(--motion-fast);
@@ -646,26 +669,7 @@ button { font: inherit; }
 .ledger-switch:active .ledger-switch__pill { background: var(--color-border); }
 .ledger-switch:focus-visible { outline: none; }
 .ledger-switch:focus-visible .ledger-switch__pill { outline: 2px solid var(--color-focus); outline-offset: 2px; }
-.ledger-switch__avatars { flex: none; display: inline-flex; }
-.ledger-switch__avatar {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--color-surface-sunken);
-  border-radius: var(--radius-full);
-  color: var(--color-on-avatar);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1;
-}
-.ledger-switch__avatar + .ledger-switch__avatar { margin-left: -10px; }
-.ledger-switch__avatar--1 { background: var(--color-avatar-1); }
-.ledger-switch__avatar--2 { background: var(--color-avatar-2); }
-.ledger-switch__avatar--3 { background: var(--color-avatar-3); }
-.ledger-switch__avatar--4, .ledger-switch__avatar--more { background: var(--color-avatar-4); }
-.ledger-switch__name { min-width: 0; padding-left: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; font-weight: 700; line-height: 1.5rem; }
+.ledger-switch__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1rem; font-weight: 700; line-height: 1.5rem; }
 .ledger-switch__caret { flex: none; color: var(--color-text-sub); }
 
 .ledger-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -950,7 +954,7 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
 
 
 /* ── 홈 "우리집 순자산" 카드 (BANB-27, design.md 5.19 작은 추이 · 5.22 홈 2번) */
-.home-nw { display: flex; flex-direction: column; gap: 6px; min-height: 44px; padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+.home-nw { display: flex; flex-direction: column; gap: 6px; min-height: 44px; padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
 a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .home-nw--status { align-items: flex-start; gap: 8px; }
 .home-nw--status .hint { margin: 0; }
@@ -958,17 +962,11 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .home-nw__label { color: var(--color-text-sub); font-size: 0.9375rem; }
 .home-nw__sub { color: var(--color-text-weak); font-size: 0.8125rem; }
 .home-nw__chevron { margin-left: auto; align-self: center; color: var(--color-text-weak); flex: none; }
-.home-nw__row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 8px; }
-/* 금액이 칸보다 넓으면(글자 크기 200% 등) 작은 추이가 다음 줄로 내려가고, 그래도 넘치면 금액이 줄바꿈된다 — 자르지 않는다 (design.md 2.2·6) */
+/* 금액이 칸보다 넓으면(글자 크기 200% 등) 쉼표 뒤에서 줄바꿈된다 — 자르지 않는다 (design.md 2.2·6) */
 .home-nw__main { flex: 1 1 auto; max-width: 100%; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .home-nw__value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
 .home-nw .delta__value { white-space: normal; overflow-wrap: anywhere; }
-.home-nw__value--long { font-size: 1.375rem; }
-.home-nw__value--longer { font-size: 1.25rem; }
 .home-nw__value.is-negative { color: var(--color-negative); }
-.mini-trend { flex: none; margin-left: auto; overflow: visible; }
-.mini-trend polyline { stroke: var(--color-chart-line); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
-.mini-trend circle { fill: var(--color-chart-line); stroke: var(--color-surface); stroke-width: 2px; }
 .home-nw--empty { flex-direction: row; align-items: center; gap: 12px; }
 .home-nw__empty-icon { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--color-surface-sunken); }
 .home-nw__empty-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }

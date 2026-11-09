@@ -7,6 +7,7 @@ import {
   categoryFilterGroups,
   compactWon,
   dailyTotals,
+  filterResultSummary,
   filterTransactions,
   knownFilter,
   formatDayLabel,
@@ -14,7 +15,9 @@ import {
   parseLedgerQuery,
   pocketFilterOptions,
   spenderFilterOptions,
+  sumExpense,
   toggleFilter,
+  txRowText,
   type LedgerFilter,
 } from './ledgerView';
 import { monthRange } from './month';
@@ -293,5 +296,51 @@ describe('주소 쿼리', () => {
     const q = parseLedgerQuery(new URLSearchParams('month=2026-13&view=x&day=2026-11-31&type=expense,bogus&spender=a,a,<b>'), now);
     expect(q).toEqual({ month: '2026-11', view: 'list', day: null, filter: f({ types: ['expense'], spenders: ['a'] }) });
     expect(parseLedgerQuery(new URLSearchParams('month=2026-10&day=2026-11-01'), now).day).toBeNull();
+  });
+});
+
+describe('합계·내역 행 글자 (design.md 5.3·5.23 v1.4)', () => {
+  it('지출 합은 지출만 더한다 (날짜 머리·필터 결과 한 줄)', () => {
+    const items = [
+      tx('a', { amount: 12_000 }),
+      tx('b', { amount: 193_000 }),
+      tx('c', { type: 'income', amount: 3_850_000 }),
+      tx('d', { type: 'saving', amount: 500_000 }),
+    ];
+    expect(sumExpense(items)).toBe(205_000);
+    expect(sumExpense([])).toBe(0);
+    expect(filterResultSummary(items)).toEqual({ count: 4, expense: 205_000 });
+  });
+
+  it('필터 결과 한 줄은 필터 결과 목록과 같은 값', () => {
+    const shown = filterTransactions(TXS, f({ spenders: ['mB'] }), CATEGORIES);
+    expect(filterResultSummary(shown)).toEqual({ count: shown.length, expense: sumExpense(shown) });
+    expect(filterResultSummary(shown)).toEqual({ count: 3, expense: 2000 });
+  });
+
+  const byId = new Map(CATEGORIES.map((c) => [c.id, c]));
+  it('제목 = 메모 → 소분류, 보조 = "대분류 · 사람"', () => {
+    expect(txRowText({ type: 'expense', memo: '점심', category_id: 'food.out' }, byId, '준호')).toEqual({ title: '점심', sub: '식비 · 준호' });
+    expect(txRowText({ type: 'expense', memo: null, category_id: 'food.mart' }, byId, '민지')).toEqual({ title: '장보기', sub: '식비 · 민지' });
+    expect(txRowText({ type: 'expense', memo: '  ', category_id: 'home.rent' }, byId, '민지')).toEqual({ title: '월세', sub: '주거 · 민지' });
+  });
+
+  it('저축은 대분류 자리에 "저축"', () => {
+    expect(txRowText({ type: 'saving', memo: '내집마련 적금', category_id: 'fund.1' }, byId, '민지')).toEqual({
+      title: '내집마련 적금',
+      sub: '저축 · 민지',
+    });
+    expect(txRowText({ type: 'saving', memo: null, category_id: 'fund.1' }, byId, '민지')).toEqual({ title: '적금', sub: '저축 · 민지' });
+  });
+
+  it('제목과 대분류가 같으면 보조 줄은 사람만 (한 단계 카테고리·메모 없음)', () => {
+    expect(txRowText({ type: 'expense', memo: null, category_id: 'food' }, byId, '민지')).toEqual({ title: '식비', sub: '민지' });
+    expect(txRowText({ type: 'income', memo: null, category_id: 'pay.1' }, byId, '민지')).toEqual({ title: '급여', sub: '민지' });
+    expect(txRowText({ type: 'income', memo: '내 월급', category_id: 'pay.1' }, byId, '민지')).toEqual({ title: '내 월급', sub: '급여 · 민지' });
+  });
+
+  it('카테고리를 못 찾으면 "알 수 없음"', () => {
+    expect(txRowText({ type: 'expense', memo: null, category_id: 'gone' }, byId, '민지')).toEqual({ title: '알 수 없음', sub: '민지' });
+    expect(txRowText({ type: 'expense', memo: '택시', category_id: 'gone' }, byId, '민지')).toEqual({ title: '택시', sub: '알 수 없음 · 민지' });
   });
 });

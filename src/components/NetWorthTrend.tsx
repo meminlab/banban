@@ -128,36 +128,3 @@ export function NetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
     </section>
   );
 }
-
-/**
- * 홈 순자산 카드의 작은 추이 (design.md 5.19 "작은 추이"): 72×36, 선 2px, 점은 마지막(선택한) 달 하나만 7px.
- * 라벨·축 없음. 장식이라 aria-hidden — 값은 카드의 aria-label이 전한다.
- */
-const MINI_W = 72;
-const MINI_H = 36;
-const MINI_PAD = 4;
-
-export function MiniNetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
-  const scale = trendScale(points.map((p) => p.net));
-  if (!scale) return null;
-  const n = points.length;
-  const x = (i: number) => MINI_PAD + (n === 1 ? (MINI_W - 2 * MINI_PAD) / 2 : (i * (MINI_W - 2 * MINI_PAD)) / (n - 1));
-  const y = (v: number) => MINI_PAD + trendRatio(v, scale) * (MINI_H - 2 * MINI_PAD);
-  const lastIdx = points.length - 1;
-  const lastNet = points[lastIdx].net;
-  return (
-    <svg
-      className="mini-trend"
-      width={MINI_W}
-      height={MINI_H}
-      viewBox={`0 0 ${MINI_W} ${MINI_H}`}
-      aria-hidden="true"
-      focusable="false"
-    >
-      {trendSegments(points).map((seg) => (
-        <polyline key={seg[0]} points={seg.map((i) => `${x(i)},${y(points[i].net!)}`).join(' ')} fill="none" />
-      ))}
-      {lastNet !== null && <circle cx={x(lastIdx)} cy={y(lastNet)} r={3.5} />}
-    </svg>
-  );
-}
