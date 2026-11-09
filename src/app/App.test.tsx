@@ -231,11 +231,10 @@ describe('로그인했고 가계부가 있는 상태', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
   });
 
-  it('설정에 저장된 프로필(이름)과 이메일이 보이고, 로그아웃하면 로그인 화면으로 간다', async () => {
+  it('설정 계정 줄에 이메일이 보이고, 로그아웃하면 로그인 화면으로 간다 (design.md 5.23: 아바타·이름 없음)', async () => {
     const user = userEvent.setup();
     renderAt('/settings');
-    expect(await screen.findByText('김반반')).toBeInTheDocument();
-    expect(screen.getByText('banban@example.com')).toBeInTheDocument();
+    expect(await screen.findByText('banban@example.com')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
     expect(fake.signOut).toHaveBeenCalledTimes(1);
