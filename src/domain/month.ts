@@ -50,3 +50,9 @@ export function formatYearMonth(ym: YearMonth): string {
   const { year, month } = parse(ym);
   return `${year}년 ${month}월`;
 }
+
+/** 월 이동 줄 글자 (design.md 5.23): 올해는 '11월', 다른 해만 '2025년 11월' */
+export function formatMonthLabel(ym: YearMonth, today: YearMonth = currentYearMonth()): string {
+  const { year, month } = parse(ym);
+  return year === parse(today).year ? `${month}월` : `${year}년 ${month}월`;
+}

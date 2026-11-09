@@ -91,6 +91,23 @@ export async function listMonthTransactions(ledgerId: string, month: YearMonth):
   }
 }
 
+/** 그 달(KST 날짜 기준) 내역 중 최근 `limit`건 — 가계부 탭 목록과 같은 순서(날짜 → 입력 시각 최근 순). 홈 "최근 내역" */
+export async function listLatestTransactions(ledgerId: string, month: YearMonth, limit: number): Promise<Transaction[]> {
+  const { start, end } = monthRange(month);
+  const { data, error } = await getSupabase()
+    .from('transaction')
+    .select(TRANSACTION_COLUMNS)
+    .eq('ledger_id', ledgerId)
+    .gte('occurred_on', start)
+    .lt('occurred_on', end)
+    .order('occurred_on', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id')
+    .limit(limit);
+  if (error) throw error;
+  return (data as Transaction[]).map((t) => ({ ...t, amount: Number(t.amount) }));
+}
+
 /** 새 내역. source 는 manual, 작성자·마지막 수정자·시각은 서버(트리거)가 로그인 사용자로 기록한다 */
 export async function createTransaction(ledgerId: string, values: TransactionValues): Promise<string> {
   const { data, error } = await getSupabase()

@@ -1,12 +1,11 @@
 /*
- * 디자인 토큰 — docs/design.md v1.2 8절을 그대로 옮겼다 (1절 색·1.4 다크·1.5 강조 표현, 2절 글자, 3절 간격·모서리·움직임·레이아웃).
+ * 디자인 토큰 — docs/design.md v1.4 8절을 그대로 옮겼다 (1절 색·1.4 다크·1.5 강조 표현, 2절 글자, 3절 간격·모서리·움직임·레이아웃).
  * 컴포넌트 CSS는 이 토큰만 쓴다. 테마 이름으로 분기하는 CSS(`[data-theme="cozy"] .x`)는 쓰지 않는다 (1.0).
  * 테마는 <html data-theme="clean|berry|cozy">. 값이 없으면 clean. 라이트/다크는 기기 설정(prefers-color-scheme).
  * 값을 바꿀 때는 design.md를 먼저 고친다 (10절).
  */
 :root {
   /* 공통 의미 색 — 라이트 */
-  --color-income: #3E5F9E;
   --color-negative: #B23A48;
   --color-danger: #B23A48;
   --color-on-danger: #FFFFFF;
@@ -21,7 +20,7 @@
   --color-chart-line: var(--color-primary);
   --color-chart-grid: var(--color-border);
   --color-chart-zero: var(--color-border-strong);
-  --color-delta-up: var(--color-income);
+  --color-delta-up: var(--color-primary-strong); /* v1.4: 수입·증가 = 테마 primary-strong. 테마 속성이 붙은 요소 아래에서 풀리도록 컴포넌트에서 직접 써도 된다 */
   --color-delta-down: var(--color-text-sub);
   --color-inverse-surface: var(--color-text);
   --color-on-inverse: var(--color-surface);
@@ -79,7 +78,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-income: #9DB2DC;
     --color-negative: #EE8F99;
     --color-danger: #EE8F99;
     --color-on-danger: #1A1310;

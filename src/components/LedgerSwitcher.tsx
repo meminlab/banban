@@ -3,22 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronsUpDown } from 'lucide-react';
 import { LEDGER_CREATE_PATH, LEDGER_JOIN_PATH } from '../app/routes';
 import { useCurrentLedger, useLedgers } from '../app/ledgers';
-import { useLoad } from '../app/useLoad';
-import { listMembers } from '../data/member';
-import { headerAvatars } from '../domain/ledgers';
 import { Sheet } from './Sheet';
 
 /**
- * 상단 왼쪽 가계부 전환 알약 버튼 (design.md 5.6·5.18): [멤버 아바타 묶음] 가계부 이름 ⇕
+ * 상단 왼쪽 가계부 전환 알약 버튼 (design.md 5.23·5.18): 가계부 이름 ⇕ (v1.4: 멤버 아바타 없음)
  * → 아래에서 올라오는 가계부 목록 (전환·새로 만들기·초대코드로 참여)
  */
 export function LedgerSwitcher() {
   const current = useCurrentLedger();
   const [open, setOpen] = useState(false);
-  const members = useLoad(() => listMembers(current.id), [current.id]).state;
-  // 아바타는 장식(멤버를 못 불러와도 이름·전환은 그대로). 가계부를 바꾼 직후 이전 가계부 멤버는 보이지 않게
-  const avatars =
-    members.status === 'ready' ? headerAvatars(members.data.filter((m) => m.ledger_id === current.id)) : null;
 
   return (
     <>
@@ -31,18 +24,6 @@ export function LedgerSwitcher() {
         onClick={() => setOpen(true)}
       >
         <span className="ledger-switch__pill">
-          {avatars && avatars.initials.length > 0 && (
-            <span className="ledger-switch__avatars" aria-hidden="true">
-              {avatars.initials.map((initial, i) => (
-                <span key={i} className={`ledger-switch__avatar ledger-switch__avatar--${i + 1}`}>
-                  {initial}
-                </span>
-              ))}
-              {avatars.more > 0 && (
-                <span className="ledger-switch__avatar ledger-switch__avatar--more">+{avatars.more}</span>
-              )}
-            </span>
-          )}
           <span className="ledger-switch__name">{current.name}</span>
           <ChevronsUpDown className="ledger-switch__caret" size={18} strokeWidth={2} aria-hidden="true" />
         </span>

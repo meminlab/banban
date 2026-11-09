@@ -1,4 +1,4 @@
-import { headerAvatars, pickCurrentLedgerId, toMyLedgers, type LedgerWithMembers, type MyLedger } from './ledgers';
+import { pickCurrentLedgerId, toMyLedgers, type LedgerWithMembers, type MyLedger } from './ledgers';
 
 const ME = 'u-me';
 const m = (user_id: string, joined_at: string, left_at: string | null = null) => ({ user_id, joined_at, left_at });
@@ -48,26 +48,5 @@ describe('pickCurrentLedgerId', () => {
   it('참여한 가계부가 없으면 null (시작 화면)', () => {
     expect(pickCurrentLedgerId([], 'A')).toBeNull();
     expect(pickCurrentLedgerId([], null)).toBeNull();
-  });
-});
-
-describe('headerAvatars (헤더 알약 아바타 묶음)', () => {
-  const m = (display_name: string, joined_at: string, left_at: string | null = null) => ({ display_name, joined_at, left_at });
-
-  it('지금 멤버만 참여 순으로, 이름 첫 글자', () => {
-    expect(
-      headerAvatars([m('준호', '2026-02-01'), m('민지', '2026-01-01'), m('서연', '2026-01-15', '2026-03-01')]),
-    ).toEqual({ initials: ['민', '준'], more: 0 });
-  });
-
-  it('3명이 넘으면 3명 + 나머지 수', () => {
-    expect(
-      headerAvatars([m('가', '2026-01-01'), m('나', '2026-01-02'), m('다', '2026-01-03'), m('라', '2026-01-04')]),
-    ).toEqual({ initials: ['가', '나', '다'], more: 1 });
-  });
-
-  it('빈 이름은 ?, 멤버가 없으면 빈 묶음', () => {
-    expect(headerAvatars([m('  ', '2026-01-01')])).toEqual({ initials: ['?'], more: 0 });
-    expect(headerAvatars([])).toEqual({ initials: [], more: 0 });
   });
 });

@@ -191,6 +191,49 @@ export function groupByDate<T extends Pick<Transaction, 'occurred_on' | 'created
   return groups;
 }
 
+// ── 합계·내역 행 글자 (design.md 5.3·5.23 v1.4)
+
+/** 지출 합 — 날짜 머리 오른쪽, 필터 결과 한 줄. 수입·저축은 더하지 않는다 */
+export function sumExpense(items: readonly Pick<Transaction, 'type' | 'amount'>[]): number {
+  return items.reduce((sum, t) => (t.type === 'expense' ? sum + t.amount : sum), 0);
+}
+
+/**
+ * 필터 결과 한 줄 "필터 결과 N건 · 지출 …": 지금 보이는(필터를 통과한) 내역 기준 (BANB-37 Q1)
+ * 종류 필터가 한 종류만이면 그 종류의 합, 종류 필터가 없거나 두 종류 이상이면 지출 합
+ */
+export function filterResultSummary(
+  items: readonly Pick<Transaction, 'type' | 'amount'>[],
+  types: readonly TransactionType[] = [],
+): { count: number; type: TransactionType; amount: number } {
+  const type: TransactionType = types.length === 1 ? types[0] : 'expense';
+  const amount = items.reduce((sum, t) => (t.type === type ? sum + t.amount : sum), 0);
+  return { count: items.length, type, amount };
+}
+
+export const UNKNOWN_CATEGORY = '알 수 없음';
+
+/**
+ * 내역 행 두 줄 (design.md 5.3 v1.4)
+ *   제목 = 메모 → 소분류 → 대분류(카테고리 이름)
+ *   보조 = "대분류 · 사람". 저축은 대분류 자리에 "저축". 제목과 같은 글자면 대분류를 빼고 사람만(예: 메모 없는 "식비")
+ *   주머니·고정은 목록에 쓰지 않는다 (수정 화면·필터에서 본다)
+ */
+export function txRowText(
+  t: Pick<Transaction, 'type' | 'memo' | 'category_id'>,
+  categoryById: ReadonlyMap<string, Pick<Category, 'name' | 'parent_id'>>,
+  spender: string,
+): { title: string; sub: string } {
+  const category = categoryById.get(t.category_id);
+  const parent = category?.parent_id ? categoryById.get(category.parent_id) : undefined;
+  const top = parent?.name ?? category?.name ?? UNKNOWN_CATEGORY;
+  const memo = t.memo?.trim();
+  const title = memo || category?.name || UNKNOWN_CATEGORY;
+  const kind = t.type === 'saving' ? '저축' : top;
+  const sub = [kind === title ? null : kind, spender].filter(Boolean).join(' · ');
+  return { title, sub };
+}
+
 // ── 달력
 
 function pad2(n: number) {

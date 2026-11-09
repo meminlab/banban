@@ -2,17 +2,21 @@ import { ChevronRight, Landmark } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { ASSET_NEW_PATH, ASSETS_PATH } from '../app/routes';
+import { ASSET_NEW_PATH, ASSETS_PATH, LEDGER_PATH, type TransactionFormState } from '../app/routes';
 import { Delta, deltaSpeech, signedWon } from '../components/NetWorthDelta';
-import { MiniNetWorthTrend } from '../components/NetWorthTrend';
+import { MonthNav } from '../components/MonthNav';
+import { TxRow, useTxLabels } from '../components/TxRow';
 import { WonText } from '../components/WonText';
 import { listAssets, listBalanceHistory } from '../data/asset';
 import { getMonthSummaryData, type MonthSummaryData } from '../data/summary';
-import type { Asset, AssetBalanceHistory } from '../data/types';
-import { formatPercent, formatWon } from '../domain/format';
-import { addMonths, currentYearMonth, formatYearMonth, type YearMonth } from '../domain/month';
+import { getTransactionFormOptions, listLatestTransactions, type TransactionFormOptions } from '../data/transaction';
+import type { Asset, AssetBalanceHistory, Transaction } from '../data/types';
+import { formatWon } from '../domain/format';
+import { buildLedgerQuery, EMPTY_FILTER } from '../domain/ledgerView';
+import { addMonths, currentYearMonth, type YearMonth } from '../domain/month';
 import { homeNetWorth, trendWindowStart } from '../domain/netWorth';
-import { computeMonthSummary, type BreakdownRow } from '../domain/summary';
+import { activeMemberCount, computeMonthSummary, type BreakdownRow, type MonthSummary } from '../domain/summary';
+import { formatNumber } from '../domain/transactionForm';
 
 type LoadState =
   | { status: 'loading' }
@@ -88,20 +92,11 @@ export function HomePage() {
     () => (state.status === 'ready' ? computeMonthSummary(state.month, state.data.transactions, state.data) : null),
     [state],
   );
+  const showWhoSpent = state.status === 'ready' && activeMemberCount(state.data.members) > 1;
 
   return (
     <div className="home">
-      <div className="month-nav">
-        <button type="button" className="icon-button" aria-label="이전 달" onClick={() => setMonth((m) => addMonths(m, -1))}>
-          <span aria-hidden="true">‹</span>
-        </button>
-        <h2 className="month-nav__label" aria-live="polite">
-          {formatYearMonth(month)}
-        </h2>
-        <button type="button" className="icon-button" aria-label="다음 달" onClick={() => setMonth((m) => addMonths(m, 1))}>
-          <span aria-hidden="true">›</span>
-        </button>
-      </div>
+      <MonthNav month={month} onMove={(d) => setMonth((m) => addMonths(m, d))} />
 
       <HomeNetWorthCard state={asset.state} retry={asset.retry} month={month} />
 
@@ -123,74 +118,199 @@ export function HomePage() {
 
       {summary && (
         <>
-          <section className="summary-card" aria-label="이번 달 요약">
-            <dl className="summary-card__grid">
-              <SummaryItem label="수입" amount={summary.income} />
-              <SummaryItem label="지출" amount={summary.expense} />
-              <SummaryItem label="저축" amount={summary.saving} />
-              <SummaryItem label="남은 돈" amount={summary.remaining} />
-            </dl>
-            <p className="hint">남은 돈 = 수입 − 지출 − 저축</p>
-            {summary.count === 0 && <p className="home__empty">이 달에 입력한 내역이 없어요.</p>}
-          </section>
+          <MonthSummaryCard summary={summary} />
+          {showWhoSpent && <WhoSpentCard rows={summary.expenseBy.spender} total={summary.expense} />}
 
-          <section className="breakdown" aria-labelledby="breakdown-title">
-            <h2 id="breakdown-title" className="breakdown__title">
-              지출 나눠 보기
-            </h2>
-            {summary.expense === 0 ? (
-              <p className="hint">이 달 지출이 없어요.</p>
-            ) : (
-              <>
-                <BreakdownList title="사람별" rows={summary.expenseBy.spender} />
-                <BreakdownList title="공동·개인" rows={summary.expenseBy.scope} />
-                <BreakdownList title="주머니별" rows={summary.expenseBy.pocket} />
-                <BreakdownList title="고정·변동" rows={summary.expenseBy.fixed} />
-                <BreakdownList title="카테고리 상위 5개" rows={summary.expenseBy.topCategories} />
-              </>
-            )}
-          </section>
+          {summary.expense > 0 && <WhereSpentCard rows={summary.expenseBy.topCategories} month={summary.month} />}
+          <RecentCard ledgerId={ledgerId} month={summary.month} />
         </>
       )}
     </div>
   );
 }
 
-function SummaryItem({ label, amount }: { label: string; amount: number }) {
-  const negative = amount < 0;
+/** 14자 이상(예: 9,999,999,999원 이상)이면 hero 36px → xl 28px (design.md 5.4) */
+const heroSizeClass = (amount: number) => (formatWon(amount).length >= 14 ? ' summary-card__value--long' : '');
+
+/**
+ * 이번 달 카드 (design.md 5.23 홈 3): "11월 남은 돈" / hero 금액 / 한 줄 "수입 … · 지출 … · 저축 …"(원 생략, 수입 숫자만 포인트 색).
+ * 계산식 문구는 쓰지 않는다. 360px에서 넘치면 항목 단위로 다음 줄(저축부터). 내역이 없으면 한 줄 대신 빈 상태 안내.
+ */
+function MonthSummaryCard({ summary }: { summary: MonthSummary }) {
+  const remaining = summary.remaining;
   return (
-    <div className="summary-item">
-      <dt>{label}</dt>
-      <dd className={negative ? 'is-negative' : undefined}>
-        <WonText amount={amount} />
-      </dd>
-    </div>
+    <section className="summary-card" aria-labelledby="summary-title">
+      <h2 id="summary-title" className="summary-card__label">
+        {monthNo(summary.month)}월 남은 돈
+      </h2>
+      <p
+        className={`summary-card__value money${remaining < 0 ? ' is-negative' : ''}${heroSizeClass(remaining)}`}
+        data-testid="home-remaining"
+      >
+        <WonText amount={remaining} />
+      </p>
+      {summary.count === 0 ? (
+        <p className="summary-card__line">이 달에 입력한 내역이 없어요.</p>
+      ) : (
+        <p className="summary-card__line">
+          <SummaryPart label="수입" amount={summary.income} income sep />{' '}
+          <SummaryPart label="지출" amount={summary.expense} sep />{' '}
+          <SummaryPart label="저축" amount={summary.saving} />
+        </p>
+      )}
+    </section>
   );
 }
 
-function BreakdownList({ title, rows }: { title: string; rows: BreakdownRow[] }) {
+/** "수입 4,200,000 ·" 한 덩어리 (덩어리 안에서는 줄바꿈하지 않는다) */
+function SummaryPart({ label, amount, income, sep }: { label: string; amount: number; income?: boolean; sep?: boolean }) {
   return (
-    <div className="breakdown__group">
-      <h3>{title}</h3>
-      <ul aria-label={title}>
+    <span className="summary-card__part">
+      {label} <b className={income ? 'is-income' : undefined}>{formatNumber(amount)}</b>
+      {sep && <span aria-hidden="true">{'\u00a0·'}</span>}
+    </span>
+  );
+}
+
+/**
+ * 누가 썼나 (design.md 5.23 홈 4): 제목 + 오른쪽 이달 지출 합 / 나눔 막대 / 한 줄 범례(점 + 이름 + 금액). %는 쓰지 않는다.
+ * 색은 참여 순 member-1~4. 지출이 0이면 막대 대신 안내 한 줄.
+ */
+function WhoSpentCard({ rows, total }: { rows: BreakdownRow[]; total: number }) {
+  const colorOf = (i: number) => `who-spent__color--${(i % 4) + 1}`;
+  return (
+    <section className="who-spent" aria-labelledby="who-spent-title">
+      <div className="who-spent__head">
+        <h2 id="who-spent-title" className="who-spent__title">
+          누가 썼나
+        </h2>
+        <span className="who-spent__total money">{formatWon(total)}</span>
+      </div>
+      {total === 0 ? (
+        <p className="who-spent__empty">이 달 지출이 없어요.</p>
+      ) : (
+        <>
+          <div className="who-spent__bar" aria-hidden="true">
+            {rows.map((r, i) =>
+              r.amount > 0 ? <span key={r.key} className={colorOf(i)} style={{ flexGrow: r.amount }} /> : null,
+            )}
+          </div>
+          <ul className="who-spent__legend">
+            {rows.map((r, i) => (
+              <li key={r.key}>
+                <span className={`who-spent__dot ${colorOf(i)}`} aria-hidden="true" />
+                <span>
+                  {r.label} <span className="money">{formatNumber(r.amount)}</span>
+                  <span className="sr-only">원</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** "전체" → 같은 달의 가계부 탭 목록 */
+const ledgerListPath = (month: YearMonth) =>
+  `${LEDGER_PATH}${buildLedgerQuery({ month, view: 'list', day: null, filter: EMPTY_FILTER })}`;
+
+/**
+ * 어디에 썼나 (design.md 5.4 3번 · 5.23 홈 5): 제목 + "전체" / 대분류 상위 3개 막대(chart-bar 단색).
+ * 막대 길이 = 이달 지출 대비 비율. 이 달 지출이 없으면 카드를 숨긴다(부모가 판단).
+ */
+function WhereSpentCard({ rows, month }: { rows: BreakdownRow[]; month: YearMonth }) {
+  return (
+    <section className="where-spent" aria-labelledby="where-spent-title">
+      <div className="home-card__head">
+        <h2 id="where-spent-title" className="home-card__title">
+          어디에 썼나
+        </h2>
+        <Link to={ledgerListPath(month)} className="home-card__more" aria-label={`${monthNo(month)}월 내역 전체 보기`}>
+          전체
+          <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
+        </Link>
+      </div>
+      <ul className="where-spent__list">
         {rows.map((r) => (
-          <li key={r.key} className="breakdown__row">
-            <span className="breakdown__label">{r.label}</span>
-            <span className="breakdown__amount">{formatWon(r.amount)}</span>
-            <span className="breakdown__ratio">{formatPercent(r.ratio)}</span>
-            <span className="breakdown__bar" aria-hidden="true">
+          <li key={r.key} className="where-spent__row">
+            <span className="where-spent__label">{r.label}</span>
+            <span className="where-spent__amount money">{formatWon(r.amount)}</span>
+            <span className="where-spent__bar" aria-hidden="true">
               <span style={{ width: `${Math.min(100, r.ratio * 100)}%` }} />
             </span>
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }
 
+type RecentState =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'ready'; month: YearMonth; items: Transaction[]; options: TransactionFormOptions };
+
+/** 최근 내역 건수 (design.md 5.4 4번) */
+const RECENT_COUNT = 3;
+
+/**
+ * 최근 내역 (design.md 5.4 4번 · 5.23 홈 5): 카드 1장에 그 달 최근 3건, 행은 가계부 탭 내역 행(5.3)과 같다.
+ * 내역이 없으면 숨긴다. 누르면 수정 화면, 닫으면 홈으로 돌아온다.
+ */
+function RecentCard({ ledgerId, month }: { ledgerId: string; month: YearMonth }) {
+  const [state, setState] = useState<RecentState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    setState({ status: 'loading' });
+    Promise.all([listLatestTransactions(ledgerId, month, RECENT_COUNT), getTransactionFormOptions(ledgerId)]).then(
+      ([items, options]) => alive && setState({ status: 'ready', month, items, options }),
+      () => alive && setState({ status: 'error' }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId, month, attempt]);
+  const options = state.status === 'ready' ? state.options : EMPTY_OPTIONS;
+  const labels = useTxLabels(options);
+
+  if (state.status === 'error') {
+    return (
+      <section className="recent" aria-labelledby="recent-title">
+        <h2 id="recent-title" className="home-card__title">
+          최근 내역
+        </h2>
+        <p className="hint">최근 내역을 불러오지 못했어요.</p>
+        <button type="button" className="button button--secondary button--small" onClick={() => setAttempt((n) => n + 1)}>
+          최근 내역 다시 불러오기
+        </button>
+      </section>
+    );
+  }
+  // 불러오는 중에는 비워 둔다(위 요약 카드가 불러오는 중을 보여 준다). 다른 달 결과는 쓰지 않는다
+  if (state.status !== 'ready' || state.month !== month || state.items.length === 0) return null;
+  return (
+    <section className="recent" aria-labelledby="recent-title">
+      <h2 id="recent-title" className="home-card__title">
+        최근 내역
+      </h2>
+      <ul className="tx-list">
+        {state.items.map((t) => (
+          <TxRow key={t.id} t={t} labels={labels} returnState={HOME_RETURN} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+const EMPTY_OPTIONS: TransactionFormOptions = { categories: [], pockets: [], members: [] };
+const HOME_RETURN: TransactionFormState = { returnTo: '/' };
+
+
 const monthNo = (ym: YearMonth) => Number(ym.slice(5));
 
-/** 360px에서 작은 추이(72px) 옆에 금액이 잘리지 않게: 13자부터 22px, 15자부터 20px (기본 28px, design.md 5.22) */
 /** 큰 글자(200%)에서 금액이 줄바꿈될 때 쉼표 뒤에서 먼저 끊기게 <wbr> 을 넣는다 */
 const breakAtCommas = (text: string) =>
   text.split(',').map((part, i) => (
@@ -204,11 +324,8 @@ const breakAtCommas = (text: string) =>
     </Fragment>
   ));
 
-const netSizeClass = (text: string) =>
-  text.length >= 15 ? ' home-nw__value--longer' : text.length >= 13 ? ' home-nw__value--long' : '';
-
 /**
- * 홈 맨 위 "우리집 순자산" 카드 (design.md 5.22 홈 2번). 카드 전체가 자산 탭(합친 보기)으로 가는 링크.
+ * 홈 맨 위 "우리집 순자산" 카드 (design.md 5.23 홈 2): 라벨 / xl 금액 / 증감. 작은 추이 그래프는 없다(자산 탭에 있음). 카드 전체가 자산 탭(합친 보기)으로 가는 링크.
  * 이번 달 = 현재 값, 지난 달 = 그 달 월말 값("10월 말 기준"), 미래 달 = 현재 값(Q13). 자산이 없으면 자산 추가로.
  */
 function HomeNetWorthCard({ state, retry, month }: { state: AssetLoadState; retry: () => void; month: YearMonth }) {
@@ -267,17 +384,14 @@ function HomeNetWorthCard({ state, retry, month }: { state: AssetLoadState; retr
         {sub && <span className="home-nw__sub">{sub}</span>}
         <ChevronRight size={20} className="home-nw__chevron" />
       </div>
-      <div className="home-nw__row" aria-hidden="true">
-        <div className="home-nw__main">
-          <span
-            className={`home-nw__value money${net !== null && net < 0 ? ' is-negative' : ''}${netSizeClass(netText)}`}
-            data-testid="home-net-worth"
-          >
-            {breakAtCommas(netText)}
-          </span>
-          <Delta value={data.change} label={deltaLabel} />
-        </div>
-        <MiniNetWorthTrend points={data.trend} />
+      <div className="home-nw__main" aria-hidden="true">
+        <span
+          className={`home-nw__value money${net !== null && net < 0 ? ' is-negative' : ''}`}
+          data-testid="home-net-worth"
+        >
+          {breakAtCommas(netText)}
+        </span>
+        <Delta value={data.change} label={deltaLabel} />
       </div>
     </Link>
   );

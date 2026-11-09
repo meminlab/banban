@@ -1,4 +1,4 @@
-import { computeMonthSummary, type SummaryRefs, type SummaryTransaction } from './summary';
+import { activeMemberCount, computeMonthSummary, type SummaryRefs, type SummaryTransaction } from './summary';
 
 const refs: SummaryRefs = {
   members: [
@@ -121,13 +121,11 @@ describe('computeMonthSummary', () => {
     ]);
   });
 
-  it('카테고리 대분류 상위 5개 (소분류 합산, 금액 큰 순)', () => {
+  it('카테고리 대분류 상위 3개 (소분류 합산, 금액 큰 순)', () => {
     expect(s.expenseBy.topCategories.map((r) => [r.label, r.amount])).toEqual([
       ['주거', 1200000],
       ['식비', 120000],
       ['통신', 65000],
-      ['교통', 30000],
-      ['생활', 20000],
     ]);
   });
 
@@ -161,5 +159,13 @@ describe('computeMonthSummary', () => {
     expect(odd.expenseBy.pocket).toMatchObject([{ label: '알 수 없음', amount: 5000 }]);
     expect(odd.expenseBy.scope.at(-1)).toMatchObject({ label: '알 수 없음', amount: 5000 });
     expect(odd.expenseBy.topCategories).toMatchObject([{ label: '알 수 없음', amount: 5000 }]);
+  });
+});
+
+describe('activeMemberCount', () => {
+  it('나간 멤버는 세지 않는다', () => {
+    expect(activeMemberCount([{ left_at: null }, { left_at: '2026-10-01T00:00:00Z' }])).toBe(1);
+    expect(activeMemberCount([{ left_at: null }, { left_at: null }])).toBe(2);
+    expect(activeMemberCount([])).toBe(0);
   });
 });

@@ -43,7 +43,7 @@ export interface MonthSummary {
     scope: BreakdownRow[];
     /** 고정 / 변동 (항상 2줄) */
     fixed: BreakdownRow[];
-    /** 카테고리 대분류 상위 5개, 금액 큰 순 */
+    /** 카테고리 대분류 상위 3개(TOP_CATEGORY_COUNT), 금액 큰 순 */
     topCategories: BreakdownRow[];
   };
 }
@@ -54,7 +54,8 @@ export interface SummaryRefs {
   categories: SummaryCategory[];
 }
 
-export const TOP_CATEGORY_COUNT = 5;
+/** 홈 "어디에 썼나" 대분류 상위 개수 (design.md 5.4 3번) */
+export const TOP_CATEGORY_COUNT = 3;
 export const UNKNOWN_LABEL = '알 수 없음';
 export const LEFT_SUFFIX = ' (나감)';
 const SCOPE_LABEL: Record<PocketScope, string> = { shared: '공동', personal: '개인' };
@@ -155,7 +156,7 @@ export function computeMonthSummary(
   // 고정·변동
   const fixedRows = [row('fixed', '고정', fixed), row('variable', '변동', expense - fixed)];
 
-  // 카테고리 대분류 상위 5개
+  // 카테고리 대분류 상위 3개
   const categoryOrder = new Map(refs.categories.map((c) => [c.id, c.sort_order]));
   const topCategories = [...byParentCategory.entries()]
     .map(([id, amount]) => row(id, categoryById.get(id)?.name ?? UNKNOWN_LABEL, amount))
@@ -171,4 +172,9 @@ export function computeMonthSummary(
     count,
     expenseBy: { spender, pocket, scope, fixed: fixedRows, topCategories },
   };
+}
+
+/** 지금 멤버 수(나간 멤버 제외). 홈 "누가 썼나"는 1명 이하이면 숨긴다 (design.md 5.23) */
+export function activeMemberCount(members: readonly Pick<SummaryMember, 'left_at'>[]): number {
+  return members.filter((m) => !m.left_at).length;
 }
