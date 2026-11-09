@@ -53,6 +53,23 @@ export async function listEventsForRange(ledgerId: string, start: string, end: s
   return (data ?? []) as CalendarEvent[];
 }
 
+/**
+ * 홈 함께한 날 카드용 기념일 (BANB-43): 반복 기념일 전부 + 오늘 이후의 반복 안 함 기념일.
+ * 고를 줄(고정 먼저·30일 안)은 domain/togetherCard 의 pickDdays
+ */
+export async function listUpcomingAnniversaries(ledgerId: string, today: string): Promise<CalendarEvent[]> {
+  const { data, error } = await getSupabase()
+    .from('event')
+    .select(COLUMNS)
+    .eq('ledger_id', ledgerId)
+    .eq('kind', 'anniversary')
+    .or(`repeat.neq.none,event_date.gte.${today}`)
+    .order('event_date')
+    .order('created_at');
+  if (error) throw error;
+  return (data ?? []) as CalendarEvent[];
+}
+
 /** 이 가계부에 일정이 하나라도 있나 (일정 없음 안내) */
 export async function hasAnyEvent(ledgerId: string): Promise<boolean> {
   const { data, error } = await getSupabase().from('event').select('id').eq('ledger_id', ledgerId).limit(1);

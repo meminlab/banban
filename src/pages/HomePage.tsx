@@ -1,13 +1,15 @@
-import { ChevronRight, Landmark } from 'lucide-react';
+import { ChevronRight, Heart, Landmark } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { ASSET_NEW_PATH, ASSETS_PATH, LEDGER_PATH, type TransactionFormState } from '../app/routes';
+import { ASSET_NEW_PATH, ASSETS_PATH, CALENDAR_PATH, LEDGER_PATH, type TransactionFormState } from '../app/routes';
 import { Delta, deltaSpeech, signedWon } from '../components/NetWorthDelta';
 import { MonthNav } from '../components/MonthNav';
 import { TxRow, useTxLabels } from '../components/TxRow';
 import { WonText } from '../components/WonText';
 import { listAssets, listBalanceHistory } from '../data/asset';
+import { listUpcomingAnniversaries } from '../data/event';
+import { getLedger } from '../data/ledger';
 import { getMonthSummaryData, type MonthSummaryData } from '../data/summary';
 import { getTransactionFormOptions, listLatestTransactions, type TransactionFormOptions } from '../data/transaction';
 import type { Asset, AssetBalanceHistory, Transaction } from '../data/types';
@@ -16,7 +18,14 @@ import { buildLedgerQuery, EMPTY_FILTER } from '../domain/ledgerView';
 import { addMonths, currentYearMonth, type YearMonth } from '../domain/month';
 import { homeNetWorth, trendWindowStart } from '../domain/netWorth';
 import { activeMemberCount, computeMonthSummary, type BreakdownRow, type MonthSummary } from '../domain/summary';
-import { formatNumber } from '../domain/transactionForm';
+import {
+  buildTogetherCard,
+  ddaySentence,
+  formatTogetherDays,
+  togetherCardAriaLabel,
+  type TogetherCard as TogetherCardData,
+} from '../domain/togetherCard';
+import { formatNumber, todayKST } from '../domain/transactionForm';
 
 type LoadState =
   | { status: 'loading' }
@@ -96,6 +105,8 @@ export function HomePage() {
 
   return (
     <div className="home">
+      <TogetherCard ledgerId={ledgerId} />
+
       <MonthNav month={month} onMove={(d) => setMonth((m) => addMonths(m, d))} />
 
       <HomeNetWorthCard state={asset.state} retry={asset.retry} month={month} />
@@ -126,6 +137,50 @@ export function HomePage() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * 홈 맨 위 함께한 날 카드 (design.md 5.26, BANB-43): ① 함께한 지 N일째예요 ②③ 기념일 D-day 최대 2줄.
+ * 셋 다 없으면 숨김. 카드 전체가 일정 탭(이번 달)으로 가는 링크.
+ * 월과 상관없는 정서 카드라 불러오는 중·실패 때는 그리지 않는다(아래 금액 카드가 상태를 보여 준다).
+ */
+function TogetherCard({ ledgerId }: { ledgerId: string }) {
+  const [loaded, setLoaded] = useState<{ ledgerId: string; card: TogetherCardData | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const today = todayKST();
+    Promise.all([getLedger(ledgerId), listUpcomingAnniversaries(ledgerId, today)]).then(
+      ([ledger, events]) => alive && setLoaded({ ledgerId, card: buildTogetherCard(ledger.together_since, events, today) }),
+      () => alive && setLoaded({ ledgerId, card: null }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId]);
+
+  // 다른 가계부의 결과는 쓰지 않는다
+  const card = loaded?.ledgerId === ledgerId ? loaded.card : null;
+  if (!card) return null;
+  return (
+    <Link to={CALENDAR_PATH} className="together-card" aria-label={togetherCardAriaLabel(card)} data-testid="together-card">
+      {card.togetherDays != null && (
+        <span className="together-card__days" aria-hidden="true">
+          <Heart size={20} className="together-card__heart" />
+          <span>
+            함께한 지 <b>{formatTogetherDays(card.togetherDays)}</b>일째예요
+          </span>
+        </span>
+      )}
+      {card.ddays.map((d) => (
+        <span key={d.event.id} className="together-card__dday" aria-hidden="true">
+          <span className="together-card__text">{ddaySentence(d.event.title, d.daysLeft)}</span>
+          <b className={`together-card__badge${d.daysLeft === 0 ? ' is-today' : ''}`}>
+            {d.daysLeft === 0 ? 'D-day' : `D-${d.daysLeft}`}
+          </b>
+        </span>
+      ))}
+    </Link>
   );
 }
 

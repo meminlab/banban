@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { vi } from 'vitest';
 import type { MonthSummaryData } from '../data/summary';
-import type { Asset, AssetBalanceHistory, AssetKind } from '../data/types';
+import type { Asset, AssetBalanceHistory, AssetKind, CalendarEvent } from '../data/types';
 import { HomePage as HomePageInner } from './HomePage';
 
 const fake = vi.hoisted(() => ({
@@ -66,6 +66,31 @@ vi.mock('../data/asset', () => ({
   },
 }));
 
+const calDb = vi.hoisted(() => ({
+  togetherSince: null as string | null,
+  events: [] as CalendarEvent[],
+  fail: false,
+  /** listUpcomingAnniversaries 에 넘어온 오늘 */
+  today: [] as string[],
+}));
+vi.mock('../data/ledger', () => ({
+  getLedger: async (id: string) => {
+    if (calDb.fail) throw new Error('network');
+    return { id, name: '우리집', member_limit: 2, created_by: 'u1', created_at: '', together_since: calDb.togetherSince };
+  },
+}));
+vi.mock('../data/event', () => ({
+  listUpcomingAnniversaries: async (_l: string, today: string) => {
+    calDb.today.push(today);
+    return calDb.events;
+  },
+}));
+const anniversary = (id: string, title: string, event_date: string, extra: Partial<CalendarEvent> = {}): CalendarEvent => ({
+  id, ledger_id: 'ledger-1', title, kind: 'anniversary', event_date, all_day: true, start_time: null, repeat: 'yearly',
+  lunar_month: null, lunar_day: null, target_member_id: null, place: null, memo: null, pinned_at: null,
+  created_by: 'mA', updated_by: 'mA', created_at: '2026-01-01T00:00:00Z', updated_at: '', ...extra,
+});
+
 function LedgerProbe() {
   const { search } = useLocation();
   return <p>가계부 탭 화면{search}</p>;
@@ -78,6 +103,7 @@ function HomePage() {
       <Routes>
         <Route path="/" element={<HomePageInner />} />
         <Route path="/assets" element={<p>자산 탭 화면</p>} />
+        <Route path="/calendar" element={<p>일정 탭 화면</p>} />
         <Route path="/assets/new" element={<p>자산 추가 화면</p>} />
         <Route path="/ledger" element={<LedgerProbe />} />
         <Route path="/ledger/:id" element={<p>수정 화면</p>} />
@@ -127,6 +153,10 @@ beforeEach(() => {
   assetDb.calls = 0;
   assetDb.pending = false;
   assetDb.since = [];
+  calDb.togetherSince = null;
+  calDb.events = [];
+  calDb.fail = false;
+  calDb.today = [];
 });
 afterEach(() => vi.useRealTimers());
 
@@ -427,5 +457,69 @@ describe('홈: 우리집 순자산 카드', () => {
     assetDb.pending = true;
     render(<HomePage />);
     expect(screen.getByText('순자산을 불러오고 있어요')).toBeInTheDocument();
+  });
+});
+
+describe('홈 맨 위 함께한 날 카드 (BANB-43)', () => {
+  beforeEach(() => fake.get.mockImplementation(async (_l, m) => data(m)));
+  const card = () => screen.findByTestId('together-card');
+
+  it('함께한 지 N일째 + 기념일 D-day 2줄 (고정 먼저, 30일 밖 고정 안 함은 빠짐) → 누르면 일정 탭', async () => {
+    // 오늘 = 2026-11-06 (KST)
+    calDb.togetherSince = '2021-06-12';
+    calDb.events = [
+      anniversary('e1', '준호 생일', '1990-11-18'), // D-12
+      anniversary('e2', '결혼기념일', '2019-11-11'), // D-5
+      anniversary('e3', '아버님 제사', '2015-11-09'), // D-3 (고정 안 한 것 중 가장 가까움)
+      anniversary('e4', '첫 만남', '2020-03-01', { pinned_at: '2026-05-01T00:00:00Z' }), // 고정, D-115
+      anniversary('e5', '먼 기념일', '2020-12-07'), // D-31 → 빠짐
+    ];
+    const user = userEvent.setup();
+    render(<HomePage />);
+    const el = await card();
+    expect(calDb.today).toEqual(['2026-11-06']);
+    expect(el).toHaveTextContent('함께한 지 1,974일째예요');
+    expect(el).toHaveTextContent('첫 만남까지 115일 남았어요D-115');
+    expect(el).toHaveTextContent('아버님 제사까지 3일 남았어요D-3');
+    expect(el).not.toHaveTextContent('결혼기념일');
+    expect(el).toHaveAccessibleName('함께한 지 1,974일째, 첫 만남까지 115일, 아버님 제사까지 3일. 일정 탭으로 가기');
+    // 홈 맨 위 (월 이동 줄보다 위)
+    expect(el.compareDocumentPosition(screen.getByRole('heading', { name: '2026년 11월' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 기존 카드 회귀 없음
+    expect(await screen.findByRole('region', SUMMARY)).toBeInTheDocument();
+    await user.click(el);
+    expect(screen.getByText('일정 탭 화면')).toBeInTheDocument();
+  });
+
+  it('당일은 "오늘은 ○○이에요" + D-day 포인트 색', async () => {
+    calDb.events = [anniversary('e1', '결혼기념일', '2019-11-06'), anniversary('e2', '할머니 제사', '2019-11-06', { created_at: '2026-02-01T00:00:00Z' })];
+    render(<HomePage />);
+    const el = await card();
+    expect(el).not.toHaveTextContent('함께한 지');
+    expect(el).toHaveTextContent('오늘은 결혼기념일이에요D-day');
+    expect(el).toHaveTextContent('오늘은 할머니 제사예요D-day');
+    expect(within(el).getAllByText('D-day')[0]).toHaveClass('is-today');
+  });
+
+  it('함께한 날만 있으면 1줄 카드', async () => {
+    calDb.togetherSince = '2026-11-06';
+    render(<HomePage />);
+    const el = await card();
+    expect(el).toHaveTextContent(/^함께한 지 1일째예요$/);
+  });
+
+  it('함께한 날·30일 안 기념일 둘 다 없으면 카드 숨김 (불러오기 실패도 숨김)', async () => {
+    calDb.events = [anniversary('e1', '먼 기념일', '2020-12-25')];
+    const { unmount } = render(<HomePage />);
+    await screen.findByRole('region', SUMMARY);
+    expect(calDb.today).toHaveLength(1);
+    expect(screen.queryByTestId('together-card')).toBeNull();
+    unmount();
+
+    calDb.togetherSince = '2021-06-12';
+    calDb.fail = true;
+    render(<HomePage />);
+    await screen.findByRole('region', SUMMARY);
+    expect(screen.queryByTestId('together-card')).toBeNull();
   });
 });
