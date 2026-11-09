@@ -7,6 +7,11 @@ import { TxFlashToast } from './TxFlashToast';
 
 type Tab = (typeof TABS)[number];
 
+/** 탭 화면이 쓸 수 있는 공통 틀 기능: reload = 지금 탭을 처음부터 다시 불러온다(정기 내역 기록 후 합계 반영) */
+export interface TabOutletContext {
+  reload: () => void;
+}
+
 /**
  * 탭 화면 공통 틀: 위 제목줄(왼쪽 가계부 전환 알약, 오른쪽 설정) + 본문 + 하단 탭.
  * 하단 탭은 홈 · 가계부 · [＋] · 일정 · 자산 (design.md 5.7 v1.6). ＋는 탭이 아니라 버튼이고, 모든 탭에서 같은 자리.
@@ -47,7 +52,7 @@ export function AppLayout() {
       </header>
 
       <main className="content">
-        <Outlet key={reloadKey} />
+        <Outlet key={reloadKey} context={{ reload } satisfies TabOutletContext} />
       </main>
       <TxFlashToast onUndone={reload} />
 

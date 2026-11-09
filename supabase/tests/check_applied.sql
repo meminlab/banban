@@ -14,6 +14,8 @@
 --           category_simplify = true (20261109000000 마이그레이션: 새 기본 카테고리 20개, 모든 가계부에 기본 20개 대분류, 목록 함수 직접 실행 불가)
 --           event_calendar = true (20261109100000 마이그레이션: event 테이블·작성자 트리거·고정 2개 규칙, ledger.together_since 멤버 수정 가능)
 --           (asset_balance_history·event 행이 추가되어 11행. 이력 테이블·event policies 1)
+--           recurring = true (20261109200000 마이그레이션: 정기 내역·회차 테이블, transaction.source 'recurring', 기록·되돌리기 함수 로그인 사용자만, 회차 직접 쓰기 불가)
+--           (recurring_transaction·recurring_occurrence 행이 추가되어 13행. 둘 다 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -92,11 +94,22 @@ select c.relname                                          as table_name,
         and exists (select 1 from information_schema.columns
                      where table_schema = 'public' and table_name = 'ledger' and column_name = 'together_since')
         and has_column_privilege('authenticated', 'public.ledger', 'together_since', 'update')
-        and not has_column_privilege('authenticated', 'public.ledger', 'member_limit', 'update')) as event_calendar
+        and not has_column_privilege('authenticated', 'public.ledger', 'member_limit', 'update')) as event_calendar,
+       (to_regclass('public.recurring_transaction') is not null
+        and to_regclass('public.recurring_occurrence') is not null
+        and (select pg_get_constraintdef(oid) like '%recurring%' from pg_constraint
+              where conrelid = 'public.transaction'::regclass and conname = 'transaction_source_check')
+        and exists (select 1 from pg_trigger t where t.tgrelid = 'public.recurring_transaction'::regclass
+                     and t.tgname = 'recurring_transaction_before_write')
+        and has_function_privilege('authenticated', 'public.record_recurring(uuid,jsonb)', 'execute')
+        and not has_function_privilege('anon', 'public.record_recurring(uuid,jsonb)', 'execute')
+        and has_function_privilege('authenticated', 'public.undo_recurring_record(uuid,jsonb)', 'execute')
+        and not has_table_privilege('authenticated', 'public.recurring_occurrence', 'insert')
+        and not has_table_privilege('authenticated', 'public.recurring_occurrence', 'delete')) as recurring
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)

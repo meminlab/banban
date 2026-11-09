@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { vi } from 'vitest';
 import type { MonthSummaryData } from '../data/summary';
-import type { Asset, AssetBalanceHistory, AssetKind, CalendarEvent } from '../data/types';
+import type { Asset, AssetBalanceHistory, AssetKind, CalendarEvent, RecurringOccurrence, RecurringTransaction } from '../data/types';
+import type { RecordItem } from '../data/recurring';
 import { HomePage as HomePageInner } from './HomePage';
 
 const fake = vi.hoisted(() => ({
@@ -85,6 +86,25 @@ vi.mock('../data/event', () => ({
     return calDb.events;
   },
 }));
+const recDb = vi.hoisted(() => ({
+  list: [] as RecurringTransaction[],
+  occurrences: [] as RecurringOccurrence[],
+  recorded: [] as RecordItem[][],
+}));
+vi.mock('../data/recurring', () => ({
+  listRecurring: async () => recDb.list,
+  listOccurrences: async () => recDb.occurrences,
+  recordRecurring: async (_l: string, items: RecordItem[]) => {
+    recDb.recorded.push(items);
+    return items.map((i) => ({ ...i, status: i.record ? 'recorded' : 'skipped', transaction_id: i.record ? 't1' : null, applied: true }));
+  },
+}));
+const recurring = (id: string, extra: Partial<RecurringTransaction> = {}): RecurringTransaction => ({
+  id, ledger_id: 'ledger-1', type: 'expense', amount: 250000, category_id: 'food.out', pocket_id: null, spender_id: 'mA',
+  memo: '관리비', cycle: 'monthly', day_of_month: 6, month: null, weekday: null, start_on: '2026-01-01', end_on: null,
+  is_paused: false, created_by: 'mA', updated_by: 'mA', created_at: `2026-01-01T00:00:0${id.length}Z`, updated_at: '', ...extra,
+});
+
 const anniversary = (id: string, title: string, event_date: string, extra: Partial<CalendarEvent> = {}): CalendarEvent => ({
   id, ledger_id: 'ledger-1', title, kind: 'anniversary', event_date, all_day: true, start_time: null, repeat: 'yearly',
   lunar_month: null, lunar_day: null, target_member_id: null, place: null, memo: null, pinned_at: null,
@@ -158,7 +178,13 @@ beforeEach(() => {
   calDb.fail = false;
   calDb.today = [];
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  recDb.list = [];
+  recDb.occurrences = [];
+  recDb.recorded = [];
+  localStorage.clear();
+});
 
 describe('홈: 월 요약', () => {
   it('이번 달 카드: "11월 남은 돈" / 금액 / 한 줄 요약 (계산식 문구 없음), 누가 썼나 (% 없음)', async () => {
@@ -521,5 +547,84 @@ describe('홈 맨 위 함께한 날 카드 (BANB-43)', () => {
     render(<HomePage />);
     await screen.findByRole('region', SUMMARY);
     expect(screen.queryByTestId('together-card')).toBeNull();
+  });
+});
+
+describe('홈 정기 내역 기록 제안 (BANB-44)', () => {
+  beforeEach(() => fake.get.mockImplementation(async (_l, m) => data(m)));
+  const ROW = { name: '정기 내역 2건, 기록할까요?' };
+
+  it('기록할 회차가 없으면 줄이 없다 (일시정지·확인한 회차·미래 시작 제외)', async () => {
+    recDb.list = [
+      recurring('p', { is_paused: true }),
+      recurring('done'),
+      recurring('later', { start_on: '2026-11-20' }),
+    ];
+    recDb.occurrences = [
+      { recurring_id: 'done', occurs_on: '2026-11-06', ledger_id: 'ledger-1', status: 'skipped', transaction_id: null, decided_by: 'mB', decided_at: '' },
+      { recurring_id: 'done', occurs_on: '2026-10-06', ledger_id: 'ledger-1', status: 'recorded', transaction_id: 't', decided_by: 'mA', decided_at: '' },
+    ];
+    render(<HomePage />);
+    await screen.findByRole('region', SUMMARY);
+    expect(screen.queryByRole('button', { name: /기록할까요/ })).toBeNull();
+  });
+
+  it('오늘 + 지난 30일 놓친 것 → 줄 → 시트: 체크한 것만 기록, 끈 것은 건너뛰기. 금액은 고쳐서 기록', async () => {
+    const user = userEvent.setup();
+    // 오늘(11/6) 관리비 + 10/20 놓친 주간 장보기(화요일) … 10/27·11/3 은 이미 확인함
+    recDb.list = [
+      recurring('a'),
+      recurring('wk', { memo: '장보기', cycle: 'weekly', day_of_month: null, weekday: 2, start_on: '2026-10-20', amount: 30000 }),
+    ];
+    recDb.occurrences = ['2026-10-27', '2026-11-03'].map((d) => ({
+      recurring_id: 'wk', occurs_on: d, ledger_id: 'ledger-1', status: 'recorded' as const, transaction_id: 't', decided_by: 'mA', decided_at: '',
+    }));
+    render(<HomePage />);
+    await user.click(await screen.findByRole('button', ROW));
+    const sheet = screen.getByRole('dialog', { name: '정기 내역 2건' });
+    const rows = within(sheet).getAllByRole('listitem');
+    // 오래된 날짜 먼저: 10/20 장보기(17일 지남) → 오늘 관리비
+    expect(rows[0]).toHaveTextContent('장보기');
+    expect(rows[0]).toHaveTextContent('10월 20일 · 17일 지났어요 · 김');
+    expect(rows[1]).toHaveTextContent('관리비');
+    expect(rows[1]).toHaveTextContent('오늘 · 김');
+    expect(within(sheet).getByRole('button', { name: '2건 기록하기' })).toBeInTheDocument();
+
+    // 장보기는 이번엔 건너뛴다
+    await user.click(within(rows[0]).getByRole('checkbox'));
+    expect(within(sheet).getByRole('button', { name: '1건 기록하기' })).toBeInTheDocument();
+    // 관리비 금액을 이번만 300,000원으로
+    await user.click(within(rows[1]).getByRole('button', { name: /관리비 금액 지출 250,000원/ }));
+    const pad = screen.getByRole('dialog', { name: '이번 금액' });
+    for (let i = 0; i < 6; i++) await user.click(within(pad).getByRole('button', { name: '지우기' }));
+    for (const k of ['3', '00', '00', '0']) await user.click(within(pad).getByRole('button', { name: k }));
+    await user.click(within(pad).getByRole('button', { name: '완료' }));
+    expect(within(screen.getByRole('dialog', { name: '정기 내역 2건' })).getByText('−300,000원')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '1건 기록하기' }));
+    expect(recDb.recorded).toEqual([
+      [
+        { recurring_id: 'wk', occurs_on: '2026-10-20', record: false, amount: null },
+        { recurring_id: 'a', occurs_on: '2026-11-06', record: true, amount: 300000 },
+      ],
+    ]);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', ROW)).toBeNull();
+  });
+
+  it('모두 끄면 "건너뛰기", X(오늘은 그만)는 오늘 하루 줄을 숨긴다', async () => {
+    const user = userEvent.setup();
+    recDb.list = [recurring('a'), recurring('b', { memo: '보험' })];
+    const first = render(<HomePage />);
+    await user.click(await screen.findByRole('button', ROW));
+    for (const box of screen.getAllByRole('checkbox')) await user.click(box);
+    await user.click(screen.getByRole('button', { name: '건너뛰기' }));
+    expect(recDb.recorded[0].map((i) => i.record)).toEqual([false, false]);
+    first.unmount();
+
+    render(<HomePage />);
+    await user.click(await screen.findByRole('button', { name: '오늘은 그만' }));
+    expect(screen.queryByRole('button', ROW)).toBeNull();
+    expect(localStorage.getItem('banban.recurringSnooze.ledger-1')).toBe('2026-11-06');
   });
 });

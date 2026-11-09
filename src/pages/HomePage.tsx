@@ -1,4 +1,4 @@
-import { ChevronRight, Heart, Landmark } from 'lucide-react';
+import { ChevronRight, Heart, Landmark, Repeat, X } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
@@ -7,6 +7,9 @@ import { Delta, deltaSpeech, signedWon } from '../components/NetWorthDelta';
 import { MonthNav } from '../components/MonthNav';
 import { TxRow, useTxLabels } from '../components/TxRow';
 import { WonText } from '../components/WonText';
+import { RecurringSuggestSheet, useRecordDone } from '../components/RecurringSuggestSheet';
+import { listOccurrences, listRecurring } from '../data/recurring';
+import { occurrenceStatusMap, pendingSuggestions, suggestRange, type RecurringDue } from '../domain/recurring';
 import { listAssets, listBalanceHistory } from '../data/asset';
 import { listUpcomingAnniversaries } from '../data/event';
 import { getLedger } from '../data/ledger';
@@ -106,6 +109,7 @@ export function HomePage() {
   return (
     <div className="home">
       <TogetherCard ledgerId={ledgerId} />
+      <RecurringSuggestRow ledgerId={ledgerId} />
 
       <MonthNav month={month} onMove={(d) => setMonth((m) => addMonths(m, d))} />
 
@@ -181,6 +185,92 @@ function TogetherCard({ ledgerId }: { ledgerId: string }) {
         </span>
       ))}
     </Link>
+  );
+}
+
+/** "오늘은 그만": 가계부별로 그날 하루 제안 줄을 숨긴다 (내일 다시 뜸). 이 기기에만 저장 */
+const SNOOZE_KEY = (ledgerId: string) => `banban.recurringSnooze.${ledgerId}`;
+function isSnoozed(ledgerId: string, today: string): boolean {
+  try {
+    return localStorage.getItem(SNOOZE_KEY(ledgerId)) === today;
+  } catch {
+    return false;
+  }
+}
+function snooze(ledgerId: string, today: string) {
+  try {
+    localStorage.setItem(SNOOZE_KEY(ledgerId), today);
+  } catch {
+    // 저장 못 해도 지금 화면에서는 숨긴다
+  }
+}
+
+/**
+ * 정기 내역 기록 제안 줄 (design.md 5.27): 오늘 + 최근 30일 안에 놓친, 아직 기록·건너뛰기 안 한 회차가 있으면
+ * 함께한 날 카드 아래 한 줄. 누르면 제안 시트(앱을 열자마자 시트를 띄우지 않는다). X = 오늘은 그만.
+ * 못 불러오면 줄을 그리지 않는다(아래 금액 카드가 상태를 보여 준다)
+ */
+function RecurringSuggestRow({ ledgerId }: { ledgerId: string }) {
+  const today = todayKST();
+  const [loaded, setLoaded] = useState<{ ledgerId: string; dues: RecurringDue[]; options: TransactionFormOptions } | null>(null);
+  const [hidden, setHidden] = useState(() => isSnoozed(ledgerId, today));
+  const [open, setOpen] = useState(false);
+  const onDone = useRecordDone();
+
+  useEffect(() => {
+    let alive = true;
+    setHidden(isSnoozed(ledgerId, today));
+    const { start, end } = suggestRange(today);
+    Promise.all([listRecurring(ledgerId), listOccurrences(ledgerId, start, end)])
+      .then(async ([recurrings, occurrences]) => {
+        const dues = pendingSuggestions(recurrings, occurrenceStatusMap(occurrences), today);
+        if (dues.length === 0) return alive && setLoaded({ ledgerId, dues, options: { categories: [], pockets: [], members: [] } });
+        const options = await getTransactionFormOptions(ledgerId);
+        if (alive) setLoaded({ ledgerId, dues, options });
+      })
+      .catch(() => alive && setLoaded(null));
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId, today]);
+
+  const close = useCallback(() => setOpen(false), []);
+  const stopForToday = useCallback(() => {
+    snooze(ledgerId, today);
+    setHidden(true);
+    setOpen(false);
+  }, [ledgerId, today]);
+
+  if (!loaded || loaded.ledgerId !== ledgerId || loaded.dues.length === 0 || hidden) return null;
+  const n = loaded.dues.length;
+  return (
+    <>
+      <div className="month-check recurring-row">
+        <button type="button" className="month-check__body recurring-row__body" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+          <Repeat size={20} strokeWidth={2} aria-hidden="true" />
+          <span className="recurring-row__text">정기 내역 {n}건, 기록할까요?</span>
+          <ChevronRight size={20} strokeWidth={2} aria-hidden="true" />
+        </button>
+        <button type="button" className="icon-button" aria-label="오늘은 그만" onClick={stopForToday}>
+          <X size={20} strokeWidth={2} aria-hidden="true" />
+        </button>
+      </div>
+      {open && (
+        <RecurringSuggestSheet
+          ledgerId={ledgerId}
+          dues={loaded.dues}
+          options={loaded.options}
+          today={today}
+          onClose={close}
+          onSnooze={stopForToday}
+          onDone={(done) => {
+            setOpen(false);
+            setLoaded(null);
+            onDone(done);
+          }}
+        />
+      )}
+    </>
   );
 }
 

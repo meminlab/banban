@@ -1,15 +1,28 @@
-import { CalendarHeart, CalendarPlus, Pin } from 'lucide-react';
+import { CalendarHeart, CalendarPlus, Check, Pin } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { CALENDAR_PATH, EVENT_NEW_PATH, eventPath, type EventFlash, type EventFormState } from '../app/routes';
+import {
+  CALENDAR_PATH,
+  calendarMonthPath,
+  EVENT_NEW_PATH,
+  eventPath,
+  recurringPath,
+  type EventFlash,
+  type EventFormState,
+  type RecurringFormState,
+} from '../app/routes';
 import { useLoad } from '../app/useLoad';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { EventKindIcon } from '../components/EventKindIcon';
+import { RecurringSuggestSheet, useRecordDone } from '../components/RecurringSuggestSheet';
 import { MonthNav } from '../components/MonthNav';
 import { Sheet } from '../components/Sheet';
 import { hasAnyEvent, listEventsForRange } from '../data/event';
 import { listMembers } from '../data/member';
-import type { Member } from '../data/types';
+import { listOccurrences, listRecurring } from '../data/recurring';
+import { getTransactionFormOptions, type TransactionFormOptions } from '../data/transaction';
+import type { Member, RecurringTransaction } from '../data/types';
 import {
   cellChips,
   dayAriaLabel,
@@ -23,7 +36,17 @@ import {
   type EventOccurrence,
 } from '../domain/event';
 import { addMonths, currentYearMonth, formatYearMonth, type YearMonth } from '../domain/month';
-import { todayKST } from '../domain/transactionForm';
+import {
+  canRecord,
+  chipAmount,
+  expandRecurrings,
+  occurrenceKey,
+  occurrenceStatusMap,
+  recurringRowText,
+  spokenAmount,
+  type RecurringDue,
+} from '../domain/recurring';
+import { formatNumber, memberLabel, todayKST } from '../domain/transactionForm';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 const FLASH_TEXT: Record<EventFlash['kind'], string> = {
@@ -33,6 +56,11 @@ const FLASH_TEXT: Record<EventFlash['kind'], string> = {
 };
 /** 좌우로 이만큼 밀면 달을 옮긴다 (px) */
 const SWIPE_MIN = 60;
+const SIGN = { expense: '−', income: '+', saving: '' } as const;
+const NO_OPTIONS: TransactionFormOptions = { categories: [], pockets: [], members: [] };
+
+/** 한 칸에 그릴 것: 일정 회차 → 정기 내역 회차 (design.md 5.24 순서) */
+type DayItem = { kind: 'event'; occ: EventOccurrence } | { kind: 'recurring'; r: RecurringTransaction; recorded: boolean };
 
 function parseMonth(value: string | null): YearMonth | null {
   return value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : null;
@@ -52,10 +80,17 @@ export function CalendarPage() {
 
   const { state, reload } = useLoad(async () => {
     const { start, end } = gridRange(month);
-    const [events, members] = await Promise.all([listEventsForRange(ledgerId, start, end), listMembers(ledgerId)]);
-    // 이 달 근처에 없으면 가계부 전체에 일정이 있는지 한 번 더 본다 (일정 없음 안내)
-    const any = events.length > 0 || (await hasAnyEvent(ledgerId));
-    return { month, events, members, any };
+    const [events, members, recurrings, occurrences] = await Promise.all([
+      listEventsForRange(ledgerId, start, end),
+      listMembers(ledgerId),
+      listRecurring(ledgerId),
+      listOccurrences(ledgerId, start, end),
+    ]);
+    // 정기 내역 행(카테고리 아이콘·주머니 이름)용 선택지. 정기 내역이 없으면 읽지 않는다
+    const options = recurrings.length > 0 ? await getTransactionFormOptions(ledgerId) : NO_OPTIONS;
+    // 이 달 근처에 없으면 가계부 전체에 일정이 있는지 한 번 더 본다 (일정 없음 안내 — 정기 내역도 일정으로 친다)
+    const any = events.length > 0 || recurrings.length > 0 || (await hasAnyEvent(ledgerId));
+    return { month, events, members, recurrings, decided: occurrenceStatusMap(occurrences), options, any };
   }, [ledgerId, month]);
   // 달을 바꾼 직후 지난 달 데이터를 새 달 이름으로 보여 주지 않게
   const data = state.status === 'ready' && state.data.month === month ? state.data : null;
@@ -71,9 +106,27 @@ export function CalendarPage() {
 
   const weeks = useMemo(() => monthGrid(month), [month]);
   const byDate = useMemo(() => {
+    const out = new Map<string, DayItem[]>();
+    if (!data) return out;
     const { start, end } = gridRange(month);
-    return data ? expandEvents(data.events, start, end) : new Map<string, EventOccurrence[]>();
+    for (const [date, occs] of expandEvents(data.events, start, end))
+      out.set(date, occs.map((occ) => ({ kind: 'event', occ })));
+    for (const [date, list] of expandRecurrings(data.recurrings, start, end)) {
+      const items = out.get(date) ?? [];
+      for (const r of list) items.push({ kind: 'recurring', r, recorded: data.decided.get(occurrenceKey(r.id, date)) === 'recorded' });
+      out.set(date, items);
+    }
+    return out;
   }, [data, month]);
+  const recurringLabel = useCallback(
+    (r: RecurringTransaction) => {
+      const name = r.memo?.trim() || data?.options.categories.find((c) => c.id === r.category_id)?.name || '정기 내역';
+      return `정기 내역 ${name} ${spokenAmount(r.type, r.amount)}`;
+    },
+    [data],
+  );
+  const [recording, setRecording] = useState<RecurringDue | null>(null);
+  const onRecorded = useRecordDone();
 
   // 좌우 밀기로 달 이동
   const touch = useRef<{ x: number; y: number } | null>(null);
@@ -136,6 +189,10 @@ export function CalendarPage() {
               week.map((cell) => {
                 const items = byDate.get(cell.date) ?? [];
                 const { shown, more } = cellChips(items);
+                const eventItems = items.flatMap((it) => (it.kind === 'event' ? [it.occ] : []));
+                const extra = items.flatMap((it) =>
+                  it.kind === 'recurring' ? [`${recurringLabel(it.r)}${it.recorded ? ' 기록함' : ''}`] : [],
+                );
                 const cls = [
                   'event-cal__day',
                   !cell.inMonth && 'is-outside',
@@ -149,23 +206,30 @@ export function CalendarPage() {
                     key={cell.date}
                     type="button"
                     className={cls}
-                    aria-label={dayAriaLabel(cell.date, items, data?.members ?? [])}
+                    aria-label={dayAriaLabel(cell.date, eventItems, data?.members ?? [], extra)}
                     aria-haspopup="dialog"
                     onClick={() => setSelected(cell.date)}
                   >
                     <span className="event-cal__num" aria-hidden="true">
                       {Number(cell.date.slice(8))}
                     </span>
-                    {shown.map(({ event }) => (
-                      <span
-                        key={event.id}
-                        className={`event-chip event-color--${eventColor(event.target_member_id, data?.members ?? [])}`}
-                        aria-hidden="true"
-                      >
-                        <EventKindIcon kind={event.kind} size={9} strokeWidth={2.5} />
-                        <span className="event-chip__text">{event.title}</span>
-                      </span>
-                    ))}
+                    {shown.map((it) =>
+                      it.kind === 'event' ? (
+                        <span
+                          key={it.occ.event.id}
+                          className={`event-chip event-color--${eventColor(it.occ.event.target_member_id, data?.members ?? [])}`}
+                          aria-hidden="true"
+                        >
+                          <EventKindIcon kind={it.occ.event.kind} size={9} strokeWidth={2.5} />
+                          <span className="event-chip__text">{it.occ.event.title}</span>
+                        </span>
+                      ) : (
+                        <span key={`r-${it.r.id}`} className={`event-chip recurring-chip recurring-chip--${it.r.type}`} aria-hidden="true">
+                          {it.recorded && <Check size={9} strokeWidth={2.5} />}
+                          <span className="event-chip__text">{chipAmount(it.r.type, it.r.amount)}</span>
+                        </span>
+                      ),
+                    )}
                     {more > 0 && (
                       <span className="event-cal__more" aria-hidden="true">
                         +{more}
@@ -186,11 +250,29 @@ export function CalendarPage() {
             today={today}
             items={byDate.get(selected) ?? []}
             members={data.members}
+            options={data.options}
+            decided={data.decided}
+            returnTo={calendarMonthPath(month)}
+            onRecord={(r) => setRecording({ recurring: r, date: selected })}
           />
           <Link to={EVENT_NEW_PATH} state={addState(selected)} className="button button--secondary button--block day-sheet__add">
             <CalendarPlus size={20} strokeWidth={2} aria-hidden="true" />이 날 일정 추가
           </Link>
         </Sheet>
+      )}
+      {recording && data && (
+        <RecurringSuggestSheet
+          ledgerId={ledgerId}
+          dues={[recording]}
+          options={data.options}
+          today={today}
+          onClose={() => setRecording(null)}
+          onDone={(done) => {
+            setRecording(null);
+            setSelected(null);
+            onRecorded(done);
+          }}
+        />
       )}
     </div>
   );
@@ -202,11 +284,19 @@ function DaySheet({
   today,
   items,
   members,
+  options,
+  decided,
+  returnTo,
+  onRecord,
 }: {
   date: string;
   today: string;
-  items: EventOccurrence[];
+  items: DayItem[];
   members: Member[];
+  options: TransactionFormOptions;
+  decided: ReadonlyMap<string, unknown>;
+  returnTo: string;
+  onRecord: (r: RecurringTransaction) => void;
 }) {
   if (items.length === 0)
     return (
@@ -216,9 +306,51 @@ function DaySheet({
         <p className="hint">약속이나 기념일을 남겨 두면 함께 챙길 수 있어요</p>
       </div>
     );
+  const categoryById = new Map(options.categories.map((c) => [c.id, c]));
+  const pocketById = new Map(options.pockets.map((p) => [p.id, p]));
+  const memberById = new Map(options.members.map((m) => [m.id, m]));
+  const recurringState: RecurringFormState = { returnTo };
   return (
     <ul className="day-sheet__list">
-      {items.map(({ event }) => (
+      {items.map((it) => {
+        if (it.kind === 'recurring') {
+          const r = it.r;
+          const category = categoryById.get(r.category_id);
+          const parent = category?.parent_id ? categoryById.get(category.parent_id) : null;
+          const { title, sub } = recurringRowText(
+            r,
+            { categoryName: (id) => categoryById.get(id)?.name, pocketName: (id) => pocketById.get(id)?.name },
+            '정기 내역',
+            memberLabel(memberById.get(r.spender_id)),
+          );
+          return (
+            <li key={`r-${r.id}`} className="day-sheet__recurring">
+              <Link to={recurringPath(r.id)} state={recurringState} className="day-sheet__row">
+                <CategoryIcon category={category ?? { name: title, icon: null }} parent={parent} />
+                <span className="day-sheet__text">
+                  <span className="day-sheet__title">{title}</span>
+                  <span className="day-sheet__sub">
+                    {sub}
+                    {it.recorded && ' · 기록함'}
+                  </span>
+                </span>
+                <span className={`day-sheet__amount tx-row__amount--${r.type}`}>
+                  <span className="money">
+                    {SIGN[r.type]}
+                    {formatNumber(r.amount)}원
+                  </span>
+                </span>
+              </Link>
+              {canRecord(r.id, date, today, decided) && (
+                <button type="button" className="text-button day-sheet__record" aria-label={`${title} 기록하기`} onClick={() => onRecord(r)}>
+                  기록하기
+                </button>
+              )}
+            </li>
+          );
+        }
+        const { event } = it.occ;
+        return (
         <li key={event.id}>
           <Link to={eventPath(event.id)} className="day-sheet__row">
             <span className={`day-sheet__icon event-color--${eventColor(event.target_member_id, members)}`} aria-hidden="true">
@@ -237,7 +369,8 @@ function DaySheet({
             )}
           </Link>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

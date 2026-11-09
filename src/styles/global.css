@@ -1238,3 +1238,71 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 @media (prefers-reduced-motion: reduce) {
   .switch, .switch::after { transition: none; }
 }
+
+/* ── 정기 내역 (BANB-44, design.md 5.24·5.27) */
+/* 홈 제안 줄: 월초 안내(.month-check)와 같은 모양 + 앞 Repeat 아이콘 */
+.recurring-row__body { gap: 8px; }
+.recurring-row__body > svg:first-child { flex: none; color: var(--color-text-sub); }
+.recurring-row__text { flex: 1; min-width: 0; }
+/* 달력 칩: 바탕 surface + 안쪽 테두리, 가운데 금액 */
+.recurring-chip {
+  justify-content: center; gap: 1px; padding: 0 2px; letter-spacing: -0.02em;
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+/* 360px 칸(≈51px)에 "✓ −8.9만"이 들어가게: 체크 아이콘 8px, 금액은 말줄임보다 글자 간격을 먼저 줄인다 */
+.recurring-chip svg { width: 8px; height: 8px; }
+.recurring-chip--income { color: var(--color-primary-strong); }
+/* 날짜 시트 정기 내역 행 */
+.day-sheet__recurring { display: flex; flex-direction: column; }
+.day-sheet__amount { flex: none; font-size: 0.9375rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.day-sheet__record { align-self: flex-end; margin-top: -8px; }
+.text-button { min-height: 44px; padding: 0 8px; border: 0; background: transparent; color: var(--color-primary-strong); font: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; border-radius: 8px; }
+.text-button:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+/* 제안 시트 */
+.suggest__desc { margin: 0 0 8px; font-size: 0.9375rem; color: var(--color-text-sub); }
+.suggest__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.suggest__row { display: flex; align-items: center; gap: 8px; min-height: 64px; border-bottom: 1px solid var(--color-border); }
+.suggest__check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 0; cursor: pointer; }
+.suggest__check .tx-row__sub { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; } /* "10월 25일 · 15일 지났어요 · 준호"가 잘리지 않게 2줄까지 */
+.suggest__check input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--color-primary); }
+.suggest__check:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 2px; border-radius: 8px; }
+.suggest__amount {
+  flex: none; min-height: 44px; padding: 0 4px; border: 0; background: transparent; font: inherit; font-size: 1.0625rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 4px; color: var(--color-text);
+}
+.suggest__amount.tx-row__amount--income { color: var(--color-primary-strong); }
+.suggest__amount:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; border-radius: 8px; }
+.suggest__buttons { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; margin-top: 16px; }
+.suggest__note { margin: 8px 0 0; text-align: center; font-size: 0.8125rem; color: var(--color-text-weak); }
+.amount-sheet { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+.amount-sheet .tx-amount { align-self: center; }
+.amount-sheet__keypad { margin-top: 0; }
+/* 정기 내역 목록 */
+.recurring-list { padding-bottom: 0; }
+.recurring-list__end { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.recurring-list__paused { display: inline-flex; align-items: center; gap: 2px; }
+.tx-row.is-paused :is(.tx-row__title, .tx-row__amount) { color: var(--color-text-weak); }
+.recurring-list__note { margin: 16px 0 0; font-size: 0.8125rem; }
+.recurring-empty { display: flex; flex-direction: column; gap: 8px; }
+/* 입력 화면: 정기 내역 표시·반복 알약·일시정지 */
+.tx-entry__mode { margin: -8px 0 0; font-size: 0.8125rem; font-weight: 600; color: var(--color-text-sub); }
+.tx-pill--strong { border-color: var(--color-primary); }
+.tx-entry__pause { padding: 0 16px; }
+/* 반복 시트 */
+.repeat-sheet { display: flex; flex-direction: column; gap: 16px; }
+.repeat-sheet__grid { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.repeat-sheet__week { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.repeat-sheet__cell {
+  position: relative; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px;
+  font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; color: var(--color-text);
+}
+.repeat-sheet__cell input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.repeat-sheet__cell.is-selected { background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; }
+.repeat-sheet__cell:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.repeat-sheet__cell--wide { grid-column: span 2; }
+.repeat-sheet__yearly { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.repeat-sheet__row { display: flex; align-items: center; gap: 12px; font-weight: 600; }
+.repeat-sheet__row > :first-child { flex: none; width: 32px; }
+.repeat-sheet__row .manage-input { flex: 1; min-width: 0; }
+.repeat-sheet__none { flex: none; font-size: 0.875rem; color: var(--color-text-weak); font-weight: 400; }
+.repeat-sheet__clear { flex: none; min-height: 44px; }
