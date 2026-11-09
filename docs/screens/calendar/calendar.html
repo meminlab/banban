@@ -48,8 +48,8 @@ svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
 .plus svg { width:26px; height:26px; }
 /* 일정 탭 달력 (5.24) */
 .cal { background:var(--color-surface); margin:0 var(--card-gutter); border-radius:var(--card-radius); position:absolute; top:48px; left:0; right:0; bottom:0; display:flex; flex-direction:column; }
-.wk { display:grid; grid-template-columns:repeat(7,1fr); height:28px; align-items:center; text-align:center; font-size:13px; font-weight:500; color:var(--color-text-sub); }
-.grid { flex:1; display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:1fr; }
+.wk { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); height:28px; align-items:center; text-align:center; font-size:13px; font-weight:500; color:var(--color-text-sub); }
+.grid { flex:1; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); grid-auto-rows:1fr; }
 .cell { border-top:1px solid var(--color-border); padding:3px 2px 0; min-width:0; overflow:hidden; }
 .cell.sel { background:var(--color-primary-soft); }
 .dn { height:22px; display:flex; justify-content:center; align-items:center; font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; margin-bottom:2px; }
@@ -57,6 +57,7 @@ svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
 .cell.today .dn i { background:var(--color-primary); color:var(--color-on-primary); font-weight:700; }
 .cell.out { color:var(--color-text-weak); } .cell.out .chip { opacity:.55; }
 .chip { height:15px; border-radius:4px; font-size:11px; line-height:15px; font-weight:600; padding:0 3px; margin-bottom:2px; white-space:nowrap; overflow:hidden; display:flex; align-items:center; gap:2px; color:var(--color-text); }
+.chip .tt { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .chip svg { width:9px; height:9px; stroke-width:2.5; flex:none; }
 .chip.rec.acc { color:var(--color-primary-strong); }
 .chip.rec { background:var(--color-surface); box-shadow:inset 0 0 0 1px var(--color-border-strong); font-variant-numeric:tabular-nums; justify-content:center; }
@@ -180,7 +181,7 @@ const EV = {
   16:[['1','요가','appointment']], 21:[['2','준호 생일','anniversary'],['2','풋살','other']], 23:[['1','요가','appointment']],
   25:[['rec','−25만'],['rec','+350만',1]], 27:[['t','카드값','bill_day']], 28:[['2','풋살','other']], 30:[['1','요가','appointment']],
 };
-const chip = e => e[0]==='rec' ? `<div class="chip rec${e[2]?' acc':''}">${e[1]}</div>` : `<div class="chip e-${e[0]}">${KIND[e[2]]?ic(KIND[e[2]]):''}${e[1]}</div>`;
+const chip = e => e[0]==='rec' ? `<div class="chip rec${e[2]?' acc':''}">${e[1]}</div>` : `<div class="chip e-${e[0]}">${KIND[e[2]]?ic(KIND[e[2]]):''}<span class="tt">${e[1]}</span></div>`;
 const cellHtml = (d, out, sel) => {
   const evs = out ? (d===1?[['t','송년 모임','appointment']]:[]) : (EV[d]||[]);
   const shown = evs.length > 3 ? evs.slice(0,2) : evs;
@@ -331,7 +332,7 @@ const s11b = calTab(12, emptyDay, true).replace('style="top:110px"','style="top:
 const s12 = calTab(0);
 
 const SCREENS = [
-  ['cal','1. 일정 탭 — 월 달력', [[s1,'기본']], ['탭바 4칸 + 가운데 ＋. 일정 탭에서는 ＋ 아이콘이 CalendarPlus로 바뀌고 "일정 추가"가 열린다(다른 탭은 내역 추가)', '칸 칩 색 = 누구 일정(함께 살구 · 민지 파랑 · 준호 노랑), 칩 앞 아이콘 = 종류(♡ 기념일 · 시계 약속 · 영수증 정기 지출일 · 기타 없음)', '정기 내역 칩 = 테두리만 있는 칩 + 금액(만 단위). 지출 −, 수입 + 포인트 색', '한 칸 최대 3줄, 넘치면 2개 + "+n"(14일). 긴 제목은 칸에서 잘리고 시트에서 전부 보인다(14일 넷째 일정)', '반복 일정은 펼쳐서 표시(매주 월 요가·매주 토 풋살, 음력 매년 아버님 제사 11일)']],
+  ['cal','1. 일정 탭 — 월 달력', [[s1,'기본']], ['탭바 4칸 + 가운데 ＋. 일정 탭에서는 ＋ 아이콘이 CalendarPlus로 바뀌고 "일정 추가"가 열린다(다른 탭은 내역 추가)', '칸 칩 색 = 누구 일정(함께 살구 · 민지 파랑 · 준호 노랑), 칩 앞 아이콘 = 종류(♡ 기념일 · 시계 약속 · 영수증 정기 지출일 · 기타 없음)', '정기 내역 칩 = 테두리만 있는 칩 + 금액(만 단위). 지출 −, 수입 + 포인트 색', '한 칸 최대 3줄, 넘치면 2개 + "+n"(14일). 긴 제목은 칸 안에서 말줄임(…), 시트에서 전부 보인다. 7칸은 360px 안에 모두 들어온다(minmax(0,1fr))(14일 넷째 일정)', '반복 일정은 펼쳐서 표시(매주 월 요가·매주 토 풋살, 음력 매년 아버님 제사 11일)']],
   ['day','2. 날짜 누르면 — 그날 목록 시트', [[s2,'14일 선택']], ['고른 날 칸 = primary-soft 바탕', '행: 색 원(누구) 안 아이콘(종류) / 제목(20자까지 줄바꿈, 자르지 않음) / "누구 · 시각 · 장소" 또는 반복', '누구는 이름 글자로도 쓴다 → 색만으로 구분하지 않음', '홈에 고정한 기념일은 오른쪽 배지 📌 D-5', '아래 "이 날 일정 추가"(날짜가 채워진 채 열림)']],
   ['form','3. 일정 추가·수정 + 음력 날짜', [[s3,'추가 (기념일·음력)'],[s4,'날짜 시트 (양력|음력)']], ['제목 1~20자 글자 수 표시 · 종류 칩 4개(아이콘) · 누구 칩(색 견본 + 이름)', '날짜: 기념일이면 날짜 시트에 [양력 | 음력]. 음력을 고르면 반복이 "매년 (음력)"으로 정해지고 올해 양력 날짜를 함께 보여 준다', '반복 · 종일/시각은 한 줄에 두 칸. 반복 선택지: 안 함 / 매주 (토요일) / 매월 (14일) / 매년 (11월 14일) / 매년 (음력)', '"홈에 D-day 고정"은 기념일일 때만, 가계부당 2개. 2개 찼으면 꺼진 채 비활성 + "이미 2개를 고정했어요"', '"함께한 날" 스위치는 없음 → 설정 › 함께한 날(8번)', '수정 화면: 제목 "일정 수정", 아래 [삭제(위험 외곽)] [저장]. 반복 일정은 1건 저장이라 고치면 모든 날짜에 반영 — 삭제 확인 창 "모든 날짜의 일정이 지워져요"']],
   ['home','4. 홈 맨 위 — 함께한 날 카드 + 정기 내역 제안', [[s5,'홈'],[s6,'카드 상태']], ['카드 3줄: ① ♡ 함께한 지 N일째예요 ②③ 기념일 D-day(고정한 것 먼저, 없으면 가까운 기념일 순)', '당일은 "오늘은 ○○이에요" + D-day 포인트 색', '함께한 날·다가오는 기념일 둘 다 없으면 카드 숨김. 약속 줄은 넣지 않음(일정 탭에서)', '카드 전체가 버튼 → 일정 탭', '정기 내역 제안 줄: 기록할 정기 내역이 있을 때만 카드 아래 한 줄. X = 오늘은 그만(내일 다시)', '월 이동 줄은 그 아래로 내려간다(아래 두 카드만 월에 걸리기 때문)']],
