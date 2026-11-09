@@ -48,10 +48,18 @@ describe('미니게임 화면 (BANB-52, design.md 5.32)', () => {
   it('제목 "미니게임", 둘이 같이: 오목 / 혼자서: 반반 쌓기(누르면 반반 쌓기 화면)', async () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: '미니게임' })).toBeInTheDocument();
-    const region = screen.getByRole('region', { name: '게임' });
-    expect(within(region).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['둘이 같이', '혼자서']);
-    expect(within(region).getByText('다섯 개를 먼저 이으면 이겨요')).toBeInTheDocument();
-    const stack = within(region).getByRole('link', { name: /반반 쌓기/ });
+    // 순서: 둘이 같이(오목) → 누구랑 둘까요? → 초대하기 → 혼자서(반반 쌓기) → 진동 (상대 고르기가 반반 쌓기에 딸려 보이지 않게)
+    const order = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((h) => h.textContent);
+    expect(order).toEqual(['둘이 같이', '누구랑 둘까요?', '혼자서']);
+    const duo = screen.getByRole('region', { name: '둘이 같이' });
+    const solo = screen.getByRole('region', { name: '혼자서' });
+    const send = screen.getByRole('button', { name: /준호님 초대하기/ });
+    expect(send.compareDocumentPosition(solo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(solo.compareDocumentPosition(screen.getByRole('switch', { name: /진동/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(duo).getByText('다섯 개를 먼저 이으면 이겨요')).toBeInTheDocument();
+    const stack = within(solo).getByRole('link', { name: /반반 쌓기/ });
     expect(stack).toHaveAttribute('href', '/play/stack');
     expect(stack).toHaveTextContent('동전을 쌓아 한 줄씩 저금해요');
     expect(screen.queryByText('곧 만나요')).not.toBeInTheDocument();

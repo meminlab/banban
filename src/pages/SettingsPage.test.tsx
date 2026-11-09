@@ -15,8 +15,8 @@ vi.mock('../data/ledger', () => ({
 }));
 vi.mock('../data/member', () => ({ getMyMemberName: async () => '김' }));
 
-describe('설정 › 미니게임 (BANB-51)', () => {
-  it('지금 가계부 묶음에 "미니게임" 줄이 있고, 누르면 게임 고르기(/play)로 간다', async () => {
+describe('설정 › 미니게임 (BANB-51 → BANB-52 묶음 ②)', () => {
+  it('묶음 ②(가계부 관리 · 화면 테마 · 미니게임)에 "미니게임" 줄이 있고, 누르면 미니게임 화면(/play)으로 간다', async () => {
     render(
       <MemoryRouter initialEntries={['/settings']}>
         <Routes>
@@ -25,9 +25,10 @@ describe('설정 › 미니게임 (BANB-51)', () => {
         </Routes>
       </MemoryRouter>,
     );
-    const ledgerNav = screen.getByRole('navigation', { name: '지금 보는 가계부 설정' });
+    const myNav = screen.getByRole('navigation', { name: '내 설정' });
     const row = screen.getByRole('link', { name: '미니게임' });
-    expect(ledgerNav).toContainElement(row);
+    expect(myNav).toContainElement(row);
+    expect(screen.getByRole('navigation', { name: '지금 보는 가계부 설정' })).not.toContainElement(row);
     expect(row).toHaveAttribute('href', '/play');
     await userEvent.click(row);
     expect(screen.getByText('게임 고르기 화면')).toBeInTheDocument();

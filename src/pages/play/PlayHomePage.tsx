@@ -90,8 +90,8 @@ export function PlayHomePage() {
           </section>
         )}
 
-        <section className="play-panel" aria-label="게임">
-          <h2 className="play-section">둘이 같이</h2>
+        <section className="play-panel" aria-labelledby="play-duo-title">
+          <h2 id="play-duo-title" className="play-section">둘이 같이</h2>
           <ul className="play-games">
             <li className={`play-game${mine || others.length === 0 ? ' is-disabled' : ''}`}>
               <span className="play-game__icon" aria-hidden="true">
@@ -110,29 +110,6 @@ export function PlayHomePage() {
                     ))}
                 </span>
               </span>
-            </li>
-          </ul>
-          <h2 className="play-section">혼자서</h2>
-          <ul className="play-games">
-            <li>
-              <Link to={STACK_PATH} className="play-game play-game--link">
-                <span className="play-game__icon" aria-hidden="true">
-                  <PiggyBank size={24} />
-                </span>
-                <span className="play-game__body">
-                  <span className="play-game__name">반반 쌓기</span>
-                  <span className="play-game__desc">
-                    {stackBest !== null ? (
-                      <>
-                        내 최고 <b>{formatWon(stackBest)}</b>
-                      </>
-                    ) : (
-                      '동전을 쌓아 한 줄씩 저금해요'
-                    )}
-                  </span>
-                </span>
-                <ChevronRight size={20} aria-hidden="true" className="play-game__arrow" />
-              </Link>
             </li>
           </ul>
         </section>
@@ -197,6 +174,31 @@ export function PlayHomePage() {
             {sending ? '보내고 있어요' : opponent ? `${nameOf(opponent)}님 초대하기` : selectable.length === 0 ? '모두 다른 판을 두는 중이에요' : '상대를 골라 주세요'}
           </button>
         )}
+        <section className="play-panel" aria-labelledby="play-solo-title">
+          <h2 id="play-solo-title" className="play-section">혼자서</h2>
+          <ul className="play-games">
+            <li>
+              <Link to={STACK_PATH} className="play-game play-game--link">
+                <span className="play-game__icon" aria-hidden="true">
+                  <PiggyBank size={24} />
+                </span>
+                <span className="play-game__body">
+                  <span className="play-game__name">반반 쌓기</span>
+                  <span className="play-game__desc">
+                    {stackBest !== null ? (
+                      <>
+                        내 최고 <b>{formatWon(stackBest)}</b>
+                      </>
+                    ) : (
+                      '동전을 쌓아 한 줄씩 저금해요'
+                    )}
+                  </span>
+                </span>
+                <ChevronRight size={20} aria-hidden="true" className="play-game__arrow" />
+              </Link>
+            </li>
+          </ul>
+        </section>
         <section className="play-panel" aria-label="진동">
           <label className="switch-row">
             <Vibrate size={20} strokeWidth={2} aria-hidden="true" />
