@@ -1,17 +1,16 @@
-import { ChevronRight } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Calendar, Delete, Plus, User, Wallet, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentUser } from '../app/auth';
 import { useLedgerId } from '../app/guards';
-import { ledgerReturnPath, type LedgerFlash } from '../app/routes';
+import { ledgerReturnPath, type TxFlash } from '../app/routes';
+import { saveErrorMessage } from '../app/useSaving';
 import { CategoryEditor, type CategoryEditorValues } from '../components/CategoryEditor';
-import { CategoryIcon } from '../components/CategoryIcon';
+import { LucideByKey } from '../components/CategoryIcon';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { Dialog } from '../components/Dialog';
-import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
 import { StatusScreen } from '../components/StatusScreen';
-import { saveErrorMessage } from '../app/useSaving';
 import { addChildCategory, addParentCategory } from '../data/catalog';
 import {
   createTransaction,
@@ -19,32 +18,44 @@ import {
   getTransaction,
   getTransactionFormOptions,
   listCategoryUses,
+  listMyRecentEntries,
   updateTransaction,
   type TransactionFormOptions,
 } from '../data/transaction';
 import type { Category, Transaction, TransactionType } from '../data/types';
 import { nextSortOrder } from '../domain/catalog';
+import { categoryGlyph } from '../domain/categoryIcon';
 import { buildPickerModel, frequentRange, type CategoryUse, type ParentChoice } from '../domain/categoryPicker';
 import {
   FIELD_ORDER,
+  KEYPAD_MAX_DIGITS,
   MEMO_MAX,
   TYPE_LABEL,
   TYPE_ORDER,
+  amountAriaLabel,
+  amountFromDigits,
   categoryGroups,
-  formatAmountInput,
+  datePillLabel,
   formatDateTimeKST,
   formatNumber,
+  keyFromKeyboard,
+  koreanReading,
+  lastUsedDefaults,
   memberLabel,
+  missingForSave,
+  missingMessage,
   pocketOptions,
+  pressKey,
   spenderOptions,
   todayKST,
   validateDraft,
-  type DraftErrors,
-  type DraftField,
+  type KeypadKey,
+  type RecentEntry,
   type TransactionDraft,
+  type TransactionValues,
 } from '../domain/transactionForm';
 
-type Loaded = { options: TransactionFormOptions; original: Transaction | null; myMemberId: string };
+type Loaded = { options: TransactionFormOptions; original: Transaction | null; myMemberId: string; recent: RecentEntry[] };
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'notFound' } | { status: 'ready'; data: Loaded };
 
 function useFormData(ledgerId: string, transactionId: string | undefined) {
@@ -55,16 +66,17 @@ function useFormData(ledgerId: string, transactionId: string | undefined) {
   useEffect(() => {
     let alive = true;
     setState({ status: 'loading' });
-    Promise.all([getTransactionFormOptions(ledgerId), transactionId ? getTransaction(transactionId) : null]).then(
-      ([options, original]) => {
+    Promise.all([getTransactionFormOptions(ledgerId), transactionId ? getTransaction(transactionId) : null])
+      .then(async ([options, original]) => {
         if (!alive) return;
         if (transactionId && !original) return setState({ status: 'notFound' });
         const me = options.members.find((m) => m.user_id === user.id && m.left_at === null);
         if (!me) return setState({ status: 'error' });
-        setState({ status: 'ready', data: { options, original, myMemberId: me.id } });
-      },
-      () => alive && setState({ status: 'error' }),
-    );
+        // 새 내역 기본값(마지막에 쓴 카테고리·주머니). 못 읽으면 빈 알약으로 시작한다
+        const recent = transactionId ? [] : await listMyRecentEntries(ledgerId, me.id).catch(() => []);
+        if (alive) setState({ status: 'ready', data: { options, original, myMemberId: me.id, recent } });
+      })
+      .catch(() => alive && setState({ status: 'error' }));
     return () => {
       alive = false;
     };
@@ -73,7 +85,7 @@ function useFormData(ledgerId: string, transactionId: string | undefined) {
   return { state, retry: useCallback(() => setAttempt((n) => n + 1), []) };
 }
 
-/** 내역 입력(/ledger/new) · 상세·수정(/ledger/:transactionId) */
+/** 내역 입력(/ledger/new) · 상세·수정(/ledger/:transactionId) — design.md 5.15 v1.4 키패드 + 알약 */
 export function TransactionFormPage() {
   const ledgerId = useLedgerId();
   const { transactionId } = useParams();
@@ -82,25 +94,19 @@ export function TransactionFormPage() {
   const [returnTo] = useState(() => ledgerReturnPath(location.state));
   const { state, retry } = useFormData(ledgerId, transactionId);
   const close = useCallback(
-    (flash?: LedgerFlash) => navigate(returnTo, { replace: true, state: flash ? { flash } : undefined }),
+    (txFlash?: TxFlash) => navigate(returnTo, { replace: true, state: txFlash ? { txFlash } : undefined }),
     [navigate, returnTo],
   );
-  const title = transactionId ? '내역 수정' : '내역 입력';
 
   if (state.status === 'loading') return <StatusScreen kind="loading" message="내역을 불러오고 있어요" />;
   if (state.status === 'error')
     return <StatusScreen kind="error" message="내역을 불러오지 못했어요. 네트워크를 확인해 주세요." onRetry={retry} />;
-
-  return (
-    <div className="shell">
-      <header className="topbar">
-        <button type="button" className="icon-button" aria-label="닫기" onClick={() => close()}>
-          <Icon name="back" />
-        </button>
-        <h1 className="topbar__title">{title}</h1>
-        <span className="icon-button" aria-hidden="true" />
-      </header>
-      {state.status === 'notFound' ? (
+  if (state.status === 'notFound')
+    return (
+      <div className="shell">
+        <TopBar onClose={() => close()}>
+          <h1 className="topbar__title">내역 수정</h1>
+        </TopBar>
         <main className="content content--no-tabbar">
           <p className="status-text" role="alert">
             삭제된 내역입니다.
@@ -109,45 +115,44 @@ export function TransactionFormPage() {
             목록으로
           </button>
         </main>
-      ) : (
-        <TransactionForm ledgerId={ledgerId} data={state.data} onClose={close} />
-      )}
-    </div>
+      </div>
+    );
+  return <TransactionForm ledgerId={ledgerId} data={state.data} onClose={close} />;
+}
+
+function TopBar({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  return (
+    <header className="topbar tx-topbar">
+      <button type="button" className="icon-button" aria-label="닫기" onClick={onClose}>
+        <X size={24} strokeWidth={2} aria-hidden="true" />
+      </button>
+      {children}
+    </header>
   );
 }
 
-function initialDraft(original: Transaction | null, myMemberId: string): TransactionDraft {
-  if (!original) {
-    return {
-      type: 'expense',
-      amount: '',
-      occurredOn: todayKST(),
-      categoryId: '',
-      pocketId: '',
-      spenderId: myMemberId,
-      isFixed: false,
-      memo: '',
-    };
-  }
+function valuesOf(t: Transaction): TransactionValues {
   return {
-    type: original.type,
-    amount: formatNumber(original.amount),
-    occurredOn: original.occurred_on,
-    categoryId: original.category_id,
-    pocketId: original.pocket_id ?? '',
-    spenderId: original.spender_id,
-    isFixed: original.is_fixed,
-    memo: original.memo ?? '',
+    type: t.type,
+    amount: t.amount,
+    occurred_on: t.occurred_on,
+    category_id: t.category_id,
+    pocket_id: t.pocket_id,
+    spender_id: t.spender_id,
+    is_fixed: t.is_fixed,
+    memo: t.memo,
   };
 }
 
-const fieldId = (f: DraftField) => `tx-${f}`;
+const KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0'];
+const LONG_PRESS_MS = 500;
+type SheetKind = 'category' | 'categoryAdd' | 'pocket' | 'spender' | 'date' | 'memo';
 
-function focusField(field: DraftField) {
-  const el =
-    document.getElementById(fieldId(field)) ??
-    document.querySelector<HTMLElement>(`[data-field="${field}"] input:checked, [data-field="${field}"] input`);
-  el?.focus();
+/** 실제 자판 입력을 키패드로 넘길지: 글자 입력칸에 초점이 있으면 넘기지 않는다 */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  return target instanceof HTMLInputElement && !['radio', 'checkbox', 'button', 'submit'].includes(target.type);
 }
 
 function TransactionForm({
@@ -157,21 +162,59 @@ function TransactionForm({
 }: {
   ledgerId: string;
   data: Loaded;
-  onClose: (flash?: LedgerFlash) => void;
+  onClose: (flash?: TxFlash) => void;
 }) {
-  const { options, original, myMemberId } = data;
+  const { options, original, myMemberId, recent } = data;
   const isEdit = original !== null;
-  const [draft, setDraft] = useState<TransactionDraft>(() => initialDraft(original, myMemberId));
-  const [errors, setErrors] = useState<DraftErrors>({});
+  const today = todayKST();
+  // 처음 값이 숨김/나감 항목이어도 수정 화면에서 그대로 보이게 유지
+  const keep = original ?? undefined;
+  const [categories, setCategories] = useState<Category[]>(options.categories);
+  const pockets = useMemo(() => pocketOptions(options.pockets, keep?.pocket_id), [options.pockets, keep]);
+  const spenders = useMemo(() => spenderOptions(options.members, keep?.spender_id), [options.members, keep]);
+  const memberById = useMemo(() => new Map(options.members.map((m) => [m.id, m])), [options.members]);
+
+  // 새 내역 기본값: 유형별 마지막 카테고리, 마지막 주머니 (지금 고를 수 있는 것만)
+  const [defaults] = useState(() =>
+    lastUsedDefaults(recent, {
+      categoryIds: (t) => new Set(categoryGroups(options.categories, t).flatMap((g) => g.children.map((c) => c.id))),
+      pocketIds: new Set(pocketOptions(options.pockets).map((p) => p.id)),
+    }),
+  );
+  const [draft, setDraft] = useState<TransactionDraft>(() =>
+    original
+      ? {
+          type: original.type,
+          amount: String(original.amount),
+          occurredOn: original.occurred_on,
+          categoryId: original.category_id,
+          pocketId: original.pocket_id ?? '',
+          spenderId: original.spender_id,
+          isFixed: original.is_fixed,
+          memo: original.memo ?? '',
+        }
+      : {
+          type: 'expense',
+          amount: '',
+          occurredOn: today,
+          categoryId: defaults.categoryByType.expense ?? '',
+          pocketId: defaults.pocketId,
+          spenderId: myMemberId,
+          isFixed: false,
+          memo: '',
+        },
+  );
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
   const [failure, setFailure] = useState<'save' | 'delete' | null>(null);
   const [dialog, setDialog] = useState<'confirmDelete' | 'deleted' | null>(null);
-  // 카테고리 선택 시트 → 추가 화면. 추가한 카테고리는 이 화면 안에서 바로 고를 수 있게 목록에 더한다
-  const [categories, setCategories] = useState<Category[]>(options.categories);
-  const [catSheet, setCatSheet] = useState<null | 'pick' | 'add'>(null);
+  const [sheet, setSheet] = useState<SheetKind | null>(null);
   const [catBusy, setCatBusy] = useState(false);
   const [catError, setCatError] = useState<string | null>(null);
   const [uses, setUses] = useState<CategoryUse[]>([]);
+  const [maxHits, setMaxHits] = useState(0); // 최대 금액을 넘겨 누른 횟수 → 흔들림·화면낭독 안내
+  const [shaking, setShaking] = useState(false);
+  const amountRef = useRef<HTMLOutputElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -186,8 +229,11 @@ function TransactionForm({
     };
   }, [ledgerId]);
 
-  // 처음 값이 숨김/나감 항목이어도 수정 화면에서 그대로 보이게 유지
-  const keep = original ?? undefined;
+  // 화면낭독기 첫 포커스는 금액 (5.15)
+  useEffect(() => {
+    amountRef.current?.focus();
+  }, []);
+
   const groups = useMemo(
     () => categoryGroups(categories, draft.type, keep?.type === draft.type ? keep.category_id : null),
     [categories, draft.type, keep],
@@ -196,38 +242,82 @@ function TransactionForm({
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const selectedCategory = categoryById.get(draft.categoryId);
   const selectedParent = selectedCategory?.parent_id ? categoryById.get(selectedCategory.parent_id) : undefined;
-  const pockets = useMemo(() => pocketOptions(options.pockets, keep?.pocket_id), [options.pockets, keep]);
-  const spenders = useMemo(() => spenderOptions(options.members, keep?.spender_id), [options.members, keep]);
-  const memberById = useMemo(() => new Map(options.members.map((m) => [m.id, m])), [options.members]);
+  const selectedPocket = pockets.find((p) => p.id === draft.pocketId);
+  const selectedSpender = memberById.get(draft.spenderId);
   const isExpense = draft.type === 'expense';
 
-  const set = <K extends keyof TransactionDraft>(key: K, value: TransactionDraft[K]) => {
+  const amount = amountFromDigits(draft.amount);
+  const hint = missingMessage(missingForSave(draft));
+  // 저장 비활성 안내가 떠 있으면 읽기 줄은 숨긴다 (5.15)
+  const reading = hint ? null : koreanReading(amount);
+
+  const set = useCallback(<K extends keyof TransactionDraft>(key: K, value: TransactionDraft[K]) => {
     setDraft((d) => ({ ...d, [key]: value }));
-    if (key in errors) setErrors((e) => ({ ...e, [key]: undefined }));
+    setSubmitError(null);
+  }, []);
+
+  const press = useCallback(
+    (key: KeypadKey) => {
+      const r = pressKey(draft.amount, key);
+      if (r.overflow) {
+        setMaxHits((n) => n + 1);
+        setShaking(true);
+        return;
+      }
+      if (r.digits !== draft.amount) set('amount', r.digits);
+    },
+    [draft.amount, set],
+  );
+
+  // 블루투스·PC 키보드의 숫자·Backspace (시트·확인 창이 열려 있으면 받지 않는다)
+  const keyboardOn = sheet === null && dialog === null && busy === null;
+  useEffect(() => {
+    if (!keyboardOn) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey || isTextEntry(e.target)) return;
+      const key = keyFromKeyboard(e.key);
+      if (!key) return;
+      e.preventDefault();
+      press(key);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [keyboardOn, press]);
+
+  // ⌫ 길게 누르면 전부 지움
+  const longPress = useRef<{ timer?: ReturnType<typeof setTimeout>; fired: boolean }>({ fired: false });
+  const startLongPress = () => {
+    longPress.current.fired = false;
+    clearTimeout(longPress.current.timer);
+    longPress.current.timer = setTimeout(() => {
+      longPress.current.fired = true;
+      set('amount', '');
+    }, LONG_PRESS_MS);
   };
+  const stopLongPress = () => clearTimeout(longPress.current.timer);
+  useEffect(() => () => clearTimeout(longPress.current.timer), []);
 
   const changeType = (type: TransactionType) => {
     if (type === draft.type) return;
-    // 유형이 바뀌면 카테고리 선택지가 바뀌므로 고른 카테고리는 비운다
-    setDraft((d) => ({ ...d, type, categoryId: '' }));
-    setErrors((e) => ({ ...e, categoryId: undefined, pocketId: undefined }));
+    // 유형이 바뀌면 카테고리 선택지가 바뀐다 → 그 유형에서 마지막에 쓴 카테고리(없으면 비움)
+    setDraft((d) => ({ ...d, type, categoryId: isEdit ? '' : (defaults.categoryByType[type] ?? '') }));
+    setSubmitError(null);
   };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (busy) return;
+    if (busy || hint) return;
     const result = validateDraft(draft, {
       categoryIds: new Set(groups.flatMap((g) => g.children.map((c) => c.id))),
       pocketIds: new Set(pockets.map((p) => p.id)),
       spenderIds: new Set(spenders.map((m) => m.id)),
     });
     if (!result.ok) {
-      setErrors(result.errors);
       const first = FIELD_ORDER.find((f) => result.errors[f]);
-      if (first) requestAnimationFrame(() => focusField(first));
+      setSubmitError(first ? result.errors[first]! : '입력값을 확인해 주세요.');
       return;
     }
-    setErrors({});
+    setSubmitError(null);
     setFailure(null);
     setBusy('save');
     try {
@@ -238,22 +328,23 @@ function TransactionForm({
           setDialog('deleted');
           return;
         }
+        onClose({ kind: 'saved', undo: { op: 'restore', id: original.id, values: valuesOf(original) } });
       } else {
-        await createTransaction(ledgerId, result.values);
+        const id = await createTransaction(ledgerId, result.values);
+        onClose({ kind: 'saved', undo: { op: 'delete', id } });
       }
-      onClose('saved');
     } catch {
       setBusy(null);
       setFailure('save'); // 입력값은 그대로 두고 다시 시도
     }
   };
 
-  const closeCategorySheet = useCallback(() => {
-    setCatSheet(null);
+  const closeSheet = useCallback(() => {
+    setSheet(null);
     setCatError(null);
   }, []);
   const backToPicker = useCallback(() => {
-    setCatSheet('pick');
+    setSheet('category');
     setCatError(null);
   }, []);
 
@@ -281,7 +372,7 @@ function TransactionForm({
       }
       setCategories((list) => [...list, ...added]);
       set('categoryId', child.id); // 추가한 카테고리가 선택된 상태로 선택 시트에 돌아온다
-      setCatSheet('pick');
+      setSheet('category');
     } catch (e) {
       setCatError(saveErrorMessage(e));
     } finally {
@@ -296,184 +387,157 @@ function TransactionForm({
     setBusy('delete');
     try {
       await deleteTransaction(original.id);
-      onClose('deleted');
+      onClose({ kind: 'deleted' });
     } catch {
       setBusy(null);
       setFailure('delete');
     }
   };
 
-  const errorProps = (f: DraftField) =>
-    errors[f] ? { 'aria-invalid': true as const, 'aria-describedby': `${fieldId(f)}-error` } : {};
-  const errorText = (f: DraftField) =>
-    errors[f] ? (
-      <p id={`${fieldId(f)}-error`} className="field__error">
-        {errors[f]}
-      </p>
-    ) : null;
-  const hasErrors = FIELD_ORDER.some((f) => errors[f]);
+  const segment = (
+    <fieldset className="segmented tx-segmented" aria-label="유형">
+      {TYPE_ORDER.map((t) => (
+        <label key={t} className={`segmented__item${draft.type === t ? ' is-selected' : ''}`}>
+          <input type="radio" name="type" value={t} checked={draft.type === t} onChange={() => changeType(t)} />
+          {TYPE_LABEL[t]}
+        </label>
+      ))}
+    </fieldset>
+  );
+
+  const hiddenMark = (hidden: boolean | undefined) => (hidden ? ' (숨김)' : '');
+  const categoryText = selectedCategory ? `${selectedCategory.name}${hiddenMark(selectedCategory.is_hidden || selectedParent?.is_hidden)}` : '';
+  const categoryGlyphView = selectedCategory
+    ? (() => {
+        const g = categoryGlyph(selectedCategory, selectedParent);
+        return g.kind === 'icon' ? <LucideByKey iconKey={g.key} size={18} /> : <span className="tx-pill__letter" aria-hidden="true">{g.letter}</span>;
+      })()
+    : null;
+  const dateText = `${datePillLabel(draft.occurredOn, today)}${isExpense && draft.isFixed ? ' · 고정' : ''}`;
+  const memoText = draft.memo.trim();
 
   return (
-    <main className="content content--no-tabbar">
-      <form className="tx-form" onSubmit={submit} noValidate aria-busy={busy !== null}>
-        <fieldset className="segmented" aria-label="유형">
-          {TYPE_ORDER.map((t) => (
-            <label key={t} className={`segmented__item${draft.type === t ? ' is-selected' : ''}`}>
-              <input type="radio" name="type" value={t} checked={draft.type === t} onChange={() => changeType(t)} />
-              {TYPE_LABEL[t]}
-            </label>
-          ))}
-        </fieldset>
+    <div className="shell">
+      <TopBar onClose={() => onClose()}>
+        {isEdit ? (
+          <h1 className="topbar__title">내역 수정</h1>
+        ) : (
+          <>
+            <h1 className="sr-only">내역 입력</h1>
+            {segment}
+          </>
+        )}
+      </TopBar>
 
-        <div className="field">
-          <label className="field__label" htmlFor={fieldId('amount')}>
-            금액
-          </label>
-          <div className="amount-input">
-            <input
-              id={fieldId('amount')}
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              enterKeyHint="next"
-              placeholder="0"
-              autoFocus={!isEdit}
-              value={draft.amount}
-              onChange={(e) => set('amount', formatAmountInput(e.target.value))}
-              {...errorProps('amount')}
-            />
-            <span aria-hidden="true">원</span>
+      <form className="tx-entry" onSubmit={submit} noValidate aria-busy={busy !== null}>
+        <div className="tx-entry__top">
+          {isEdit && segment}
+
+          <div className="tx-entry__amount">
+            <output
+              ref={amountRef}
+              tabIndex={-1}
+              className={`tx-amount${amount === 0 ? ' is-zero' : ''}${draft.amount.length >= KEYPAD_MAX_DIGITS ? ' is-long' : ''}${shaking ? ' is-shaking' : ''}`}
+              aria-label={amountAriaLabel(amount)}
+              onAnimationEnd={() => setShaking(false)}
+            >
+              <span className="tx-amount__num">{formatNumber(amount)}</span>
+              <span className="tx-amount__unit">원</span>
+              <span className="tx-amount__caret" aria-hidden="true" />
+            </output>
+            {reading && (
+              <p className="tx-reading" aria-hidden="true">
+                {reading}
+              </p>
+            )}
+            <p className="sr-only" role="status">
+              {maxHits > 0 ? `최대 금액이에요${'​'.repeat(maxHits % 2)}` : ''}
+            </p>
           </div>
-          {errorText('amount')}
+
+          <div className="tx-pills">
+            <Pill
+              label={`카테고리: ${categoryText || '없음'}`}
+              empty={!selectedCategory}
+              icon={categoryGlyphView}
+              text={categoryText || '카테고리'}
+              onClick={() => setSheet('category')}
+            />
+            {isExpense && (
+              <Pill
+                label={`주머니: ${selectedPocket ? selectedPocket.name : '없음'}`}
+                empty={!selectedPocket}
+                icon={<Wallet size={18} strokeWidth={2} aria-hidden="true" />}
+                text={selectedPocket ? `${selectedPocket.name}${hiddenMark(selectedPocket.is_hidden)}` : '주머니'}
+                onClick={() => setSheet('pocket')}
+              />
+            )}
+            <Pill
+              label={`사람: ${memberLabel(selectedSpender)}`}
+              icon={<User size={18} strokeWidth={2} aria-hidden="true" />}
+              text={memberLabel(selectedSpender)}
+              onClick={() => setSheet('spender')}
+            />
+            <Pill
+              label={`날짜: ${dateText}`}
+              icon={<Calendar size={18} strokeWidth={2} aria-hidden="true" />}
+              text={dateText}
+              onClick={() => setSheet('date')}
+            />
+            <Pill
+              label={`메모: ${memoText || '없음'}`}
+              empty={!memoText}
+              text={memoText || '메모'}
+              memo
+              onClick={() => setSheet('memo')}
+            />
+          </div>
+
+          {original && (
+            <p className="tx-meta-line">
+              작성 {memberLabel(memberById.get(original.created_by))} · 마지막 수정: {memberLabel(memberById.get(original.updated_by))},{' '}
+              {formatDateTimeKST(original.updated_at)}
+            </p>
+          )}
         </div>
 
-        <div className="field">
-          <label className="field__label" htmlFor={fieldId('occurredOn')}>
-            날짜
-          </label>
-          <input
-            id={fieldId('occurredOn')}
-            className="input"
-            type="date"
-            value={draft.occurredOn}
-            onChange={(e) => set('occurredOn', e.target.value)}
-            {...errorProps('occurredOn')}
-          />
-          {errorText('occurredOn')}
-        </div>
-
-        <div className="field">
-          <span className="field__label" id={`${fieldId('categoryId')}-label`}>
-            카테고리
-          </span>
+        <div className="tx-keypad" role="group" aria-label="금액 키패드">
+          {KEYS.map((k) => (
+            <button key={k} type="button" className="tx-key" onClick={() => press(k)} disabled={busy !== null}>
+              {k}
+            </button>
+          ))}
           <button
             type="button"
-            id={fieldId('categoryId')}
-            className="category-field"
-            aria-haspopup="dialog"
-            aria-labelledby={`${fieldId('categoryId')}-label ${fieldId('categoryId')}-value`}
-            onClick={() => setCatSheet('pick')}
-            {...errorProps('categoryId')}
+            className="tx-key"
+            aria-label="지우기"
+            disabled={busy !== null}
+            onClick={() => {
+              if (longPress.current.fired) {
+                longPress.current.fired = false;
+                return;
+              }
+              press('back');
+            }}
+            onPointerDown={startLongPress}
+            onPointerUp={stopLongPress}
+            onPointerLeave={stopLongPress}
+            onPointerCancel={stopLongPress}
+            onContextMenu={(e) => e.preventDefault()}
           >
-            {selectedCategory ? (
-              <>
-                <CategoryIcon category={selectedCategory} parent={selectedParent} size="row" />
-                <span className="category-field__value" id={`${fieldId('categoryId')}-value`}>
-                  {selectedParent && selectedParent.name !== selectedCategory.name ? (
-                    <span className="category-field__parent">{selectedParent.name} › </span>
-                  ) : null}
-                  {selectedCategory.name}
-                  {selectedCategory.is_hidden || selectedParent?.is_hidden ? ' (숨김)' : ''}
-                </span>
-              </>
-            ) : (
-              <span className="category-field__value category-field__value--empty" id={`${fieldId('categoryId')}-value`}>
-                {groups.length === 0 ? '고를 수 있는 카테고리가 없어요' : '카테고리 선택'}
-              </span>
-            )}
-            <ChevronRight size={20} strokeWidth={2} aria-hidden="true" focusable="false" className="category-field__chevron" />
+            <Delete size={26} strokeWidth={2} aria-hidden="true" />
           </button>
-          {errorText('categoryId')}
         </div>
 
-        {isExpense && (
-          <fieldset className="field" data-field="pocketId" {...errorProps('pocketId')}>
-            <legend className="field__label">주머니</legend>
-            <div className="chips">
-              {pockets.map((p) => (
-                <label key={p.id} className="chip">
-                  <input
-                    type="radio"
-                    name="pocket"
-                    value={p.id}
-                    checked={draft.pocketId === p.id}
-                    onChange={() => set('pocketId', p.id)}
-                  />
-                  <span>
-                    {p.name}
-                    {p.is_hidden ? ' (숨김)' : ''}
-                  </span>
-                </label>
-              ))}
-              {pockets.length === 0 && <p className="hint">고를 수 있는 주머니가 없어요. 설정에서 주머니를 추가해 주세요.</p>}
-            </div>
-            {errorText('pocketId')}
-          </fieldset>
-        )}
-
-        <fieldset className="field" data-field="spenderId" {...errorProps('spenderId')}>
-          <legend className="field__label">사용한 사람</legend>
-          <div className="chips">
-            {spenders.map((m) => (
-              <label key={m.id} className="chip">
-                <input
-                  type="radio"
-                  name="spender"
-                  value={m.id}
-                  checked={draft.spenderId === m.id}
-                  onChange={() => set('spenderId', m.id)}
-                />
-                <span>
-                  {memberLabel(m)}
-                  {m.id === myMemberId ? ' (나)' : ''}
-                </span>
-              </label>
-            ))}
-          </div>
-          {errorText('spenderId')}
-        </fieldset>
-
-        {isExpense && (
-          <label className="check">
-            <input type="checkbox" checked={draft.isFixed} onChange={(e) => set('isFixed', e.target.checked)} />
-            고정지출
-          </label>
-        )}
-
-        <div className="field">
-          <label className="field__label" htmlFor={fieldId('memo')}>
-            메모 <span className="field__optional">(선택)</span>
-          </label>
-          <input
-            id={fieldId('memo')}
-            className="input"
-            type="text"
-            maxLength={MEMO_MAX}
-            value={draft.memo}
-            onChange={(e) => set('memo', e.target.value)}
-            aria-describedby={errors.memo ? `${fieldId('memo')}-error ${fieldId('memo')}-count` : `${fieldId('memo')}-count`}
-            aria-invalid={errors.memo ? true : undefined}
-          />
-          <p id={`${fieldId('memo')}-count`} className="field__count">
-            {[...draft.memo].length}/{MEMO_MAX}
-          </p>
-          {errorText('memo')}
-        </div>
-
-        <div className="tx-form__actions">
-          {hasErrors && (
+        <div className="tx-entry__actions">
+          {hint && (
+            <p id="tx-save-hint" className="tx-entry__hint">
+              {hint}
+            </p>
+          )}
+          {submitError && (
             <p className="form-error" role="alert">
-              입력값을 확인해 주세요.
+              {submitError}
             </p>
           )}
           {failure === 'save' && (
@@ -481,49 +545,48 @@ function TransactionForm({
               저장하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.
             </p>
           )}
-          <button type="submit" className="button button--primary button--block" disabled={busy !== null}>
-            {busy === 'save' ? '저장하는 중…' : failure === 'save' ? '다시 저장' : '저장'}
-          </button>
-        </div>
-
-        {original && (
-          <section className="tx-form__extra" aria-label="내역 정보">
-            <p className="tx-meta">
-              작성: {memberLabel(memberById.get(original.created_by))}
-              <br />
-              마지막 수정: {memberLabel(memberById.get(original.updated_by))}, {formatDateTimeKST(original.updated_at)}
+          {failure === 'delete' && (
+            <p className="form-error" role="alert">
+              삭제하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.
             </p>
-            {failure === 'delete' && (
-              <p className="form-error" role="alert">
-                삭제하지 못했어요. 네트워크를 확인하고 다시 시도해 주세요.
-              </p>
+          )}
+          <div className={`tx-entry__buttons${isEdit ? ' tx-entry__buttons--edit' : ''}`}>
+            {isEdit && (
+              <button
+                type="button"
+                className="button button--danger-outline tx-entry__button"
+                disabled={busy !== null}
+                onClick={() => setDialog('confirmDelete')}
+              >
+                {busy === 'delete' ? '삭제하는 중…' : '삭제'}
+              </button>
             )}
             <button
-              type="button"
-              className="button button--secondary button--danger-text button--block"
-              disabled={busy !== null}
-              onClick={() => setDialog('confirmDelete')}
+              type="submit"
+              className="button button--primary tx-entry__button"
+              disabled={busy !== null || hint !== null}
+              aria-describedby={hint ? 'tx-save-hint' : undefined}
             >
-              {busy === 'delete' ? '삭제하는 중…' : '삭제'}
+              {busy === 'save' ? '저장하는 중…' : failure === 'save' ? '다시 저장' : '저장'}
             </button>
-          </section>
-        )}
+          </div>
+        </div>
       </form>
 
-      {catSheet === 'pick' && (
-        <Sheet title={`${TYPE_LABEL[draft.type]} 카테고리`} onClose={closeCategorySheet}>
+      {sheet === 'category' && (
+        <Sheet title={`${TYPE_LABEL[draft.type]} 카테고리`} onClose={closeSheet}>
           <CategoryPicker
             model={pickerModel}
             selectedId={draft.categoryId}
             onSelect={(c) => {
               set('categoryId', c.id);
-              closeCategorySheet();
+              closeSheet();
             }}
-            onAdd={() => setCatSheet('add')}
+            onAdd={() => setSheet('categoryAdd')}
           />
         </Sheet>
       )}
-      {catSheet === 'add' && (
+      {sheet === 'categoryAdd' && (
         <Sheet title="카테고리 추가" onClose={backToPicker}>
           <CategoryEditor
             categories={categories}
@@ -539,6 +602,68 @@ function TransactionForm({
               </p>
             )}
           </CategoryEditor>
+        </Sheet>
+      )}
+      {sheet === 'pocket' && (
+        <Sheet title="주머니" onClose={closeSheet}>
+          <ChoiceChips
+            name="pocket"
+            label="주머니"
+            items={pockets.map((p) => ({ id: p.id, text: `${p.name}${hiddenMark(p.is_hidden)}` }))}
+            selectedId={draft.pocketId}
+            empty="고를 수 있는 주머니가 없어요. 설정에서 주머니를 추가해 주세요."
+            onSelect={(id) => {
+              set('pocketId', id);
+              closeSheet();
+            }}
+          />
+        </Sheet>
+      )}
+      {sheet === 'spender' && (
+        <Sheet title="사용한 사람" onClose={closeSheet}>
+          <ChoiceChips
+            name="spender"
+            label="사용한 사람"
+            items={spenders.map((m) => ({ id: m.id, text: `${memberLabel(m)}${m.id === myMemberId ? ' (나)' : ''}` }))}
+            selectedId={draft.spenderId}
+            onSelect={(id) => {
+              set('spenderId', id);
+              closeSheet();
+            }}
+          />
+        </Sheet>
+      )}
+      {sheet === 'date' && (
+        <Sheet title="날짜" onClose={closeSheet}>
+          <div className="tx-sheet">
+            <label className="visually-hidden" htmlFor="tx-date">
+              날짜
+            </label>
+            <input
+              id="tx-date"
+              className="manage-input"
+              type="date"
+              value={draft.occurredOn}
+              onChange={(e) => set('occurredOn', e.target.value)}
+            />
+            {isExpense && (
+              <label className="check">
+                <input type="checkbox" checked={draft.isFixed} onChange={(e) => set('isFixed', e.target.checked)} />
+                매달 나가는 돈(고정지출)
+              </label>
+            )}
+            <button type="button" className="button button--primary button--block" onClick={closeSheet}>
+              완료
+            </button>
+          </div>
+        </Sheet>
+      )}
+      {sheet === 'memo' && (
+        <Sheet title="메모" onClose={closeSheet}>
+          <MemoSheet initial={draft.memo} onDone={(memo) => {
+            set('memo', memo);
+            closeSheet();
+          }} />
         </Sheet>
       )}
 
@@ -573,6 +698,108 @@ function TransactionForm({
           <p className="dialog__body">다른 멤버가 이미 삭제한 내역이라 저장하지 않았어요.</p>
         </Dialog>
       )}
-    </main>
+    </div>
+  );
+}
+
+/** 알약: 라벨 글자 없이 값만, aria-label 에 "카테고리: 외식"처럼 라벨을 넣는다. 비어 있으면 점선 + Plus */
+function Pill({
+  label,
+  text,
+  icon,
+  empty = false,
+  memo = false,
+  onClick,
+}: {
+  label: string;
+  text: string;
+  icon?: ReactNode;
+  empty?: boolean;
+  memo?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`tx-pill${empty ? ' tx-pill--empty' : ''}${memo ? ' tx-pill--memo' : ''}`}
+      aria-label={label}
+      aria-haspopup="dialog"
+      onClick={onClick}
+    >
+      {empty ? <Plus size={18} strokeWidth={2} aria-hidden="true" /> : icon}
+      <span className="tx-pill__text">{text}</span>
+    </button>
+  );
+}
+
+/** 칩 시트(주머니·사람): 고르면 바로 닫힌다 */
+function ChoiceChips({
+  name,
+  label,
+  items,
+  selectedId,
+  empty,
+  onSelect,
+}: {
+  name: string;
+  label: string;
+  items: { id: string; text: string }[];
+  selectedId: string;
+  empty?: string;
+  onSelect: (id: string) => void;
+}) {
+  if (items.length === 0) return <p className="hint">{empty}</p>;
+  return (
+    <fieldset className="tx-sheet chips" aria-label={label}>
+      {items.map((it) => (
+        <label key={it.id} className="chip">
+          <input
+            type="radio"
+            name={name}
+            value={it.id}
+            checked={selectedId === it.id}
+            onChange={() => onSelect(it.id)}
+            // 이미 고른 칩을 다시 눌러도 시트를 닫는다
+            onClick={() => selectedId === it.id && onSelect(it.id)}
+          />
+          <span>{it.text}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** 메모 한 줄 입력 시트 (100자) */
+function MemoSheet({ initial, onDone }: { initial: string; onDone: (memo: string) => void }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <form
+      className="tx-sheet"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onDone(value);
+      }}
+    >
+      <label className="visually-hidden" htmlFor="tx-memo">
+        메모
+      </label>
+      <input
+        id="tx-memo"
+        className="manage-input"
+        type="text"
+        maxLength={MEMO_MAX}
+        autoFocus
+        enterKeyHint="done"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        aria-describedby="tx-memo-count"
+      />
+      <p id="tx-memo-count" className="field__count">
+        {[...value].length}/{MEMO_MAX}
+      </p>
+      <button type="submit" className="button button--primary button--block">
+        완료
+      </button>
+    </form>
   );
 }

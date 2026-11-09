@@ -1,7 +1,7 @@
 /** 내역(transaction) 조회·추가·수정·삭제와 입력 화면 선택지 조회 */
 import type { CategoryUse } from '../domain/categoryPicker';
 import { monthRange, type YearMonth } from '../domain/month';
-import type { TransactionValues } from '../domain/transactionForm';
+import type { RecentEntry, TransactionValues } from '../domain/transactionForm';
 import { getSupabase } from './supabase';
 import type { Category, Member, Pocket, Transaction } from './types';
 
@@ -67,6 +67,23 @@ export async function listCategoryUses(ledgerId: string, from: string, to: strin
     rows.push(...(data as CategoryUse[]));
     if (data.length < PAGE_SIZE) return rows;
   }
+}
+
+/**
+ * 입력 화면 기본값용: 이 멤버가 직접 입력한 최근 내역(입력 시각 최근 순) `limit`건의 유형·카테고리·주머니.
+ * 유형마다 마지막 값을 찾으려고 여러 건을 읽는다.
+ */
+export async function listMyRecentEntries(ledgerId: string, memberId: string, limit = 30): Promise<RecentEntry[]> {
+  const { data, error } = await getSupabase()
+    .from('transaction')
+    .select('type, category_id, pocket_id')
+    .eq('ledger_id', ledgerId)
+    .eq('created_by', memberId)
+    .order('created_at', { ascending: false })
+    .order('id')
+    .limit(limit);
+  if (error) throw error;
+  return data as RecentEntry[];
 }
 
 /** 그 달(KST 날짜 기준) 내역 전부. 가계부 탭 달력·목록 */
