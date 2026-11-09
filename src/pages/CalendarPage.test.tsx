@@ -4,8 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import { App } from '../app/App';
 import { AuthProvider } from '../app/auth';
-import type { CalendarEvent, Member } from '../data/types';
+import type { RecordItem } from '../data/recurring';
+import type { CalendarEvent, Member, RecurringOccurrence, RecurringTransaction } from '../data/types';
 import type { EventInput } from '../domain/event';
+import { todayKST } from '../domain/transactionForm';
 
 // ── 저장소 가짜: 메모리 DB (두 멤버가 같은 가계부를 공유)
 const db = vi.hoisted(() => ({
@@ -98,6 +100,43 @@ vi.mock('../data/event', () => {
   };
 });
 
+// 정기 내역 (BANB-44): 칩·날짜 시트·기록하기
+const recDb = vi.hoisted(() => ({
+  list: [] as RecurringTransaction[],
+  occurrences: [] as RecurringOccurrence[],
+  recorded: [] as RecordItem[][],
+}));
+vi.mock('../data/recurring', () => ({
+  listRecurring: async () => recDb.list,
+  listOccurrences: async () => recDb.occurrences,
+  recordRecurring: async (_l: string, items: RecordItem[]) => {
+    recDb.recorded.push(items);
+    for (const i of items)
+      recDb.occurrences.push({
+        recurring_id: i.recurring_id, occurs_on: i.occurs_on, ledger_id: 'L', status: i.record ? 'recorded' : 'skipped',
+        transaction_id: i.record ? 't1' : null, decided_by: 'ma', decided_at: '',
+      });
+    return items.map((i) => ({ ...i, status: i.record ? 'recorded' : 'skipped', transaction_id: i.record ? 't1' : null, applied: true }));
+  },
+  undoRecurringRecord: async () => 0,
+}));
+vi.mock('../data/transaction', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../data/transaction')>()),
+  getTransactionFormOptions: async () => ({
+    categories: [
+      { id: 'home', ledger_id: 'L', type: 'expense', parent_id: null, name: '주거', sort_order: 1, is_hidden: false, icon: 'house', created_at: '' },
+      { id: 'home.fee', ledger_id: 'L', type: 'expense', parent_id: 'home', name: '관리비', sort_order: 1, is_hidden: false, icon: null, created_at: '' },
+    ],
+    pockets: [{ id: 'p1', ledger_id: 'L', name: '생활비', scope: 'shared', sort_order: 1, is_hidden: false, created_at: '' }],
+    members: db.members,
+  }),
+}));
+const recurring = (id: string, extra: Partial<RecurringTransaction> = {}): RecurringTransaction => ({
+  id, ledger_id: 'L', type: 'expense', amount: 250000, category_id: 'home.fee', pocket_id: 'p1', spender_id: 'ma',
+  memo: null, cycle: 'monthly', day_of_month: 25, month: null, weekday: null, start_on: '2026-01-01', end_on: null,
+  is_paused: false, created_by: 'ma', updated_by: 'ma', created_at: '2026-01-01T00:00:00Z', updated_at: '', ...extra,
+});
+
 const member = (id: string, name: string, joined_at: string): Member => ({
   id,
   ledger_id: 'L',
@@ -156,6 +195,9 @@ beforeEach(() => {
   db.goneNext = false;
   db.seq = 0;
   db.created = [];
+  recDb.list = [];
+  recDb.occurrences = [];
+  recDb.recorded = [];
 });
 
 describe('탭바 4개 + 가운데 ＋', () => {
@@ -459,5 +501,68 @@ describe('설정 › 함께한 날', () => {
     await user.type(within(sheet).getByLabelText('함께한 날'), '2099-01-01');
     expect(within(sheet).getByText('오늘 이후 날짜는 고를 수 없어요')).toBeInTheDocument();
     expect(within(sheet).getByRole('button', { name: '저장' })).toBeDisabled();
+  });
+});
+
+describe('일정 탭 정기 내역 (BANB-44)', () => {
+  it('정기 내역은 그날 칸에 금액 칩(테두리), 기록한 날은 체크. 일시정지는 안 보인다', async () => {
+    recDb.list = [
+      recurring('fee'),
+      recurring('salary', { type: 'income', pocket_id: null, memo: '월급', amount: 3500000, day_of_month: 31 }),
+      recurring('paused', { memo: '쉼', day_of_month: 10, is_paused: true }),
+    ];
+    recDb.occurrences = [
+      { recurring_id: 'fee', occurs_on: '2026-10-25', ledger_id: 'L', status: 'recorded', transaction_id: 't', decided_by: 'ma', decided_at: '' },
+    ];
+    renderAt('/calendar?m=2026-11');
+    const day25 = await dayCell('11월 25일');
+    expect(day25).toHaveAccessibleName('11월 25일 수요일, 일정 1개: 정기 내역 관리비 지출 250,000원');
+    expect(day25.querySelector('.recurring-chip')).toHaveTextContent('−25만');
+    // 매월 31일 → 11월은 30일(말일), 수입은 + 
+    const day30 = await dayCell('11월 30일');
+    expect(day30.querySelector('.recurring-chip--income')).toHaveTextContent('+350만');
+    // 일시정지는 안 보인다
+    expect(await dayCell('11월 10일')).toHaveAccessibleName('11월 10일 화요일, 일정 없음');
+    // 일정이 하나도 없어도 정기 내역이 있으면 "일정 없음" 안내는 없다
+    expect(screen.queryByText(/아직 일정이 없어요/)).toBeNull();
+  });
+
+  it('지난 달 기록한 날은 체크, 시트에서 "기록함"이고 기록하기 버튼이 없다', async () => {
+    const user = userEvent.setup();
+    recDb.list = [recurring('fee')];
+    recDb.occurrences = [
+      { recurring_id: 'fee', occurs_on: '2026-10-25', ledger_id: 'L', status: 'recorded', transaction_id: 't', decided_by: 'ma', decided_at: '' },
+    ];
+    renderAt('/calendar?m=2026-10');
+    const cell = await dayCell('10월 25일');
+    expect(cell).toHaveAccessibleName(/정기 내역 관리비 지출 250,000원 기록함$/);
+    expect(cell.querySelector('.recurring-chip svg')).not.toBeNull();
+    await user.click(cell);
+    const sheet = screen.getByRole('dialog', { name: '10월 25일 (일)' });
+    expect(sheet).toHaveTextContent('정기 내역 · 생활비 · 민지 · 기록함');
+    expect(within(sheet).queryByRole('button', { name: /기록하기/ })).toBeNull();
+  });
+
+  it('오늘 칸 시트: 정기 내역 행 + "기록하기" → 1건 제안 시트 → 기록하면 체크로 바뀐다', async () => {
+    const user = userEvent.setup();
+    const today = todayKST();
+    const [, m, d] = today.split('-').map(Number);
+    recDb.list = [recurring('fee', { day_of_month: d, memo: '관리비' })];
+    renderAt(`/calendar?m=${today.slice(0, 7)}`);
+    await user.click(await dayCell(`${m}월 ${d}일`));
+    const sheet = screen.getByRole('dialog');
+    expect(within(sheet).getByRole('link', { name: /관리비/ })).toHaveAttribute('href', '/settings/recurring/fee');
+    await user.click(within(sheet).getByRole('button', { name: '관리비 기록하기' }));
+    const suggest = screen.getByRole('dialog', { name: '정기 내역 1건' });
+    expect(suggest).toHaveTextContent('오늘 · 생활비 · 민지');
+    // 일정 탭에서 연 1건 시트는 "오늘은 그만" 대신 "닫기"
+    expect(within(suggest).getByText('닫기', { selector: '.suggest__buttons button' })).toBeInTheDocument();
+    expect(within(suggest).queryByRole('button', { name: '오늘은 그만' })).toBeNull();
+    await user.click(within(suggest).getByRole('button', { name: '1건 기록하기' }));
+    expect(recDb.recorded).toEqual([[{ recurring_id: 'fee', occurs_on: today, record: true, amount: null }]]);
+    // 토스트 + 다시 불러와 체크
+    expect(await screen.findByText('1건 기록했어요')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument();
+    await waitFor(async () => expect(await dayCell(`${m}월 ${d}일`)).toHaveAccessibleName(/기록함$/));
   });
 });

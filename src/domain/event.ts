@@ -292,18 +292,26 @@ export function eventSubline(event: CalendarEvent, members: readonly Member[]): 
 }
 
 /** 칸 버튼 aria-label: '11월 14일 토요일, 일정 2개: 결혼기념일 함께, 레스토랑 함께 오후 7시' / 없으면 '11월 14일 토요일, 일정 없음' */
-export function dayAriaLabel(date: string, items: readonly EventOccurrence[], members: readonly Member[]): string {
+export function dayAriaLabel(
+  date: string,
+  items: readonly EventOccurrence[],
+  members: readonly Member[],
+  /** 일정 뒤에 덧붙일 항목 글자 (정기 내역: '정기 내역 관리비 지출 250,000원') */
+  extra: readonly string[] = [],
+): string {
   const [, m, d] = parts(date);
   const head = `${m}월 ${d}일 ${WEEKDAYS[weekdayOfDate(date)]}요일`;
-  if (items.length === 0) return `${head}, 일정 없음`;
+  const total = items.length + extra.length;
+  if (total === 0) return `${head}, 일정 없음`;
   const list = items
     .map(({ event }) =>
       [event.title, targetLabel(event.target_member_id, members), event.all_day || !event.start_time ? null : spokenTime(event.start_time)]
         .filter(Boolean)
         .join(' '),
     )
+    .concat(extra)
     .join(', ');
-  return `${head}, 일정 ${items.length}개: ${list}`;
+  return `${head}, 일정 ${total}개: ${list}`;
 }
 
 /** D-day 배지: 'D-5' · 'D-day' · 'D+3' (오늘 기준) */

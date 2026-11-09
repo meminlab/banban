@@ -10,7 +10,7 @@ import { ArchivedAssetsPage } from '../pages/ArchivedAssetsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { StartPage } from '../pages/StartPage';
-import { TransactionFormPage } from '../pages/TransactionFormPage';
+import { RecurringFormPage, TransactionFormPage } from '../pages/TransactionFormPage';
 import { JoinPage } from '../pages/JoinPage';
 import { MembersPage } from '../pages/MembersPage';
 import { LedgerNamePage } from '../pages/LedgerNamePage';
@@ -19,6 +19,7 @@ import { LedgerAddPage } from '../pages/LedgerAddPage';
 import { CategorySettingsPage } from '../pages/settings/CategorySettingsPage';
 import { PocketSettingsPage } from '../pages/settings/PocketSettingsPage';
 import { ThemeSettingsPage } from '../pages/settings/ThemeSettingsPage';
+import { RecurringSettingsPage } from '../pages/settings/RecurringSettingsPage';
 import { RequireAuth, RequireLedger, RequireNoLedger } from './guards';
 import { ThemeProvider } from './theme';
 
@@ -53,6 +54,9 @@ export function App() {
             <Route path="settings/categories" element={<CategorySettingsPage />} />
             <Route path="settings/pockets" element={<PocketSettingsPage />} />
             <Route path="settings/theme" element={<ThemeSettingsPage />} />
+            <Route path="settings/recurring" element={<RecurringSettingsPage />} />
+            <Route path="settings/recurring/new" element={<RecurringFormPage />} />
+            <Route path="settings/recurring/:recurringId" element={<RecurringFormPage />} />
             <Route path="ledgers/new" element={<LedgerAddPage mode="create" />} />
             <Route path="ledgers/join" element={<LedgerAddPage mode="join" />} />
           </Route>

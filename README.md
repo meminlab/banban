@@ -49,6 +49,7 @@ npm run dev                  # http://localhost:5173
 | `node supabase/tests/api_flow.mjs` | 가입 → 가계부 생성 → 초대 → 참여 흐름을 실제 Supabase API로 확인. **로컬 Supabase(`npx supabase start`) 전용** — 테스트 계정을 만들므로 운영 프로젝트에는 돌리지 않는다. `SUPABASE_URL`, `SUPABASE_KEY`(publishable) 필요 |
 | `SUPABASE_URL=… SUPABASE_KEY=… SUPABASE_SECRET_KEY=… npx vitest run src/data/asset.integration.test.ts` | 잔액 이력 범위 조회(BANB-30)를 실제 Supabase API로 확인 — 조회 상한 1000행에서 이력 1,500건 자산·오래 안 바뀐 자산의 추이 값이 전체 이력과 같은지. **로컬 Supabase 전용**(지난 시각 이력을 넣으려고 로컬 secret key 사용). 환경변수가 없으면 `npm test`에서 건너뛴다 |
 | `node supabase/tests/asset_flow.mjs` | 자산 추가·수정·보관·되살리기·잔액 이력·값 검증·외부인 차단을 실제 Supabase API로 확인. **로컬 Supabase 전용**, 환경변수는 위와 같음 |
+| `bash supabase/tests/recurring_concurrency.sh` | 정기 내역 같은 회차를 두 멤버가 동시에 기록(또는 기록+건너뛰기) → 한쪽만 반영·내역 1건(BANB-44). Docker 필요 |
 | `node supabase/tests/transaction_flow.mjs` | 내역 입력 → 다른 멤버가 수정(마지막 수정자 바뀜) → 삭제 → 삭제된 내역 저장 시 0행 흐름을 실제 Supabase API로 확인. 로컬 Supabase 전용, 환경변수는 위와 같음 |
 
 ### 환경변수
@@ -78,6 +79,7 @@ npm run dev                  # http://localhost:5173
       - `20261106190000_profile_theme.sql` — 사람별 화면 테마(`profile.theme`: clean·berry·cozy, 기본 clean). 저장은 `set_my_theme(p_theme)` 함수로 자기 행만 (profile 직접 수정 권한은 그대로 없음)
       - `20261109000000_category_simplify.sql` — 카테고리 간소화(BANB-36). 새 가계부 기본값 20개(`default_categories_v2`: 지출 12·수입 4·저축 4, 대분류마다 같은 이름 소분류 1개). 기존 가계부: 없는 기본 대분류 추가, 같은 이름 소분류가 없는 대분류에 하나 추가, 내역에 안 쓰인 **옛 기본 이름**만 숨김(삭제·내역 변경 없음, 직접 만든 것·이름 바꾼 것·이미 숨긴 것은 그대로), 기본 20개를 맨 앞 순서로. **적용 직전·직후에 `supabase/seed/category_simplify_snapshot.sql`을 실행해 결과가 같은지 비교**
       - `20261109100000_event.sql` — 일정(BANB-42). `event` 테이블(제목 1~20자·종류 4개·날짜·종일/시각·반복 5개·음력 월/일·누구·장소 30자·메모 100자·D-day 고정), 작성자·수정자·시각은 서버 기록, 가계부 변경 불가, D-day 고정은 기념일만·가계부당 2개. `ledger.together_since`(함께한 날, 선택) 멤버 수정 가능. 권한은 가계부 현재 멤버만(완화 없음)
+      - `20261109200000_recurring_transaction.sql` — 정기 내역(BANB-44). `recurring_transaction`(유형·금액·카테고리·주머니·사람·이름, 주기 매월(1~31, 31 = 말일)/매주(요일)/매년(월·일), 시작·종료·일시정지), 회차 기록 `recurring_occurrence`(정기 내역 × 날짜 기본 키 = 같은 회차는 한 번만, 기록함/건너뜀), `transaction.source`에 `recurring` 추가. 쓰기는 `record_recurring`·`undo_recurring_record` 함수로만(회차 직접 쓰기 불가). 권한은 가계부 현재 멤버만(완화 없음)
    2. `supabase/tests/check_applied.sql` — 적용 확인. 11행(asset_balance_history·event 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, `category_icon=true`, `history_window=true`, `profile_theme=true`, `category_simplify=true`, `event_calendar=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)

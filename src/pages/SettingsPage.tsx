@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { ChevronRight, HeartHandshake, Palette, Pencil, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { ChevronRight, HeartHandshake, Palette, Pencil, Repeat, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
 import {
   CATEGORY_SETTINGS_PATH,
   LEDGER_NAME_PATH,
   MEMBERS_PATH,
   MY_NAME_PATH,
   POCKET_SETTINGS_PATH,
+  RECURRING_SETTINGS_PATH,
   THEME_SETTINGS_PATH,
 } from '../app/routes';
 import { useTheme } from '../app/theme';
@@ -213,6 +214,7 @@ export function SettingsPage() {
             <MenuRow to={MEMBERS_PATH} icon={Users} label="멤버·초대" />
             <MenuRow to={CATEGORY_SETTINGS_PATH} icon={Tag} label="카테고리" />
             <MenuRow to={POCKET_SETTINGS_PATH} icon={Wallet} label="주머니" />
+            <MenuRow to={RECURRING_SETTINGS_PATH} icon={Repeat} label="정기 내역" />
           </ul>
         </nav>
 

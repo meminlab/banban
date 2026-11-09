@@ -3,7 +3,7 @@
 export type TransactionType = 'expense' | 'income' | 'saving';
 export type PocketScope = 'shared' | 'personal';
 export type MemberRole = 'owner' | 'member';
-export type TransactionSource = 'manual' | 'excel' | 'sync';
+export type TransactionSource = 'manual' | 'excel' | 'sync' | 'recurring';
 /** 자산 9종 + 부채 3종(loan / card_payable / other_liability). 금액은 모두 양수, 부채는 계산할 때 뺀다 */
 export type AssetKind =
   | 'checking'
@@ -147,6 +147,43 @@ export interface CalendarEvent {
   updated_by: string; // member id (서버 기록)
   created_at: string;
   updated_at: string;
+}
+
+/** 정기 내역 주기: 매월(일자) · 매주(요일) · 매년(월·일) */
+export type RecurringCycle = 'monthly' | 'weekly' | 'yearly';
+
+/** 정기 내역 (BANB-44) — 그날이 되면 기록할지 묻는다. 확인하면 내역(source 'recurring')이 생긴다 */
+export interface RecurringTransaction {
+  id: string;
+  ledger_id: string;
+  type: TransactionType;
+  amount: number; // 원, 1 ~ 9,999,999,999
+  category_id: string; // 소분류
+  pocket_id: string | null; // 지출일 때 필수
+  spender_id: string; // member id
+  memo: string | null; // 정기 내역 이름 (기록한 내역의 메모)
+  cycle: RecurringCycle;
+  day_of_month: number | null; // 매월·매년 1~31 (31 = 말일)
+  month: number | null; // 매년 1~12
+  weekday: number | null; // 매주 0(일)~6
+  start_on: string; // 'YYYY-MM-DD'
+  end_on: string | null;
+  is_paused: boolean;
+  created_by: string; // member id (서버 기록)
+  updated_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 확인한 회차 (기록함/건너뜀). 회차마다 1행 — 쓰기는 record_recurring 함수로만 */
+export interface RecurringOccurrence {
+  recurring_id: string;
+  occurs_on: string; // 회차 날짜 = 기록한 내역 날짜
+  ledger_id: string;
+  status: 'recorded' | 'skipped';
+  transaction_id: string | null;
+  decided_by: string; // member id
+  decided_at: string;
 }
 
 /** 마지막으로 본 가계부 (본인만 읽음, 쓰기는 set_last_ledger RPC) */

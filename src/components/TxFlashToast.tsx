@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { TxFlash, TxUndo } from '../app/routes';
+import { undoRecurringRecord } from '../data/recurring';
 import { deleteTransaction, updateTransaction } from '../data/transaction';
 
 type Notice = { text: string; undo?: TxUndo };
@@ -24,7 +25,13 @@ export function TxFlashToast({ onUndone }: { onUndone: () => void }) {
     const flash = (location.state as { txFlash?: TxFlash } | null)?.txFlash;
     if (!flash) return;
     navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
-    setNotice(flash.kind === 'saved' ? { text: '저장했어요', undo: flash.undo } : { text: '삭제했어요' });
+    setNotice(
+      flash.kind === 'saved'
+        ? { text: '저장했어요', undo: flash.undo }
+        : flash.kind === 'recorded'
+          ? { text: flash.text, undo: flash.undo }
+          : { text: '삭제했어요' },
+    );
   }, [location.state, location.pathname, location.search, navigate]);
 
   useEffect(() => {
@@ -39,6 +46,7 @@ export function TxFlashToast({ onUndone }: { onUndone: () => void }) {
     setUndoing(true);
     try {
       if (u.op === 'delete') await deleteTransaction(u.id);
+      else if (u.op === 'unrecord') await undoRecurringRecord(u.ledgerId, u.keys);
       else if ((await updateTransaction(u.id, u.values)) === 'deleted') {
         setNotice({ text: '다른 멤버가 삭제한 내역이라 되돌리지 못했어요' });
         return;

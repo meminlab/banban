@@ -31,12 +31,16 @@ export const TRANSACTION_NEW_PATH = '/ledger/new';
 /** 내역 상세·수정 */
 export const transactionPath = (id: string) => `/ledger/${id}`;
 /** 저장 토스트의 "되돌리기": 새 내역은 지우고, 수정은 저장 전 값으로 다시 쓴다 */
-export type TxUndo = { op: 'delete'; id: string } | { op: 'restore'; id: string; values: TransactionValues };
+export type TxUndo =
+  | { op: 'delete'; id: string }
+  | { op: 'restore'; id: string; values: TransactionValues }
+  /** 정기 내역 회차 확인(기록·건너뛰기) 되돌리기: 내가 확인한 회차와 그때 만든 내역을 지운다 */
+  | { op: 'unrecord'; ledgerId: string; keys: { recurring_id: string; occurs_on: string }[] };
 /**
  * 입력·수정 화면을 닫고 탭 화면(홈·가계부·자산)으로 돌아갈 때 알려 줄 결과 (location.state.txFlash).
  * 탭 공통 틀(AppLayout)이 토스트로 보여 준다. history state 에 담기므로 함수 대신 값만 넣는다
  */
-export type TxFlash = { kind: 'saved'; undo?: TxUndo } | { kind: 'deleted' };
+export type TxFlash = { kind: 'saved'; undo?: TxUndo } | { kind: 'deleted' } | { kind: 'recorded'; text: string; undo?: TxUndo };
 /** 가계부 탭 → 입력·수정 화면으로 갈 때 넘기는 state. 닫으면 보던 달·보기·필터(returnTo)로 돌아간다 */
 export interface TransactionFormState {
   returnTo?: string;
@@ -74,6 +78,24 @@ export interface EventFormState {
 export type EventFlash = { kind: 'saved' } | { kind: 'deleted' } | { kind: 'gone' };
 /** 일정 탭 주소 (보던 달) */
 export const calendarMonthPath = (month: string) => `${CALENDAR_PATH}?m=${month}`;
+/** 설정 > 정기 내역 목록 */
+export const RECURRING_SETTINGS_PATH = '/settings/recurring';
+/** 정기 내역 추가 */
+export const RECURRING_NEW_PATH = '/settings/recurring/new';
+/** 정기 내역 수정 */
+export const recurringPath = (id: string) => `/settings/recurring/${id}`;
+/** 정기 내역 추가·수정 화면으로 넘기는 state: 닫으면 돌아갈 곳(일정 탭 날짜 시트에서 왔으면 일정 탭) */
+export interface RecurringFormState {
+  returnTo?: string;
+}
+/** 정기 내역 추가·수정을 닫을 때 돌아갈 주소: 정기 내역 목록 또는 일정 탭(보던 달)만 받는다 */
+export function recurringReturnPath(state: unknown): string {
+  const returnTo = (state as RecurringFormState | null)?.returnTo;
+  if (typeof returnTo !== 'string') return RECURRING_SETTINGS_PATH;
+  return /^\/calendar(\?m=\d{4}-\d{2})?$/.test(returnTo) ? returnTo : RECURRING_SETTINGS_PATH;
+}
+/** 정기 내역 추가·수정 화면을 닫고 돌아갈 때 알려 줄 결과 (location.state.recurringFlash) */
+export type RecurringFlash = { kind: 'saved' } | { kind: 'deleted' } | { kind: 'gone' };
 /** 설정 > 가계부 이름 */
 export const LEDGER_NAME_PATH = '/settings/name';
 /** 설정 > 내 이름 (지금 가계부에서 쓰는 내 이름) */

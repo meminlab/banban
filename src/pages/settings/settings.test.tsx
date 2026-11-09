@@ -143,6 +143,7 @@ describe('설정 메뉴', () => {
       '멤버·초대',
       '카테고리',
       '주머니',
+      '정기 내역',
       '화면 테마',
     ]);
     expect(await screen.findByRole('link', { name: /가계부 이름/ })).toHaveTextContent('우리집');

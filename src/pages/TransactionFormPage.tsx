@@ -1,9 +1,9 @@
-import { Calendar, Delete, Plus, User, Wallet, X } from 'lucide-react';
+import { Calendar, Delete, Pause, Plus, Repeat, User, Wallet, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useCurrentUser } from '../app/auth';
 import { useLedgerId } from '../app/guards';
-import { ledgerReturnPath, type TxFlash } from '../app/routes';
+import { ledgerReturnPath, recurringReturnPath, type RecurringFlash, type TxFlash } from '../app/routes';
 import { saveErrorMessage } from '../app/useSaving';
 import { CategoryEditor, type CategoryEditorValues } from '../components/CategoryEditor';
 import { LucideByKey } from '../components/CategoryIcon';
@@ -12,6 +12,7 @@ import { Dialog } from '../components/Dialog';
 import { Sheet } from '../components/Sheet';
 import { StatusScreen } from '../components/StatusScreen';
 import { addChildCategory, addParentCategory } from '../data/catalog';
+import { createRecurring, deleteRecurring, getRecurring, RecurringNotFoundError, updateRecurring } from '../data/recurring';
 import {
   createTransaction,
   deleteTransaction,
@@ -22,8 +23,19 @@ import {
   updateTransaction,
   type TransactionFormOptions,
 } from '../data/transaction';
-import type { Category, Transaction, TransactionType } from '../data/types';
+import type { Category, RecurringTransaction, Transaction, TransactionType } from '../data/types';
 import { nextSortOrder } from '../domain/catalog';
+import {
+  draftCycleLabel,
+  firstDateFrom,
+  LAST_DAY,
+  maxDayOfMonth,
+  needsShortMonthHint,
+  newScheduleDraft,
+  scheduleDraftOf,
+  validateSchedule,
+  type RecurringScheduleDraft,
+} from '../domain/recurring';
 import { categoryGlyph } from '../domain/categoryIcon';
 import { buildPickerModel, frequentRange, type CategoryUse, type ParentChoice } from '../domain/categoryPicker';
 import {
@@ -120,6 +132,90 @@ export function TransactionFormPage() {
   return <TransactionForm ledgerId={ledgerId} data={state.data} onClose={close} />;
 }
 
+type RecurringLoadState =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'notFound' }
+  | { status: 'ready'; data: Loaded; original: RecurringTransaction | null };
+
+/**
+ * 정기 내역 추가(/settings/recurring/new) · 수정(/settings/recurring/:recurringId) — design.md 5.27:
+ * 내역 입력(5.15) 화면 그대로 + 날짜 알약 대신 반복 알약, 메모 = 이름, 고정지출 없음, 수정은 일시정지·삭제
+ */
+export function RecurringFormPage() {
+  const ledgerId = useLedgerId();
+  const { recurringId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const user = useCurrentUser();
+  const [returnTo] = useState(() => recurringReturnPath(location.state));
+  const [state, setState] = useState<RecurringLoadState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    setState({ status: 'loading' });
+    Promise.all([getTransactionFormOptions(ledgerId), recurringId ? getRecurring(recurringId) : null])
+      .then(async ([options, original]) => {
+        if (!alive) return;
+        if (recurringId && !original) return setState({ status: 'notFound' });
+        const me = options.members.find((m) => m.user_id === user.id && m.left_at === null);
+        if (!me) return setState({ status: 'error' });
+        const recent = recurringId ? [] : await listMyRecentEntries(ledgerId, me.id).catch(() => []);
+        if (alive) setState({ status: 'ready', data: { options, original: null, myMemberId: me.id, recent }, original });
+      })
+      .catch(() => alive && setState({ status: 'error' }));
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId, recurringId, user.id, attempt]);
+
+  const close = useCallback(
+    (recurringFlash?: RecurringFlash) => navigate(returnTo, { replace: true, state: recurringFlash ? { recurringFlash } : undefined }),
+    [navigate, returnTo],
+  );
+
+  if (state.status === 'loading') return <StatusScreen kind="loading" message="정기 내역을 불러오고 있어요" />;
+  if (state.status === 'error')
+    return (
+      <StatusScreen
+        kind="error"
+        message="정기 내역을 불러오지 못했어요. 네트워크를 확인해 주세요."
+        onRetry={() => setAttempt((n) => n + 1)}
+      />
+    );
+  if (state.status === 'notFound')
+    return (
+      <div className="shell">
+        <TopBar onClose={() => close()}>
+          <h1 className="topbar__title">정기 내역 수정</h1>
+        </TopBar>
+        <main className="content content--no-tabbar">
+          <p className="status-text" role="alert">
+            삭제된 정기 내역이에요.
+          </p>
+          <button type="button" className="button button--secondary button--block" onClick={() => close()}>
+            목록으로
+          </button>
+        </main>
+      </div>
+    );
+  return (
+    <TransactionForm
+      ledgerId={ledgerId}
+      data={state.data}
+      onClose={() => close()}
+      recurring={{ original: state.original, onClose: close }}
+    />
+  );
+}
+
+/** 정기 내역 모드: 원래 값(수정)과 닫기(목록 토스트) */
+interface RecurringMode {
+  original: RecurringTransaction | null;
+  onClose: (flash?: RecurringFlash) => void;
+}
+
 function TopBar({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   return (
     <header className="topbar tx-topbar">
@@ -146,7 +242,7 @@ function valuesOf(t: Transaction): TransactionValues {
 
 const KEYS: KeypadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0'];
 const LONG_PRESS_MS = 500;
-type SheetKind = 'category' | 'categoryAdd' | 'pocket' | 'spender' | 'date' | 'memo';
+type SheetKind = 'category' | 'categoryAdd' | 'pocket' | 'spender' | 'date' | 'memo' | 'repeat';
 
 /** 실제 자판 입력을 키패드로 넘길지: 글자 입력칸에 초점이 있으면 넘기지 않는다 */
 function isTextEntry(target: EventTarget | null): boolean {
@@ -159,16 +255,21 @@ function TransactionForm({
   ledgerId,
   data,
   onClose,
+  recurring,
 }: {
   ledgerId: string;
   data: Loaded;
   onClose: (flash?: TxFlash) => void;
+  /** 있으면 정기 내역 추가·수정 (design.md 5.27) */
+  recurring?: RecurringMode;
 }) {
   const { options, original, myMemberId, recent } = data;
-  const isEdit = original !== null;
+  const isRecurring = recurring !== undefined;
+  const recOriginal = recurring?.original ?? null;
+  const isEdit = original !== null || recOriginal !== null;
   const today = todayKST();
   // 처음 값이 숨김/나감 항목이어도 수정 화면에서 그대로 보이게 유지
-  const keep = original ?? undefined;
+  const keep = original ?? recOriginal ?? undefined;
   const [categories, setCategories] = useState<Category[]>(options.categories);
   const pockets = useMemo(() => pocketOptions(options.pockets, keep?.pocket_id), [options.pockets, keep]);
   const spenders = useMemo(() => spenderOptions(options.members, keep?.spender_id), [options.members, keep]);
@@ -182,7 +283,18 @@ function TransactionForm({
     }),
   );
   const [draft, setDraft] = useState<TransactionDraft>(() =>
-    original
+    recOriginal
+      ? {
+          type: recOriginal.type,
+          amount: String(recOriginal.amount),
+          occurredOn: today, // 정기 내역은 날짜 대신 반복을 쓴다 (검사용 자리 값)
+          categoryId: recOriginal.category_id,
+          pocketId: recOriginal.pocket_id ?? '',
+          spenderId: recOriginal.spender_id,
+          isFixed: false,
+          memo: recOriginal.memo ?? '',
+        }
+      : original
       ? {
           type: original.type,
           amount: String(original.amount),
@@ -204,6 +316,10 @@ function TransactionForm({
           memo: '',
         },
   );
+  const [schedule, setSchedule] = useState<RecurringScheduleDraft>(() =>
+    recOriginal ? scheduleDraftOf(recOriginal) : newScheduleDraft(today),
+  );
+  const [paused, setPaused] = useState(recOriginal?.is_paused ?? false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
   const [failure, setFailure] = useState<'save' | 'delete' | null>(null);
@@ -319,6 +435,26 @@ function TransactionForm({
     }
     setSubmitError(null);
     setFailure(null);
+    if (recurring) {
+      const sched = validateSchedule(schedule);
+      if (!sched.ok) {
+        setSubmitError(sched.error);
+        return;
+      }
+      const { occurred_on: _date, is_fixed: _fixed, ...values } = result.values;
+      const input = { ...values, ...sched.value, is_paused: paused };
+      setBusy('save');
+      try {
+        if (recOriginal) await updateRecurring(recOriginal.id, input);
+        else await createRecurring(ledgerId, input);
+        recurring.onClose({ kind: 'saved' });
+      } catch (err) {
+        setBusy(null);
+        if (err instanceof RecurringNotFoundError) setDialog('deleted');
+        else setFailure('save');
+      }
+      return;
+    }
     setBusy('save');
     try {
       if (original) {
@@ -381,7 +517,21 @@ function TransactionForm({
   };
 
   const remove = async () => {
-    if (!original || busy) return;
+    if (busy) return;
+    if (recurring && recOriginal) {
+      setDialog(null);
+      setFailure(null);
+      setBusy('delete');
+      try {
+        await deleteRecurring(recOriginal.id);
+        recurring.onClose({ kind: 'deleted' });
+      } catch {
+        setBusy(null);
+        setFailure('delete');
+      }
+      return;
+    }
+    if (!original) return;
     setDialog(null);
     setFailure(null);
     setBusy('delete');
@@ -418,12 +568,12 @@ function TransactionForm({
 
   return (
     <div className="shell">
-      <TopBar onClose={() => onClose()}>
+      <TopBar onClose={() => (recurring ? recurring.onClose() : onClose())}>
         {isEdit ? (
-          <h1 className="topbar__title">내역 수정</h1>
+          <h1 className="topbar__title">{isRecurring ? '정기 내역 수정' : '내역 수정'}</h1>
         ) : (
           <>
-            <h1 className="sr-only">내역 입력</h1>
+            <h1 className="sr-only">{isRecurring ? '정기 내역 추가' : '내역 입력'}</h1>
             {segment}
           </>
         )}
@@ -432,6 +582,11 @@ function TransactionForm({
       <form className="tx-entry" onSubmit={submit} noValidate aria-busy={busy !== null}>
         <div className="tx-entry__top">
           {isEdit && segment}
+          {isRecurring && (
+            <p className="tx-entry__mode" aria-hidden="true">
+              {isEdit ? '정기 내역 수정' : '정기 내역 추가'}
+            </p>
+          )}
 
           <div className="tx-entry__amount">
             <output
@@ -456,6 +611,15 @@ function TransactionForm({
           </div>
 
           <div className="tx-pills">
+            {isRecurring && (
+              <Pill
+                label={`반복: ${draftCycleLabel(schedule)}`}
+                icon={<Repeat size={18} strokeWidth={2} aria-hidden="true" />}
+                text={draftCycleLabel(schedule)}
+                strong
+                onClick={() => setSheet('repeat')}
+              />
+            )}
             <Pill
               label={`카테고리: ${categoryText || '없음'}`}
               empty={!selectedCategory}
@@ -478,16 +642,18 @@ function TransactionForm({
               text={memberLabel(selectedSpender)}
               onClick={() => setSheet('spender')}
             />
+            {!isRecurring && (
+              <Pill
+                label={`날짜: ${dateText}`}
+                icon={<Calendar size={18} strokeWidth={2} aria-hidden="true" />}
+                text={dateText}
+                onClick={() => setSheet('date')}
+              />
+            )}
             <Pill
-              label={`날짜: ${dateText}`}
-              icon={<Calendar size={18} strokeWidth={2} aria-hidden="true" />}
-              text={dateText}
-              onClick={() => setSheet('date')}
-            />
-            <Pill
-              label={`메모: ${memoText || '없음'}`}
+              label={`${isRecurring ? '이름' : '메모'}: ${memoText || '없음'}`}
               empty={!memoText}
-              text={memoText || '메모'}
+              text={memoText || (isRecurring ? '이름' : '메모')}
               memo
               onClick={() => setSheet('memo')}
             />
@@ -500,6 +666,27 @@ function TransactionForm({
             </p>
           )}
         </div>
+
+        {isRecurring && isEdit && (
+          <label className="switch-row tx-entry__pause">
+            <Pause size={20} strokeWidth={2} aria-hidden="true" />
+            <span className="switch-row__text">
+              <span className="switch-row__label">일시정지</span>
+              <span className="switch-row__sub">켜 두면 달력에 안 보이고 기록할지 묻지 않아요</span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={paused}
+              disabled={busy !== null}
+              onChange={(e) => {
+                setPaused(e.target.checked);
+                setSubmitError(null);
+              }}
+            />
+          </label>
+        )}
 
         <div className="tx-keypad" role="group" aria-label="금액 키패드">
           {KEYS.map((k) => (
@@ -658,8 +845,22 @@ function TransactionForm({
           </div>
         </Sheet>
       )}
+      {sheet === 'repeat' && (
+        <Sheet title="반복" onClose={closeSheet}>
+          <RepeatSheet
+            initial={schedule}
+            today={today}
+            autoStart={!isEdit}
+            onDone={(next) => {
+              setSchedule(next);
+              setSubmitError(null);
+              closeSheet();
+            }}
+          />
+        </Sheet>
+      )}
       {sheet === 'memo' && (
-        <Sheet title="메모" onClose={closeSheet}>
+        <Sheet title={isRecurring ? '이름' : '메모'} onClose={closeSheet}>
           <MemoSheet initial={draft.memo} onDone={(memo) => {
             set('memo', memo);
             closeSheet();
@@ -669,7 +870,7 @@ function TransactionForm({
 
       {dialog === 'confirmDelete' && (
         <Dialog
-          title="이 내역을 삭제할까요?"
+          title={isRecurring ? '이 정기 내역을 삭제할까요?' : '이 내역을 삭제할까요?'}
           onCancel={() => setDialog(null)}
           actions={
             <>
@@ -682,20 +883,28 @@ function TransactionForm({
             </>
           }
         >
-          <p className="dialog__body">삭제하면 다른 멤버 화면에서도 사라지고 되돌릴 수 없어요.</p>
+          <p className="dialog__body">
+            {isRecurring ? '이미 기록한 내역은 그대로 남아요.' : '삭제하면 다른 멤버 화면에서도 사라지고 되돌릴 수 없어요.'}
+          </p>
         </Dialog>
       )}
       {dialog === 'deleted' && (
         <Dialog
-          title="삭제된 내역입니다"
-          onCancel={() => onClose()}
+          title={isRecurring ? '삭제된 정기 내역이에요' : '삭제된 내역입니다'}
+          onCancel={() => (recurring ? recurring.onClose({ kind: 'gone' }) : onClose())}
           actions={
-            <button type="button" className="button button--primary" onClick={() => onClose()}>
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={() => (recurring ? recurring.onClose({ kind: 'gone' }) : onClose())}
+            >
               확인
             </button>
           }
         >
-          <p className="dialog__body">다른 멤버가 이미 삭제한 내역이라 저장하지 않았어요.</p>
+          <p className="dialog__body">
+            다른 멤버가 이미 삭제한 {isRecurring ? '정기 내역' : '내역'}이라 저장하지 않았어요.
+          </p>
         </Dialog>
       )}
     </div>
@@ -709,6 +918,7 @@ function Pill({
   icon,
   empty = false,
   memo = false,
+  strong = false,
   onClick,
 }: {
   label: string;
@@ -716,12 +926,14 @@ function Pill({
   icon?: ReactNode;
   empty?: boolean;
   memo?: boolean;
+  /** 꼭 정할 값 (정기 내역 반복 알약: 테두리 primary) */
+  strong?: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className={`tx-pill${empty ? ' tx-pill--empty' : ''}${memo ? ' tx-pill--memo' : ''}`}
+      className={`tx-pill${empty ? ' tx-pill--empty' : ''}${memo ? ' tx-pill--memo' : ''}${strong ? ' tx-pill--strong' : ''}`}
       aria-label={label}
       aria-haspopup="dialog"
       onClick={onClick}
@@ -801,5 +1013,157 @@ function MemoSheet({ initial, onDone }: { initial: string; onDone: (memo: string
         완료
       </button>
     </form>
+  );
+}
+
+const CYCLES: { value: RecurringScheduleDraft['cycle']; label: string }[] = [
+  { value: 'monthly', label: '매월' },
+  { value: 'weekly', label: '매주' },
+  { value: 'yearly', label: '매년' },
+];
+const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+/**
+ * 반복 시트 (design.md 5.27): [매월 | 매주 | 매년] → 매월 1~30 + 말일 / 매주 요일 7칸 / 매년 월·일,
+ * 시작(새로 만들 때 기본 = 오늘 이후 첫 날짜)·끝(선택) → "매월 25일로 할게요"
+ */
+function RepeatSheet({
+  initial,
+  today,
+  autoStart,
+  onDone,
+}: {
+  initial: RecurringScheduleDraft;
+  today: string;
+  /** 시작일을 직접 고르기 전까지 주기에 맞춰 "오늘 이후 첫 날짜"로 맞춘다 (새 정기 내역) */
+  autoStart: boolean;
+  onDone: (next: RecurringScheduleDraft) => void;
+}) {
+  const [d, setD] = useState(initial);
+  const [startTouched, setStartTouched] = useState(!autoStart);
+  const [error, setError] = useState<string | null>(null);
+  const update = (patch: Partial<RecurringScheduleDraft>) => {
+    setError(null);
+    setD((prev) => {
+      const next = { ...prev, ...patch };
+      if (next.cycle === 'yearly') next.dayOfMonth = Math.min(next.dayOfMonth, maxDayOfMonth(next.month));
+      if (!startTouched && !('startOn' in patch)) next.startOn = firstDateFrom(next, today);
+      return next;
+    });
+  };
+  const done = () => {
+    const r = validateSchedule(d);
+    if (!r.ok) return setError(r.error);
+    onDone(d);
+  };
+  const days = Array.from({ length: LAST_DAY - 1 }, (_, i) => i + 1);
+
+  return (
+    <div className="tx-sheet repeat-sheet">
+      <fieldset className="segmented" aria-label="주기">
+        {CYCLES.map((c) => (
+          <label key={c.value} className={`segmented__item${d.cycle === c.value ? ' is-selected' : ''}`}>
+            <input type="radio" name="cycle" value={c.value} checked={d.cycle === c.value} onChange={() => update({ cycle: c.value })} />
+            {c.label}
+          </label>
+        ))}
+      </fieldset>
+
+      {d.cycle === 'monthly' && (
+        <fieldset className="repeat-sheet__grid" aria-label="날짜">
+          {days.map((n) => (
+            <label key={n} className={`repeat-sheet__cell${d.dayOfMonth === n ? ' is-selected' : ''}`}>
+              <input type="radio" name="day" checked={d.dayOfMonth === n} onChange={() => update({ dayOfMonth: n })} />
+              {n}
+            </label>
+          ))}
+          <label className={`repeat-sheet__cell repeat-sheet__cell--wide${d.dayOfMonth === LAST_DAY ? ' is-selected' : ''}`}>
+            <input type="radio" name="day" checked={d.dayOfMonth === LAST_DAY} onChange={() => update({ dayOfMonth: LAST_DAY })} />
+            말일
+          </label>
+        </fieldset>
+      )}
+      {needsShortMonthHint(d) && <p className="hint">짧은 달은 말일에 기록해요</p>}
+
+      {d.cycle === 'weekly' && (
+        <fieldset className="repeat-sheet__week" aria-label="요일">
+          {WEEKDAY_NAMES.map((w, i) => (
+            <label key={w} className={`repeat-sheet__cell${d.weekday === i ? ' is-selected' : ''}`}>
+              <input type="radio" name="weekday" checked={d.weekday === i} onChange={() => update({ weekday: i })} />
+              <span aria-hidden="true">{w}</span>
+              <span className="sr-only">{w}요일</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+
+      {d.cycle === 'yearly' && (
+        <div className="repeat-sheet__yearly">
+          <label className="field">
+            <span className="field__label">월</span>
+            <select className="manage-input" value={d.month} onChange={(e) => update({ month: Number(e.target.value) })}>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <option key={m} value={m}>
+                  {m}월
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span className="field__label">일</span>
+            <select className="manage-input" value={d.dayOfMonth} onChange={(e) => update({ dayOfMonth: Number(e.target.value) })}>
+              {Array.from({ length: maxDayOfMonth(d.month) }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n}일
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
+      <label className="repeat-sheet__row">
+        <span>시작</span>
+        <input
+          className="manage-input"
+          type="date"
+          value={d.startOn}
+          onChange={(e) => {
+            setStartTouched(true);
+            update({ startOn: e.target.value });
+          }}
+        />
+      </label>
+      <div className="repeat-sheet__row">
+        <label htmlFor="repeat-end">끝</label>
+        <input
+          id="repeat-end"
+          className="manage-input"
+          type="date"
+          value={d.endOn}
+          min={d.startOn}
+          aria-describedby="repeat-end-hint"
+          onChange={(e) => update({ endOn: e.target.value })}
+        />
+        {d.endOn ? (
+          <button type="button" className="button button--secondary repeat-sheet__clear" onClick={() => update({ endOn: '' })}>
+            지우기
+          </button>
+        ) : (
+          <span id="repeat-end-hint" className="repeat-sheet__none">
+            정하지 않음
+          </span>
+        )}
+      </div>
+
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="button" className="button button--primary button--block" onClick={done}>
+        {draftCycleLabel(d)}로 할게요
+      </button>
+    </div>
   );
 }
