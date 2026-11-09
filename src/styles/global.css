@@ -428,6 +428,7 @@ button { font: inherit; }
 .form-card__title { margin: 0; font-size: 1rem; }
 .form-card__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .form-card .form-error { margin: 0; }
+.field .form-error { font-size: 0.875rem; }
 .form-success { margin: 0; color: var(--color-text); font-size: 0.9375rem; }
 .field__input {
   min-height: var(--touch-lg); /* 주요 입력 48 (design.md 3.5) */

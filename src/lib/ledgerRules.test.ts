@@ -10,6 +10,7 @@ import {
   normalizeInviteCode,
   parseLedgerError,
   validateLedgerName,
+  validateMemberName,
 } from './ledgerRules';
 
 describe('validateLedgerName', () => {
@@ -33,6 +34,24 @@ describe('validateLedgerName', () => {
   it('21자 이상이면 안내 (앞뒤 공백은 세지 않음)', () => {
     expect(validateLedgerName('가'.repeat(21))).toMatch('20자');
     expect(validateLedgerName(` ${'가'.repeat(20)} `)).toBeNull();
+  });
+});
+
+describe('validateMemberName (BANB-45 설정 › 내 이름)', () => {
+  it('앞뒤 공백을 빼고 1~20자면 통과', () => {
+    expect(validateMemberName('남편')).toBeNull();
+    expect(validateMemberName('  남편  ')).toBeNull();
+    expect(validateMemberName('가'.repeat(20))).toBeNull();
+    expect(validateMemberName(` ${'가'.repeat(20)} `)).toBeNull();
+    expect(validateMemberName('😀'.repeat(20))).toBeNull();
+  });
+  it('비었거나 공백만이면 입력 안내', () => {
+    expect(validateMemberName('')).toBe('이름을 입력해 주세요.');
+    expect(validateMemberName('   ')).toBe('이름을 입력해 주세요.');
+  });
+  it('21자 이상이면 글자 수 안내 (이모지 1개 = 1자)', () => {
+    expect(validateMemberName('가'.repeat(21))).toBe('이름은 20자까지 쓸 수 있어요.');
+    expect(validateMemberName('😀'.repeat(21))).toBe('이름은 20자까지 쓸 수 있어요.');
   });
 });
 

@@ -37,7 +37,7 @@ vi.mock('../data/ledger', () => ({
   }),
 }));
 vi.mock('../data/profile', () => ({ getProfile: async () => null }));
-vi.mock('../data/member', () => ({ listMembers: async () => db.members }));
+vi.mock('../data/member', () => ({ listMembers: async () => db.members, getMyMemberName: async () => '민지' }));
 vi.mock('../data/event', () => {
   class EventNotFoundError extends Error {}
   class EventPinLimitError extends Error {}
