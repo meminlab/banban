@@ -1263,7 +1263,7 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .suggest__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .suggest__row { display: flex; align-items: center; gap: 8px; min-height: 64px; border-bottom: 1px solid var(--color-border); }
 .suggest__check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 0; cursor: pointer; }
-.suggest__check .tx-row__sub { white-space: normal; } /* "10월 25일 · 15일 지났어요 · 준호"가 잘리지 않게 2줄까지 */
+.suggest__check .tx-row__sub { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; } /* "10월 25일 · 15일 지났어요 · 준호"가 잘리지 않게 2줄까지 */
 .suggest__check input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--color-primary); }
 .suggest__check:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 2px; border-radius: 8px; }
 .suggest__amount {
