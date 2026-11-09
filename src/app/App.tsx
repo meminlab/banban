@@ -12,6 +12,7 @@ import { TransactionFormPage } from '../pages/TransactionFormPage';
 import { JoinPage } from '../pages/JoinPage';
 import { MembersPage } from '../pages/MembersPage';
 import { LedgerNamePage } from '../pages/LedgerNamePage';
+import { MemberNamePage } from '../pages/MemberNamePage';
 import { LedgerAddPage } from '../pages/LedgerAddPage';
 import { CategorySettingsPage } from '../pages/settings/CategorySettingsPage';
 import { PocketSettingsPage } from '../pages/settings/PocketSettingsPage';
@@ -42,6 +43,7 @@ export function App() {
             <Route path="ledger/new" element={<TransactionFormPage />} />
             <Route path="ledger/:transactionId" element={<TransactionFormPage />} />
             <Route path="settings/name" element={<LedgerNamePage />} />
+            <Route path="settings/my-name" element={<MemberNamePage />} />
             <Route path="settings/members" element={<MembersPage />} />
             <Route path="settings/categories" element={<CategorySettingsPage />} />
             <Route path="settings/pockets" element={<PocketSettingsPage />} />

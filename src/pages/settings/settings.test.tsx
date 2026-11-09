@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
@@ -13,6 +13,9 @@ const fake = vi.hoisted(() => ({
   failNext: false,
   loadFail: false,
   seq: 0,
+  // 가계부별 내 이름 (BANB-45). L 이 지금 가계부, L2 는 다른 가계부
+  myNames: {} as Record<string, string>,
+  renameFail: false,
 }));
 
 vi.mock('../../data/auth', () => ({
@@ -32,6 +35,14 @@ vi.mock('../../data/ledger', () => ({
   getLedger: async () => ({ id: 'L', name: '우리집', member_limit: 2, created_by: 'u', created_at: '' }),
 }));
 vi.mock('../../data/profile', () => ({ getProfile: async () => null }));
+vi.mock('../../data/member', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../data/member')>()),
+  getMyMemberName: vi.fn(async (ledgerId: string) => fake.myNames[ledgerId] ?? null),
+  renameMyMember: vi.fn(async (ledgerId: string, _userId: string, name: string) => {
+    if (fake.renameFail) throw new Error('FAILED');
+    fake.myNames[ledgerId] = name;
+  }),
+}));
 
 vi.mock('../../data/catalog', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../data/catalog')>();
@@ -95,6 +106,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   fake.failNext = false;
   fake.loadFail = false;
+  fake.renameFail = false;
+  fake.myNames = { L: '에이', L2: '에이' };
   fake.categories = [
     c('food', 'expense', null, '식비', 1),
     c('grocery', 'expense', 'food', '장보기', 1),
@@ -126,6 +139,7 @@ describe('설정 메뉴', () => {
     const links = await screen.findAllByRole('link');
     expect(links.map((a) => a.querySelector('.menu-list__label')?.textContent)).toEqual([
       '가계부 이름',
+      '내 이름',
       '멤버·초대',
       '카테고리',
       '주머니',
@@ -157,6 +171,69 @@ describe('설정 메뉴', () => {
     renderAt('/settings');
     expect(await screen.findByRole('link', { name: /가계부 이름/ })).toHaveAttribute('href', '/settings/name');
     expect(screen.getByRole('link', { name: /멤버·초대/ })).toHaveAttribute('href', '/settings/members');
+  });
+});
+
+describe('내 이름 (BANB-45)', () => {
+  it('설정 첫 묶음에 지금 이름을 값으로 보여 주고 /settings/my-name 으로 간다', async () => {
+    renderAt('/settings');
+    const row = await screen.findByRole('link', { name: /내 이름/ });
+    expect(row).toHaveAttribute('href', '/settings/my-name');
+    await waitFor(() => expect(row).toHaveTextContent('에이'));
+  });
+
+  it('바꾸면 지금 가계부의 내 이름만 바뀌고 설정 줄에 새 이름이 보인다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings');
+    await user.click(await screen.findByRole('link', { name: /내 이름/ }));
+    expect(await screen.findByRole('heading', { level: 1, name: '내 이름' })).toBeInTheDocument();
+    const input = await screen.findByLabelText('내 이름');
+    expect(input).toHaveValue('에이');
+    const save = screen.getByRole('button', { name: '저장' });
+    expect(save).toBeDisabled(); // 바뀐 게 없으면 꺼짐
+    await user.clear(input);
+    await user.type(input, '  남편  ');
+    await user.click(save);
+    expect(await screen.findByRole('status')).toHaveTextContent('저장했어요.');
+    expect(input).toHaveValue('남편');
+    expect(fake.myNames).toEqual({ L: '남편', L2: '에이' });
+    const { renameMyMember } = await import('../../data/member');
+    expect(renameMyMember).toHaveBeenCalledWith('L', 'u1', '남편');
+    await user.click(screen.getByRole('button', { name: '뒤로' }));
+    await waitFor(() => expect(screen.getByRole('link', { name: /내 이름/ })).toHaveTextContent('남편'));
+  });
+
+  it('빈 값·21자 이상이면 저장 버튼이 꺼지고 안내가 보인다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/my-name');
+    const input = await screen.findByLabelText('내 이름');
+    const save = screen.getByRole('button', { name: '저장' });
+    await user.clear(input);
+    expect(save).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('이름을 입력해 주세요.');
+    await user.type(input, '   ');
+    expect(save).toBeDisabled();
+    await user.clear(input);
+    await user.type(input, '가'.repeat(21));
+    expect(save).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('이름은 20자까지 쓸 수 있어요.');
+    await user.type(input, '{Backspace}');
+    expect(save).toBeEnabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('저장에 실패하면 이전 이름을 유지하고 오류를 알린다', async () => {
+    const user = userEvent.setup();
+    fake.renameFail = true;
+    renderAt('/settings/my-name');
+    const input = await screen.findByLabelText('내 이름');
+    await user.clear(input);
+    await user.type(input, '남편');
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어요');
+    expect(fake.myNames.L).toBe('에이');
+    expect(screen.queryByText('저장했어요.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled(); // 다시 시도 가능
   });
 });
 

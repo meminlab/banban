@@ -61,6 +61,8 @@ export const ASSETS_ARCHIVED_PATH = '/assets/archived';
 export type AssetFlash = { kind: 'saved' } | { kind: 'archived'; id: string; name: string } | { kind: 'gone' };
 /** 설정 > 가계부 이름 */
 export const LEDGER_NAME_PATH = '/settings/name';
+/** 설정 > 내 이름 (지금 가계부에서 쓰는 내 이름) */
+export const MY_NAME_PATH = '/settings/my-name';
 /** 설정 > 멤버·초대 */
 export const MEMBERS_PATH = '/settings/members';
 /** 초대 링크: /join/<코드> (lib/ledgerRules JOIN_PATH_PREFIX 와 같음) */

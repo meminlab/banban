@@ -21,9 +21,21 @@ export const JOIN_PATH_PREFIX = '/join/';
  * 입력칸에 maxLength 를 두지 않는다: maxLength 는 UTF-16 단위라 이모지를 2자로 세고, 앞뒤 공백도 센다.
  */
 export function validateLedgerName(raw: string): string | null {
+  return validateName(raw, '가계부 이름', LEDGER_NAME_MAX);
+}
+
+/** 가계부 안 내 이름(member.display_name) 최대 글자 수 — DB check 1~20자와 같다 */
+export const MEMBER_NAME_MAX = 20;
+
+/** 가계부 안 내 이름 검사: 앞뒤 공백 제거 후 1~20자. 문제없으면 null, 있으면 안내 문구 (글자 수 기준은 validateLedgerName 과 같음) */
+export function validateMemberName(raw: string): string | null {
+  return validateName(raw, '이름', MEMBER_NAME_MAX);
+}
+
+function validateName(raw: string, label: string, max: number): string | null {
   const name = raw.trim();
-  if (name.length === 0) return '가계부 이름을 입력해 주세요.';
-  if (nameLength(name) > LEDGER_NAME_MAX) return `가계부 이름은 ${LEDGER_NAME_MAX}자까지 쓸 수 있어요.`;
+  if (name.length === 0) return `${label}을 입력해 주세요.`;
+  if (nameLength(name) > max) return `${label}은 ${max}자까지 쓸 수 있어요.`;
   return null;
 }
 
