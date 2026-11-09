@@ -63,12 +63,16 @@ reset role;
 select test6.expect_count($$select * from public.member m, test6.ctx c
   where c.key = 'ledger' and m.ledger_id = c.val and m.left_at is null$$, 2);
 
+-- 기본값은 같은 이름 소분류뿐이라(BANB-36) 규칙 확인용 소분류 2개를 식비 아래에 둔다
+insert into public.category (ledger_id, type, parent_id, name, sort_order)
+select p.ledger_id, 'expense', p.id, v.n, v.o from public.category p, (values ('외식', 1), ('배달', 2)) v(n, o)
+ where p.type = 'expense' and p.name = '식비' and p.parent_id is null and p.ledger_id = (select val from test6.ctx where key = 'ledger');
 insert into test6.ctx select 'used_child', id from public.category c
   where c.name = '외식' and c.ledger_id = (select val from test6.ctx where key = 'ledger');
 insert into test6.ctx select 'unused_child', id from public.category c
   where c.name = '배달' and c.ledger_id = (select val from test6.ctx where key = 'ledger');
 insert into test6.ctx select 'food', id from public.category c
-  where c.name = '식비' and c.ledger_id = (select val from test6.ctx where key = 'ledger');
+  where c.name = '식비' and c.parent_id is null and c.ledger_id = (select val from test6.ctx where key = 'ledger');
 insert into test6.ctx select 'pocket', id from public.pocket p
   where p.name = '개인용돈' and p.ledger_id = (select val from test6.ctx where key = 'ledger');
 insert into test6.ctx select 'member_a', id from public.member m
@@ -87,12 +91,12 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000006a0';
 select test6.expect_count($$select * from public.pocket where (name, scope) in
   (('공동소비','shared'),('개인용돈','personal'),('여행','shared'),('경조사비','shared')) and not is_hidden$$, 4);
-select test6.expect_count($$select * from public.category where parent_id is null and type = 'expense'$$, 15);
-select test6.expect_count($$select * from public.category where parent_id is null and type = 'income'$$, 6);
-select test6.expect_count($$select * from public.category where parent_id is null and type = 'saving'$$, 6);
--- 소분류 없는 대분류는 같은 이름 소분류 1개
+select test6.expect_count($$select * from public.category where parent_id is null and type = 'expense'$$, 12);
+select test6.expect_count($$select * from public.category where parent_id is null and type = 'income'$$, 4);
+select test6.expect_count($$select * from public.category where parent_id is null and type = 'saving'$$, 4);
+-- 대분류마다 같은 이름 소분류 1개
 select test6.expect_count($$select * from public.category p join public.category c on c.parent_id = p.id
-  where p.name = '보험' and c.name = '보험'$$, 1);
+  where p.name = '경조사·선물' and c.name = '경조사·선물'$$, 1);
 
 -- ── 2. 관리 동작: 추가·이름 변경·순서 변경·숨김 (B가 해도 A에게 보인다)
 set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000006b0';

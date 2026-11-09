@@ -63,7 +63,7 @@ function t(o: Partial<Transaction>): Transaction {
 }
 
 vi.mock('../data/transaction', () => ({
-  listRecentCategoryIds: async () => [],
+  listCategoryUses: async () => [],
   getTransactionFormOptions: async () => ({ categories: CATEGORIES, pockets: POCKETS, members: MEMBERS }),
   listMonthTransactions: (ledgerId: string, month: string) => fake.list(ledgerId, month),
   getTransaction: async (id: string) => fake.transactions.find((x) => (x as Transaction).id === id) ?? null,

@@ -10,7 +10,8 @@ import { Sheet } from '../../components/Sheet';
 import { StatusScreen } from '../../components/StatusScreen';
 import { addChildCategory, addParentCategory, listCategories, saveOrder, updateCategory } from '../../data/catalog';
 import type { Category, TransactionType } from '../../data/types';
-import { buildCategoryTree, iconFollowers, moveItem, nextSortOrder, positionOf, TRANSACTION_TYPES, TYPE_LABEL } from '../../domain/catalog';
+import { buildCategoryTree, iconFollowers, moveItem, nameFollowers, nextSortOrder, positionOf, TRANSACTION_TYPES, TYPE_LABEL } from '../../domain/catalog';
+import { isSelfChild } from '../../domain/categoryPicker';
 import { HideButton, ItemButton, OrderButtons, SheetError } from './ManageParts';
 
 type SheetState = null | { kind: 'add'; parentId: string | null } | { kind: 'edit'; id: string };
@@ -81,7 +82,8 @@ export function CategorySettingsPage() {
                     onClick={() => setSheet({ kind: 'edit', id: parent.id })}
                   />
                   <ul className="manage-list manage-list--children">
-                    {children.map((child) => (
+                    {/* 같은 이름 소분류(= 대분류 자체 선택지)는 대분류와 함께 움직이므로 따로 보이지 않는다. 숨겨져 있을 때만 다시 켤 수 있게 보인다 */}
+                    {children.filter((child) => !isSelfChild(child, parent) || child.is_hidden).map((child) => (
                       <li key={child.id}>
                         <ItemButton
                           item={child}
@@ -158,11 +160,15 @@ export function CategorySettingsPage() {
             busy={saving.busy}
             submitLabel="저장"
             onSubmit={async ({ name, icon }) => {
-              // 대분류 아이콘을 바꾸면 같은 이름 소분류도 함께 (선택 시트에는 그 소분류가 보인다)
-              const followers = icon !== editing.icon ? iconFollowers(all, editing) : [];
+              // 대분류 아이콘·이름을 바꾸면 같은 이름 소분류도 함께 (대분류를 고르면 그 소분류로 저장된다)
+              const iconFollow = icon !== editing.icon ? iconFollowers(all, editing) : [];
+              const nameFollow = name !== editing.name ? nameFollowers(all, editing, name) : [];
               const ok = await save(async () => {
                 await updateCategory(editing.id, { name, icon });
-                await Promise.all(followers.map((c) => updateCategory(c.id, { icon })));
+                await Promise.all([
+                  ...iconFollow.map((c) => updateCategory(c.id, { icon, ...(nameFollow.includes(c) ? { name } : {}) })),
+                  ...nameFollow.filter((c) => !iconFollow.includes(c)).map((c) => updateCategory(c.id, { name })),
+                ]);
               });
               if (ok) closeSheet();
             }}

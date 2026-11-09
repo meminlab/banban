@@ -18,7 +18,8 @@ q() { run -At -c "$1"; }
 
 run < supabase/tests/00_supabase_stub.sql
 NEW=supabase/migrations/20261106170000_category_icon.sql
-for f in supabase/migrations/*.sql; do [ "$f" = "$NEW" ] || run < "$f"; done
+# 이 마이그레이션 이전 것만 먼저 적용 (뒤에 생긴 마이그레이션은 이 확인의 전제가 아니다)
+for f in supabase/migrations/*.sql; do [[ "$f" < "$NEW" ]] && run < "$f"; done
 
 A=00000000-0000-0000-0000-0000000000a5
 echo "▶ 기존 가계부 2개(그중 하나는 이름 바꾼 기본 카테고리 + 직접 만든 카테고리)"
@@ -55,7 +56,9 @@ SQL
 [ "$(q "select count(*) from public.category where ledger_id = (select id from public.ledger where name = '새 가계부') and icon is not null")" = 70 ] \
   || fail "새 가계부: 70개 모두 아이콘"
 echo "  새 가계부: 70개 아이콘 ✓"
+# 뒤에 생긴 마이그레이션까지 적용한 뒤 적용 확인 스크립트(최신 기준)를 돌린다
+for f in supabase/migrations/*.sql; do [[ "$f" > "$NEW" ]] && run < "$f" >/dev/null 2>&1; done
 echo "▶ check_applied.sql"
-[ "$(run -At -F, < supabase/tests/check_applied.sql | head -10 | awk -F, '{print $NF}' | sort -u)" = "t" ] || fail "check_applied category_icon"
+[ "$(run -A -F, < supabase/tests/check_applied.sql | head -11 | awk -F, -v col=category_icon 'NR == 1 { for (i = 1; i <= NF; i++) if ($i == col) c = i; next } { print $c }' | sort -u)" = "t" ] || fail "check_applied category_icon"
 echo "  category_icon = true (10행) ✓"
 echo "✅ category icon check passed"

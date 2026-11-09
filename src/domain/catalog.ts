@@ -74,6 +74,18 @@ export function iconFollowers(categories: readonly Category[], parent: Category)
   );
 }
 
+/**
+ * 대분류 이름을 바꿀 때 함께 바꿀 소분류: 대분류와 이름이 같은 것(대분류 자체 선택지, BANB-36).
+ * 같이 안 바꾸면 그 소분류가 "보이는 소분류"가 되어 대분류를 한 번에 고를 수 없게 된다.
+ * 새 이름과 같은 소분류가 이미 있으면 겹치지 않게 바꾸지 않는다.
+ */
+export function nameFollowers(categories: readonly Category[], parent: Category, newName: string): Category[] {
+  if (parent.parent_id !== null) return [];
+  const children = categories.filter((c) => c.parent_id === parent.id);
+  if (children.some((c) => c.name === newName)) return [];
+  return children.filter((c) => c.name === parent.name);
+}
+
 /** 내역 입력에서 고를 수 있는 주머니 (숨긴 것 제외, 순서대로) */
 export function selectablePockets(pockets: readonly Pocket[]): Pocket[] {
   return sortByOrder(pockets.filter((p) => !p.is_hidden));
