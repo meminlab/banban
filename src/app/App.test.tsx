@@ -61,6 +61,7 @@ vi.mock('../data/ledger', () => ({
     member_limit: fake.memberLimit,
     created_by: 'u1',
     created_at: '',
+    together_since: null,
   }),
   renameLedger: (id: string, name: string) => fake.renameLedger(id, name),
   // 서버처럼: 만들거나 참여한 가계부를 목록에 넣고 마지막으로 본 가계부로 기록
@@ -182,13 +183,13 @@ describe('로그인하지 않은 상태', () => {
 });
 
 describe('로그인했고 가계부가 있는 상태', () => {
-  it('하단 탭: 홈 · 가계부 · [＋ 내역 추가] · 자산 순서 (design.md 5.7)', async () => {
+  it('하단 탭: 홈 · 가계부 · [＋ 내역 추가] · 일정 · 자산 순서 (design.md 5.7 v1.6)', async () => {
     renderAt('/');
     const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
     const names = within(nav)
       .getAllByRole('link')
       .map((a) => a.getAttribute('aria-label') ?? a.textContent);
-    expect(names).toEqual(['홈', '가계부', '내역 추가', '자산']);
+    expect(names).toEqual(['홈', '가계부', '내역 추가', '일정', '자산']);
     expect(within(nav).getByRole('link', { name: '홈' })).toHaveAttribute('aria-current', 'page');
   });
 

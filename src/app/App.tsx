@@ -3,6 +3,8 @@ import { AppLayout } from '../components/AppLayout';
 import { HomePage } from '../pages/HomePage';
 import { LedgerPage } from '../pages/LedgerPage';
 import { AssetsPage } from '../pages/AssetsPage';
+import { CalendarPage } from '../pages/CalendarPage';
+import { EventFormPage } from '../pages/EventFormPage';
 import { AssetFormPage } from '../pages/AssetFormPage';
 import { ArchivedAssetsPage } from '../pages/ArchivedAssetsPage';
 import { SettingsPage } from '../pages/SettingsPage';
@@ -34,8 +36,11 @@ export function App() {
             <Route element={<AppLayout />}>
               <Route index element={<HomePage />} />
               <Route path="ledger" element={<LedgerPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
               <Route path="assets" element={<AssetsPage />} />
             </Route>
+            <Route path="calendar/new" element={<EventFormPage />} />
+            <Route path="calendar/:eventId" element={<EventFormPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="assets/new" element={<AssetFormPage />} />
             <Route path="assets/archived" element={<ArchivedAssetsPage />} />

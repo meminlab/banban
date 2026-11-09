@@ -33,6 +33,8 @@ export interface Ledger {
   member_limit: number;
   created_by: string; // auth user id
   created_at: string;
+  /** 함께한 날 'YYYY-MM-DD' (설정 › 함께한 날). null = 정하지 않음 */
+  together_since: string | null;
 }
 
 export interface Member {
@@ -118,6 +120,33 @@ export interface AssetBalanceHistory {
   balance: number;
   changed_by: string | null; // member id. null = 마이그레이션이 채운 행
   changed_at: string;
+}
+
+/** 일정 종류: 기념일 · 약속 · 정기 지출일 · 기타 */
+export type EventKind = 'anniversary' | 'appointment' | 'bill_day' | 'other';
+/** 반복: 안 함 · 매년 · 매년(음력) · 매월 · 매주 */
+export type EventRepeat = 'none' | 'yearly' | 'yearly_lunar' | 'monthly' | 'weekly';
+
+/** 일정 — 반복 일정도 1행. 화면에서 펼친다 (domain/event) */
+export interface CalendarEvent {
+  id: string;
+  ledger_id: string;
+  title: string; // 1~20자
+  kind: EventKind;
+  event_date: string; // 첫 회차 'YYYY-MM-DD' (양력, KST)
+  all_day: boolean;
+  start_time: string | null; // 'HH:MM:SS' (KST). 종일이면 null
+  repeat: EventRepeat;
+  lunar_month: number | null; // 음력 매년일 때만
+  lunar_day: number | null;
+  target_member_id: string | null; // member id, null = 함께
+  place: string | null; // 30자
+  memo: string | null; // 100자
+  pinned_at: string | null; // 홈 D-day 고정 시각(서버가 정함). 기념일만, 가계부당 2개
+  created_by: string; // member id (서버 기록)
+  updated_by: string; // member id (서버 기록)
+  created_at: string;
+  updated_at: string;
 }
 
 /** 마지막으로 본 가계부 (본인만 읽음, 쓰기는 set_last_ledger RPC) */
