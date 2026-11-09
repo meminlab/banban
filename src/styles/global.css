@@ -1306,3 +1306,46 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .repeat-sheet__row .manage-input { flex: 1; min-width: 0; }
 .repeat-sheet__none { flex: none; font-size: 0.875rem; color: var(--color-text-weak); font-weight: 400; }
 .repeat-sheet__clear { flex: none; min-height: 44px; }
+
+/* ── 설정 › 가계부 관리 (design.md 5.18, BANB-46) */
+.ledger-manage__head { margin: 4px 0 8px; font-size: 0.9375rem; font-weight: 700; color: var(--color-text); }
+.ledger-manage__count { font-weight: 400; color: var(--color-text-sub); }
+/* 행 64: 첫 글자 원 40 + 이름 16/600(두 줄까지) + 보조 13 + [지금 보는 중] + ChevronRight */
+.ledger-row {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 64px; padding: 10px 16px; color: var(--color-text); text-decoration: none;
+}
+.ledger-row:active { background: var(--color-surface-sunken); }
+.ledger-row:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+.ledger-row__initial {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 999px;
+  background: var(--color-surface-sunken); color: var(--color-text); font-size: 1rem; font-weight: 700;
+}
+.ledger-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ledger-row__name {
+  font-size: 1rem; font-weight: 600; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ledger-row__sub { font-size: 0.8125rem; color: var(--color-text-sub); }
+.ledger-row__chevron { flex: none; color: var(--color-text-sub); }
+/* 보조 버튼 2개 나란히 */
+.ledger-manage__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ledger-manage__actions .button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--touch-lg); }
+.ledger-manage__hint { margin: 0; color: var(--color-text-sub); font-size: 0.8125rem; line-height: 1.5; }
+/* 상세 */
+.ledger-detail {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px;
+  margin-inline: calc(var(--card-gutter) - var(--content-pad));
+  border: var(--card-border); border-radius: var(--card-radius); background: var(--color-surface); box-shadow: var(--card-shadow);
+}
+.ledger-detail__initial { width: 56px; height: 56px; font-size: 1.375rem; }
+.ledger-detail__name { margin: 0; font-size: 1.25rem; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
+.ledger-detail__facts { display: flex; flex-direction: column; gap: 4px; width: 100%; margin: 8px 0 0; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.ledger-detail__facts div { display: flex; justify-content: space-between; gap: 8px; min-height: 32px; align-items: center; }
+.ledger-detail__facts dt { color: var(--color-text-sub); font-size: 0.9375rem; }
+.ledger-detail__facts dd { margin: 0; font-size: 0.9375rem; font-weight: 600; }
+.ledger-manage__detail-actions { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.ledger-manage__detail-actions .form-error { margin: 0; }
+/* 전환 시트 아래 "가계부 관리" 텍스트 버튼 */
+.ledger-list__manage { display: inline-flex; align-items: center; justify-content: center; gap: 6px; align-self: center; color: var(--color-text-sub); font-size: 0.9375rem; font-weight: 600; }

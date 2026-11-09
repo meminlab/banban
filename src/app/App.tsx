@@ -20,6 +20,7 @@ import { CategorySettingsPage } from '../pages/settings/CategorySettingsPage';
 import { PocketSettingsPage } from '../pages/settings/PocketSettingsPage';
 import { ThemeSettingsPage } from '../pages/settings/ThemeSettingsPage';
 import { RecurringSettingsPage } from '../pages/settings/RecurringSettingsPage';
+import { LedgerManageDetailPage, LedgerManagePage } from '../pages/settings/LedgerManagePage';
 import { RequireAuth, RequireLedger, RequireNoLedger } from './guards';
 import { ThemeProvider } from './theme';
 
@@ -51,6 +52,8 @@ export function App() {
             <Route path="settings/name" element={<LedgerNamePage />} />
             <Route path="settings/my-name" element={<MemberNamePage />} />
             <Route path="settings/members" element={<MembersPage />} />
+            <Route path="settings/ledgers" element={<LedgerManagePage />} />
+            <Route path="settings/ledgers/:ledgerId" element={<LedgerManageDetailPage />} />
             <Route path="settings/categories" element={<CategorySettingsPage />} />
             <Route path="settings/pockets" element={<PocketSettingsPage />} />
             <Route path="settings/theme" element={<ThemeSettingsPage />} />

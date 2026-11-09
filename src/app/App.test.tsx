@@ -11,7 +11,7 @@ const fake = vi.hoisted(() => ({
   listener: null as ((u: unknown) => void) | null,
   initialUser: null as unknown,
   /** 내가 참여 중인 가계부 (서버 상태 흉내) */
-  ledgers: [] as Array<{ id: string; name: string; memberCount: number; joinedAt: string }>,
+  ledgers: [] as Array<{ id: string; name: string; memberCount: number; joinedAt: string; createdBy: string; createdAt: string }>,
   /** 서버에 저장된 마지막으로 본 가계부 */
   lastId: null as string | null,
   ledgerError: false,
@@ -67,14 +67,15 @@ vi.mock('../data/ledger', () => ({
   // 서버처럼: 만들거나 참여한 가계부를 목록에 넣고 마지막으로 본 가계부로 기록
   createLedger: async (name: string, displayName: string) => {
     const id = await fake.createLedger(name, displayName);
-    fake.ledgers.push({ id, name: name.trim(), memberCount: 1, joinedAt: new Date().toISOString() });
+    const now = new Date().toISOString();
+    fake.ledgers.push({ id, name: name.trim(), memberCount: 1, joinedAt: now, createdBy: 'u1', createdAt: now });
     fake.lastId = id;
     return id;
   },
   joinLedger: async (code: string, displayName: string) => {
     const id = await fake.joinLedger(code, displayName);
     if (!fake.ledgers.some((l) => l.id === id))
-      fake.ledgers.push({ id, name: '참여한 가계부', memberCount: 2, joinedAt: new Date().toISOString() });
+      fake.ledgers.push({ id, name: '참여한 가계부', memberCount: 2, joinedAt: new Date().toISOString(), createdBy: 'other', createdAt: '2026-10-01T00:00:00Z' });
     fake.lastId = id;
     return id;
   },
@@ -120,7 +121,9 @@ const member = (id: string, user_id: string, display_name: string, extra: Record
 const invite = (code: string, extra: Record<string, unknown> = {}) => ({
   id: `inv-${code}`, ledger_id: 'ledger-1', code, expires_at: FUTURE, is_revoked: false, created_by: 'm1', created_at: '', ...extra,
 });
-const ledgerRow = (id: string, name: string, memberCount = 1, joinedAt = '2026-11-01T00:00:00Z') => ({ id, name, memberCount, joinedAt });
+const ledgerRow = (id: string, name: string, memberCount = 1, joinedAt = '2026-11-01T00:00:00Z', createdBy = 'u1') => ({
+  id, name, memberCount, joinedAt, createdBy, createdAt: joinedAt,
+});
 /** RPC 오류 흉내 (supabase PostgrestError 형태) */
 const rpcError = (message: string, details: string | null = null) => Object.assign(new Error(message), { details });
 
@@ -744,5 +747,137 @@ describe('여러 가계부 전환 (BANB-17)', () => {
     await user.click(await screen.findByRole('button', { name: '취소' }));
     expect(await screen.findByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
     expect(fake.createLedger).not.toHaveBeenCalled();
+  });
+});
+
+describe('설정 › 가계부 관리 (BANB-46, design.md 5.18)', () => {
+  beforeEach(() => {
+    fake.ledgers = [
+      ledgerRow('ledger-a', '부부 공동', 2, '2026-11-01T00:00:00Z', 'u1'),
+      ledgerRow('ledger-b', '부모님', 3, '2026-11-02T03:00:00Z', 'other'),
+    ];
+    fake.lastId = 'ledger-a';
+  });
+
+  it('설정 둘째 묶음에 "가계부 관리" 줄이 있다', async () => {
+    renderAt('/settings');
+    expect(await screen.findByRole('link', { name: /가계부 관리/ })).toHaveAttribute('href', '/settings/ledgers');
+  });
+
+  it('전환 시트 아래 "가계부 관리" 버튼이 관리 화면으로 간다', async () => {
+    const user = userEvent.setup();
+    renderAt('/');
+    await user.click(await screen.findByRole('button', { name: /지금 보는 가계부: 부부 공동/ }));
+    await user.click(within(screen.getByRole('dialog', { name: '가계부' })).getByRole('button', { name: '가계부 관리' }));
+    expect(await screen.findByRole('heading', { level: 1, name: '가계부 관리' })).toBeInTheDocument();
+  });
+
+  it('머리 "내 가계부 N/5" + 행(이름·멤버 수·내가 만듦/참여함·지금 보는 중) + 만들기·참여 + 안내', async () => {
+    renderAt('/settings/ledgers');
+    expect(await screen.findByRole('heading', { level: 2, name: '내 가계부 2/5' })).toBeInTheDocument();
+    const rows = screen.getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/settings/ledgers/'));
+    expect(rows.map((a) => a.textContent)).toEqual(['부부부 공동멤버 2명 · 내가 만듦지금 보는 중', '부부모님멤버 3명 · 참여함']);
+    expect(rows[0]).toHaveAttribute('aria-current', 'true');
+    expect(rows[1]).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: '새로 만들기' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '코드로 참여' })).toBeEnabled();
+    expect(screen.getByText('가계부는 1인 최대 5개. 나가기는 각 가계부를 눌러서.')).toBeInTheDocument();
+  });
+
+  it('코드로 참여는 기존 참여 화면으로 연결된다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers');
+    await user.click(await screen.findByRole('button', { name: '코드로 참여' }));
+    expect(await screen.findByRole('heading', { level: 1, name: '초대코드로 참여' })).toBeInTheDocument();
+  });
+
+  it('관리 화면에서 새로 만들면 그 가계부로 전환된다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers');
+    await user.click(await screen.findByRole('button', { name: '새로 만들기' }));
+    await user.type(await screen.findByLabelText('가계부 이름'), '여행');
+    await user.click(screen.getByRole('button', { name: '만들기' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 여행/ })).toBeInTheDocument();
+  });
+
+  it('5개가 차면 만들기·참여를 끄고 상한 안내를 보인다', async () => {
+    fake.ledgers = ['a', 'b', 'c', 'd', 'e'].map((k, i) => ledgerRow(`ledger-${k}`, k, 1, `2026-11-0${i + 1}T00:00:00Z`));
+    renderAt('/settings/ledgers');
+    expect(await screen.findByRole('heading', { level: 2, name: '내 가계부 5/5' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '새로 만들기' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '코드로 참여' })).toBeDisabled();
+    expect(screen.getByText('가계부는 최대 5개까지 참여할 수 있어요.')).toBeInTheDocument();
+  });
+
+  it('행을 누르면 상세(이름·멤버 수·만든 날)가 보이고, "이 가계부로 전환"으로 바꾼다', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers');
+    await user.click(await screen.findByRole('link', { name: /부모님/ }));
+    expect(await screen.findByRole('heading', { level: 2, name: '부모님' })).toBeInTheDocument();
+    expect(screen.getByText('3명')).toBeInTheDocument();
+    expect(screen.getByText('2026년 11월 2일')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '이 가계부로 전환' }));
+    expect(await screen.findByRole('button', { name: /지금 보는 가계부: 부모님/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '홈' })).toBeInTheDocument();
+    expect(fake.rememberLedger).toHaveBeenCalledWith('ledger-b');
+  });
+
+  it('지금 보는 가계부 상세에는 전환 버튼이 없다', async () => {
+    renderAt('/settings/ledgers/ledger-a');
+    expect(await screen.findByRole('heading', { level: 2, name: '부부 공동' })).toBeInTheDocument();
+    expect(screen.getByText('지금 보는 중')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '이 가계부로 전환' })).not.toBeInTheDocument();
+  });
+
+  it('나가기: 확인 창(취소 먼저 포커스) → 나가면 목록으로 돌아와 빠지고, 지금 가계부는 그대로', async () => {
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers/ledger-b');
+    await user.click(await screen.findByRole('button', { name: '가계부 나가기' }));
+    const dialog = screen.getByRole('alertdialog', { name: "'부모님'에서 나갈까요?" });
+    expect(within(dialog).getByRole('button', { name: '취소' })).toHaveFocus();
+    expect(dialog).not.toHaveTextContent('마지막 멤버라서');
+    await user.click(within(dialog).getByRole('button', { name: '나가기' }));
+    expect(fake.leaveLedger).toHaveBeenCalledWith('ledger-b');
+    expect(await screen.findByRole('heading', { level: 2, name: '내 가계부 1/5' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent("'부모님'에서 나갔어요");
+    expect(screen.queryByRole('link', { name: /부모님/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /부부 공동/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('지금 보는 가계부에서 나가면 남은 가계부로 바뀐다. 혼자인 가계부는 보관 안내를 덧붙인다', async () => {
+    fake.ledgers[0].memberCount = 1;
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers/ledger-a');
+    await user.click(await screen.findByRole('button', { name: '가계부 나가기' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(dialog).toHaveTextContent('마지막 멤버라서 나가면 가계부가 보관되고 아무도 볼 수 없어요.');
+    await user.click(within(dialog).getByRole('button', { name: '나가기' }));
+    expect(await screen.findByRole('heading', { level: 2, name: '내 가계부 1/5' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /부모님/ })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('마지막 가계부에서 나가면 시작 화면으로 간다 (기존 규칙)', async () => {
+    fake.ledgers = [fake.ledgers[0]];
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers/ledger-a');
+    await user.click(await screen.findByRole('button', { name: '가계부 나가기' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '나가기' }));
+    expect(await screen.findByRole('button', { name: /만들기/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: '가계부 관리' })).not.toBeInTheDocument();
+  });
+
+  it('나가기에 실패하면 상세에 남아 오류를 보인다', async () => {
+    fake.leaveLedger.mockRejectedValueOnce(new Error('network'));
+    const user = userEvent.setup();
+    renderAt('/settings/ledgers/ledger-b');
+    await user.click(await screen.findByRole('button', { name: '가계부 나가기' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: '나가기' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('나가지 못했어요');
+    expect(screen.getByRole('heading', { level: 2, name: '부모님' })).toBeInTheDocument();
+  });
+
+  it('없는 가계부 주소로 들어오면 목록으로', async () => {
+    renderAt('/settings/ledgers/ledger-zzz');
+    expect(await screen.findByRole('heading', { level: 2, name: '내 가계부 2/5' })).toBeInTheDocument();
   });
 });
