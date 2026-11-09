@@ -29,7 +29,7 @@ vi.mock('../../data/ledger', () => ({
   getLastLedgerId: async () => 'L',
   rememberLedger: async () => {},
   // 설정 메뉴가 가계부 이름을 보여 준다 (BANB-5)
-  getLedger: async () => ({ id: 'L', name: '우리집', member_limit: 2, created_by: 'u', created_at: '' }),
+  getLedger: async () => ({ id: 'L', name: '우리집', member_limit: 2, created_by: 'u', created_at: '', together_since: null }),
 }));
 vi.mock('../../data/profile', () => ({ getProfile: async () => null }));
 

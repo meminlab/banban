@@ -32,11 +32,17 @@ export async function rememberLedger(ledgerId: string): Promise<void> {
 export async function getLedger(ledgerId: string): Promise<Ledger> {
   const { data, error } = await getSupabase()
     .from('ledger')
-    .select('id, name, member_limit, created_by, created_at')
+    .select('id, name, member_limit, created_by, created_at, together_since')
     .eq('id', ledgerId)
     .single();
   if (error) throw error;
   return data as Ledger;
+}
+
+/** 함께한 날 저장 ('YYYY-MM-DD', null = 지우기). 멤버 누구나 바꿀 수 있다 */
+export async function setTogetherSince(ledgerId: string, date: string | null): Promise<void> {
+  const { error } = await getSupabase().from('ledger').update({ together_since: date }).eq('id', ledgerId);
+  if (error) throw error;
 }
 
 export async function renameLedger(ledgerId: string, name: string): Promise<void> {

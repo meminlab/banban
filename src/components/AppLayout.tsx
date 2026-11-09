@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { SETTINGS_PATH, TABS, TRANSACTION_NEW_PATH, type TransactionFormState } from '../app/routes';
+import { CALENDAR_PATH, EVENT_NEW_PATH, SETTINGS_PATH, TABS, TRANSACTION_NEW_PATH, type TransactionFormState } from '../app/routes';
 import { Icon } from './Icon';
 import { LedgerSwitcher } from './LedgerSwitcher';
 import { TxFlashToast } from './TxFlashToast';
@@ -9,7 +9,8 @@ type Tab = (typeof TABS)[number];
 
 /**
  * 탭 화면 공통 틀: 위 제목줄(왼쪽 가계부 전환 알약, 오른쪽 설정) + 본문 + 하단 탭.
- * 하단 탭은 홈 · 가계부 · [＋] · 자산 (design.md 5.7). ＋는 탭이 아니라 내역 입력 버튼이고, 모든 탭에서 같은 자리.
+ * 하단 탭은 홈 · 가계부 · [＋] · 일정 · 자산 (design.md 5.7 v1.6). ＋는 탭이 아니라 버튼이고, 모든 탭에서 같은 자리.
+ * ＋가 하는 일: 일정 탭에서는 일정 추가(CalendarPlus, 날짜 = 오늘), 그 밖의 탭에서는 내역 입력.
  * 탭 이름은 하단 탭에 보이므로 제목은 화면 낭독용.
  */
 export function AppLayout() {
@@ -52,9 +53,15 @@ export function AppLayout() {
 
       <nav className="tabbar" aria-label="주요 메뉴">
         {TABS.slice(0, 2).map(tabLink)}
-        <Link to={TRANSACTION_NEW_PATH} state={addState} className="tabbar__add" aria-label="내역 추가">
-          <Icon name="add" size={26} />
-        </Link>
+        {pathname === CALENDAR_PATH ? (
+          <Link to={EVENT_NEW_PATH} className="tabbar__add" aria-label="일정 추가">
+            <Icon name="addEvent" size={26} />
+          </Link>
+        ) : (
+          <Link to={TRANSACTION_NEW_PATH} state={addState} className="tabbar__add" aria-label="내역 추가">
+            <Icon name="add" size={26} />
+          </Link>
+        )}
         {TABS.slice(2).map(tabLink)}
       </nav>
     </div>

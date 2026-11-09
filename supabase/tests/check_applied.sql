@@ -12,7 +12,8 @@
 --           history_window = true (20261106180000 마이그레이션: 잔액 이력 범위 조회 함수, 로그인 사용자만 실행·권한 규칙 그대로)
 --           profile_theme = true (20261106190000 마이그레이션: profile.theme 기본 clean·허용 값 3종, set_my_theme 로그인 사용자만, profile 직접 수정 불가 그대로)
 --           category_simplify = true (20261109000000 마이그레이션: 새 기본 카테고리 20개, 모든 가계부에 기본 20개 대분류, 목록 함수 직접 실행 불가)
---           (asset_balance_history 행이 추가되어 10행. 이력 테이블 policies 1)
+--           event_calendar = true (20261109100000 마이그레이션: event 테이블·작성자 트리거·고정 2개 규칙, ledger.together_since 멤버 수정 가능)
+--           (asset_balance_history·event 행이 추가되어 11행. 이력 테이블·event policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -82,11 +83,20 @@ select c.relname                                          as table_name,
         and not exists (select 1 from public.ledger l cross join public.default_categories_v2() d
                          where not exists (select 1 from public.category p where p.ledger_id = l.id and p.type = d.type
                                              and p.parent_id is null and p.name = d.name))
-       ) as category_simplify
+       ) as category_simplify,
+       (to_regclass('public.event') is not null
+        and exists (select 1 from pg_trigger t where t.tgrelid = 'public.event'::regclass and t.tgname = 'event_before_write')
+        and exists (select 1 from pg_constraint where conrelid = 'public.event'::regclass and conname = 'event_lunar_rule')
+        and exists (select 1 from pg_constraint where conrelid = 'public.event'::regclass and conname = 'event_pin_rule')
+        and not has_function_privilege('authenticated', 'public.event_before_write()', 'execute')
+        and exists (select 1 from information_schema.columns
+                     where table_schema = 'public' and table_name = 'ledger' and column_name = 'together_since')
+        and has_column_privilege('authenticated', 'public.ledger', 'together_since', 'update')
+        and not has_column_privilege('authenticated', 'public.ledger', 'member_limit', 'update')) as event_calendar
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)

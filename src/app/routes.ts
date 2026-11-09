@@ -1,9 +1,10 @@
 import type { TransactionValues } from '../domain/transactionForm';
 
-/** 하단 탭 정의. 순서 = 화면 표시 순서 */
+/** 하단 탭 정의. 순서 = 화면 표시 순서. ＋ 버튼은 앞 2개 뒤에 들어간다 (design.md 5.7 v1.6: 홈 · 가계부 · [＋] · 일정 · 자산) */
 export const TABS = [
   { path: '/', label: '홈', icon: 'home' },
   { path: '/ledger', label: '가계부', icon: 'ledger' },
+  { path: '/calendar', label: '일정', icon: 'calendar' },
   { path: '/assets', label: '자산', icon: 'assets' },
 ] as const;
 
@@ -59,6 +60,20 @@ export const assetPath = (id: string) => `/assets/${id}`;
 export const ASSETS_ARCHIVED_PATH = '/assets/archived';
 /** 자산 추가·수정·보관 화면을 닫고 자산 탭으로 돌아갈 때 알려 줄 결과 (location.state.flash) */
 export type AssetFlash = { kind: 'saved' } | { kind: 'archived'; id: string; name: string } | { kind: 'gone' };
+/** 일정 탭 (?m=YYYY-MM 보던 달) */
+export const CALENDAR_PATH = '/calendar';
+/** 일정 추가 (state.date = 채워 둘 날짜, 없으면 오늘) */
+export const EVENT_NEW_PATH = '/calendar/new';
+/** 일정 수정 */
+export const eventPath = (id: string) => `/calendar/${id}`;
+/** 일정 추가 화면으로 넘기는 state */
+export interface EventFormState {
+  date?: string;
+}
+/** 일정 추가·수정 화면을 닫고 일정 탭으로 돌아갈 때 알려 줄 결과 (location.state.eventFlash) */
+export type EventFlash = { kind: 'saved' } | { kind: 'deleted' } | { kind: 'gone' };
+/** 일정 탭 주소 (보던 달) */
+export const calendarMonthPath = (month: string) => `${CALENDAR_PATH}?m=${month}`;
 /** 설정 > 가계부 이름 */
 export const LEDGER_NAME_PATH = '/settings/name';
 /** 설정 > 멤버·초대 */

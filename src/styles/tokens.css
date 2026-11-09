@@ -12,6 +12,13 @@
   --color-danger-soft: #FBEEEF;
   --color-scrim: rgb(15 16 18 / 0.45);
 
+  /* 일정 색 (design.md 1.6 v1.6) — 누구 일정. 테마 공통, 일정 칩·일정 행 원·누구 칩 견본에만 */
+  --color-event-together: #FFDCCF;
+  --color-event-1: #D6E4FF;
+  --color-event-2: #FFEDA8;
+  --color-event-3: #E6DBFF;
+  --color-event-4: #CFEDE4;
+
   /* 테마 토큰에서 끌어오는 별칭 */
   --color-expense: var(--color-text);
   --color-focus: var(--color-primary);
@@ -83,6 +90,11 @@
     --color-on-danger: #1A1310;
     --color-danger-soft: #3A2226;
     --color-scrim: rgb(0 0 0 / 0.6);
+    --color-event-together: #6B3328;
+    --color-event-1: #26406B;
+    --color-event-2: #4F5216;
+    --color-event-3: #3E3168;
+    --color-event-4: #164A40;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;

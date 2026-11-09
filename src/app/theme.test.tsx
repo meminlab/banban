@@ -39,7 +39,7 @@ vi.mock('../data/ledger', () => ({
   listMyLedgers: async () => [{ id: 'L', name: '우리집', memberCount: 2, joinedAt: '2026-11-01T00:00:00Z' }],
   getLastLedgerId: async () => 'L',
   rememberLedger: async () => {},
-  getLedger: async () => ({ id: 'L', name: '우리집', member_limit: 2, created_by: 'u', created_at: '' }),
+  getLedger: async () => ({ id: 'L', name: '우리집', member_limit: 2, created_by: 'u', created_at: '', together_since: null }),
 }));
 vi.mock('../data/profile', () => ({ getProfile: async () => null }));
 vi.mock('../data/theme', async (importOriginal) => {
