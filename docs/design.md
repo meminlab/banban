@@ -1,6 +1,6 @@
-# 반반 디자인 시스템 v1.2
+# 반반 디자인 시스템 v1.3
 
-> 상태: v1.2 (BANB-22, 자산관리 1단계 그래프·자산/부채·증감 규칙 5.19~5.22 추가 = BANB-19, v1.1 = BANB-19 앞 단계, v1 = BANB-18) · 기준 폭 360–430px · 이 문서가 화면 시안(BANB-19)과 개발 반영의 기준이다.
+> 상태: v1.3 (BANB-33, 다크 3테마 구분 강화 = 1.4) · v1.2 (BANB-22, 자산관리 1단계 그래프·자산/부채·증감 규칙 5.19~5.22 추가 = BANB-19, v1.1 = BANB-19 앞 단계, v1 = BANB-18) · 기준 폭 360–430px · 이 문서가 화면 시안(BANB-19)과 개발 반영의 기준이다.
 > 미리보기: `docs/design-preview.html`(테마 3종 홈·입력·컴포넌트, 주소 끝에 `#dark`를 붙이면 다크), `docs/design-preview-flows.html`(카테고리 선택·추가, 가계부 전환·추가 동선). 스크린샷은 `docs/assets/design-v1.2/`. 홈·자산 시안: `docs/screens/assets-home.html`. 나머지 화면 시안: `docs/screens/screens.html` + `docs/screens/README.md`(BANB-19).
 
 ## 0. 방향
@@ -96,32 +96,32 @@
 
 | 토큰 | 베리 라이트 | 베리 다크 | 클린 라이트 | 클린 다크 | 포근 라이트 | 포근 다크 |
 |---|---|---|---|---|---|---|
-| `color.bg` | `#F5F6F8` | `#131416` | `#F2F4F6` | `#101214` | `#FFF7F3` | `#171312` |
-| `color.surface` | `#FFFFFF` | `#1D1E21` | `#FFFFFF` | `#1B1E22` | `#FFFFFF` | `#221C1A` |
-| `color.surface-sunken` | `#F0F1F4` | `#27292D` | `#F2F4F6` | `#262A2F` | `#FBEDE7` | `#2E2624` |
-| `color.border` | `#E8EAED` | `#34363B` | `#E5E8EB` | `#33383E` | `#F3DED5` | `#3D3330` |
-| `color.border-strong` | `#8A8F98` | `#7B8089` | `#878E98` | `#7A808A` | `#98857E` | `#85766F` |
-| `color.text` | `#1D1F23` | `#F1F2F4` | `#191C21` | `#F2F4F6` | `#2B2220` | `#F5EEEB` |
-| `color.text-sub` | `#5B6068` | `#B8BCC3` | `#5F6670` | `#B5BBC3` | `#6B5A54` | `#C4B6B1` |
-| `color.text-weak` | `#686D76` | `#989CA4` | `#69707A` | `#959BA4` | `#76655F` | `#A39590` |
-| `color.primary` | `#A23B72` | `#F08CC0` | `#007F55` | `#3FC08A` | `#C44536` | `#FF8A74` |
-| `color.primary-pressed` | `#8A2D5F` | `#E673AE` | `#006A47` | `#2FA877` | `#A83A2D` | `#F27560` |
-| `color.primary-strong` | `#8A2D5F` | `#F5A9D0` | `#006B47` | `#6FD3A8` | `#9E3226` | `#FFB3A3` |
-| `color.primary-soft` | `#F9EAF2` | `#3A1F2E` | `#E6F4EE` | `#12301F` | `#FDE8E3` | `#3D211C` |
-| `color.on-primary` | `#FFFFFF` | `#1F0F18` | `#FFFFFF` | `#04140D` | `#FFFFFF` | `#1F0E0B` |
-| `color.inverse-action` | `#F5A9D0` | `#8A2D5F` | `#6FD3A8` | `#006B47` | `#FFB3A3` | `#9E3226` |
-| `color.saving` | `#3B7560` | `#93C4AD` | `#6B52AE` | `#B7A6E8` | `#3B7560` | `#93C4AD` |
-| `color.hero-bg` | `#FFFFFF` | `#1D1E21` | `#FFFFFF` | `#1B1E22` | `#FDE8E3` | `#3D211C` |
-| `color.hero-label` | `#5B6068` | `#B8BCC3` | `#5F6670` | `#B5BBC3` | `#9E3226` | `#FFB3A3` |
-| `color.member-1` | `#A23B72` | `#F08CC0` | `#007F55` | `#3FC08A` | `#F7B9A4` | `#E89A84` |
-| `color.member-2` | `#D98CB5` | `#9C4E78` | `#5DBB92` | `#2A7A58` | `#F6D98B` | `#D9B95F` |
+| `color.bg` | `#F5F6F8` | `#151217` | `#F2F4F6` | `#0D1311` | `#FFF7F3` | `#1A1310` |
+| `color.surface` | `#FFFFFF` | `#1F1A22` | `#FFFFFF` | `#161E1B` | `#FFFFFF` | `#261C18` |
+| `color.surface-sunken` | `#F0F1F4` | `#2A232D` | `#F2F4F6` | `#202A26` | `#FBEDE7` | `#33261F` |
+| `color.border` | `#E8EAED` | `#3A313D` | `#E5E8EB` | `#2C3833` | `#F3DED5` | `#47362D` |
+| `color.border-strong` | `#8A8F98` | `#857A8B` | `#878E98` | `#74827C` | `#98857E` | `#8F7B71` |
+| `color.text` | `#1D1F23` | `#F4EFF5` | `#191C21` | `#EEF4F1` | `#2B2220` | `#F7EEE9` |
+| `color.text-sub` | `#5B6068` | `#C2B6C6` | `#5F6670` | `#B1BEB8` | `#6B5A54` | `#CDBAB0` |
+| `color.text-weak` | `#686D76` | `#A193A6` | `#69707A` | `#909D97` | `#76655F` | `#AA978D` |
+| `color.primary` | `#A23B72` | `#EA8CD2` | `#007F55` | `#3FC08A` | `#C44536` | `#FFA36B` |
+| `color.primary-pressed` | `#8A2D5F` | `#DD72C3` | `#006A47` | `#2FA877` | `#A83A2D` | `#F28D52` |
+| `color.primary-strong` | `#8A2D5F` | `#F4B3E3` | `#006B47` | `#7ADBB0` | `#9E3226` | `#FFC8A6` |
+| `color.primary-soft` | `#F9EAF2` | `#47203F` | `#E6F4EE` | `#14402D` | `#FDE8E3` | `#4A2819` |
+| `color.on-primary` | `#FFFFFF` | `#1F0F1C` | `#FFFFFF` | `#04140D` | `#FFFFFF` | `#1F0E05` |
+| `color.inverse-action` | `#F5A9D0` | `#8A2D72` | `#6FD3A8` | `#006B47` | `#FFB3A3` | `#A14B14` |
+| `color.saving` | `#3B7560` | `#93C4AD` | `#6B52AE` | `#C2B3F0` | `#3B7560` | `#93C4AD` |
+| `color.hero-bg` | `#FFFFFF` | `#3F1D39` | `#FFFFFF` | `#123B2A` | `#FDE8E3` | `#4A2819` |
+| `color.hero-label` | `#5B6068` | `#F4B3E3` | `#5F6670` | `#9FE6C6` | `#9E3226` | `#FFC8A6` |
+| `color.member-1` | `#A23B72` | `#EA8CD2` | `#007F55` | `#3FC08A` | `#F7B9A4` | `#F0A27E` |
+| `color.member-2` | `#D98CB5` | `#A0548F` | `#5DBB92` | `#2A7A58` | `#F6D98B` | `#D9B95F` |
 | `color.member-3` | `#6F6A75` | `#8E8994` | `#6B727C` | `#8F96A0` | `#B7D3A8` | `#8FB07F` |
 | `color.member-4` | `#B9B4BE` | `#5A5560` | `#B8BEC6` | `#4E555E` | `#C9C3EC` | `#9F97D6` |
-| `color.avatar-1` | `#F0F1F4` | `#27292D` | `#F2F4F6` | `#262A2F` | `#F7B9A4` | `#E89A84` |
-| `color.avatar-2` | `#F0F1F4` | `#27292D` | `#F2F4F6` | `#262A2F` | `#F6D98B` | `#D9B95F` |
-| `color.avatar-3` | `#F0F1F4` | `#27292D` | `#F2F4F6` | `#262A2F` | `#B7D3A8` | `#8FB07F` |
-| `color.avatar-4` | `#F0F1F4` | `#27292D` | `#F2F4F6` | `#262A2F` | `#C9C3EC` | `#9F97D6` |
-| `color.on-avatar` | `#1D1F23` | `#F1F2F4` | `#191C21` | `#F2F4F6` | `#2B2220` | `#1F1715` |
+| `color.avatar-1` | `#F0F1F4` | `#2A232D` | `#F2F4F6` | `#202A26` | `#F7B9A4` | `#F0A27E` |
+| `color.avatar-2` | `#F0F1F4` | `#2A232D` | `#F2F4F6` | `#202A26` | `#F6D98B` | `#D9B95F` |
+| `color.avatar-3` | `#F0F1F4` | `#2A232D` | `#F2F4F6` | `#202A26` | `#B7D3A8` | `#8FB07F` |
+| `color.avatar-4` | `#F0F1F4` | `#2A232D` | `#F2F4F6` | `#202A26` | `#C9C3EC` | `#9F97D6` |
+| `color.on-avatar` | `#1D1F23` | `#F4EFF5` | `#191C21` | `#EEF4F1` | `#2B2220` | `#1F1715` |
 
 테마와 상관없이 같은 값: `color.focus` = `primary`, `color.chart-bar` = `primary`, `color.chart-track` = `surface-sunken`, `color.chart-line` = `primary`, `color.chart-grid` = `border`, `color.chart-zero` = `border-strong`, `color.delta-up` = `income`, `color.delta-down` = `text-sub` (5.19·5.21), `color.inverse-surface` = `text`, `color.on-inverse` = `surface`, `color.scrim` 라이트 `rgb(15 16 18 / 0.45)` / 다크 `rgb(0 0 0 / 0.6)`.
 
@@ -142,24 +142,26 @@
 
 ### 1.3 명도 대비 검증 (WCAG 2.1 AA)
 
-6벌 모두 계산으로 확인했다(상대 휘도 공식, 토큰 소스에서 자동 계산). 글자 4.5:1, 테두리·포커스 3:1. 아래는 가장 빠듯한 조합 위주.
+6벌 모두 계산으로 확인했다(상대 휘도 공식, 토큰 소스에서 자동 계산). 다크 3열(D)은 v1.3(BANB-33) 값이다. 라이트(L)는 바뀌지 않았다. 글자 4.5:1, 테두리·포커스 3:1. 아래는 가장 빠듯한 조합 위주.
 
 | 조합 (최소) | 베리 L | 베리 D | 클린 L | 클린 D | 포근 L | 포근 D |
 |---|---|---|---|---|---|---|
-| text / bg (4.5) | 15.26 | 16.45 | 15.49 | 17.03 | 14.68 | 16.09 |
-| text-sub / surface (4.5) | 6.33 | 8.75 | 5.80 | 8.65 | 6.53 | 8.55 |
-| text-weak / bg (4.5) | 4.81 | 6.69 | 4.54 | 6.71 | 5.23 | 6.38 |
-| text-weak / surface-sunken (4.5) | 4.61 | 5.29 | 4.54 | 5.16 | 4.84 | 5.12 |
-| primary / surface (4.5) | 6.17 | 7.32 | 5.04 | 7.26 | 4.94 | 7.32 |
-| primary / bg (4.5) | 5.70 | 8.09 | 4.57 | 8.15 | 4.67 | 8.03 |
-| on-primary / primary (4.5) | 6.17 | 8.09 | 5.04 | 8.21 | 4.94 | 8.12 |
-| primary-strong / primary-soft (4.5) | 6.90 | 8.10 | 5.80 | 7.87 | 6.07 | 8.54 |
-| hero-label / hero-bg (4.5) | 6.33 | 8.75 | 5.80 | 8.65 | 6.07 | 8.54 |
-| income / hero-bg (4.5) | 6.30 | 7.81 | 6.30 | 7.83 | 5.35 | 6.86 |
-| saving / surface (4.5) | 5.39 | 8.52 | 6.10 | 7.67 | 5.39 | 8.60 |
-| saving / hero-bg (4.5) | 5.39 | 8.52 | 6.10 | 7.67 | 4.57 | 7.50 |
-| negative / hero-bg (4.5) | 5.85 | 7.16 | 5.85 | 7.19 | 4.96 | 6.30 |
-| border-strong / surface (3) | 3.25 | 4.20 | 3.31 | 4.21 | 3.51 | 3.86 |
+| text / bg (4.5) | 15.26 | 16.37 | 15.49 | 16.85 | 14.68 | 16.04 |
+| text-sub / surface (4.5) | 6.33 | 8.79 | 5.80 | 8.84 | 6.53 | 8.91 |
+| text-weak / bg (4.5) | 4.81 | 6.40 | 4.54 | 6.67 | 5.23 | 6.57 |
+| text-weak / surface-sunken (4.5) | 4.61 | 5.26 | 4.54 | 5.25 | 4.84 | 5.23 |
+| primary / surface (4.5) | 6.17 | 7.47 | 5.04 | 7.38 | 4.94 | 8.48 |
+| primary / bg (4.5) | 5.70 | 8.12 | 4.57 | 8.15 | 4.67 | 9.35 |
+| on-primary / primary (4.5) | 6.17 | 8.03 | 5.04 | 8.21 | 4.94 | 9.53 |
+| primary-strong / primary-soft (4.5) | 6.90 | 8.02 | 5.80 | 6.99 | 6.07 | 8.74 |
+| hero-label / hero-bg (4.5) | 6.33 | 8.58 | 5.80 | 8.67 | 6.07 | 8.74 |
+| text / hero-bg (4.5) — v1.3 | 16.50 | 12.80 | 17.08 | 11.19 | 13.18 | 11.41 |
+| income / hero-bg (4.5) | 6.30 | 6.80 | 6.30 | 5.84 | 5.35 | 6.11 |
+| saving / surface (4.5) | 5.39 | 8.74 | 6.10 | 8.90 | 5.39 | 8.51 |
+| saving / hero-bg (4.5) | 5.39 | 7.43 | 6.10 | 6.53 | 4.57 | 6.68 |
+| negative / hero-bg (4.5) | 5.85 | 6.24 | 5.85 | 5.36 | 4.96 | 5.61 |
+| border-strong / surface (3) | 3.25 | 4.19 | 3.31 | 4.23 | 3.51 | 4.15 |
+| inverse-action / 토스트 바탕(=text) (4.5) — v1.3 | — | 6.86 | — | 5.90 | — | 5.20 |
 
 > - 클린 라이트의 초록은 처음 후보 `#00875A`가 회색 바탕(`bg`) 위 4.13으로 미달이라 `#007F55`로 한 단계 낮췄다.
 > - `member-*`(사람 막대)는 장식이다: 같은 줄에 이름·금액·%가 글자로 항상 함께 나온다. 그래서 대비 기준에서 뺐다(포근의 파스텔 막대는 흰 카드 위 1.7 정도).
@@ -170,7 +172,17 @@
 
 - 기기 설정 `prefers-color-scheme: dark`를 따른다. 앱 안 라이트/다크 토글은 다음 단계.
 - 다크에서는 그림자 대신 `surface` 명도 차이와 카드 `1px border`로 층을 구분한다(클린은 위아래 테두리만).
-- `<meta name="theme-color">`는 헤더 `surface`와 같게: 라이트 `#FFFFFF`(세 테마 공통) / 다크 클린 `#1B1E22`, 베리 `#1D1E21`, 포근 `#221C1A`. 테마를 바꾸면 JS로 다크 값을 갈아 끼운다.
+- `<meta name="theme-color">`는 헤더 `surface`와 같게: 라이트 `#FFFFFF`(세 테마 공통) / 다크 클린 `#161E1B`, 베리 `#1F1A22`, 포근 `#261C18`. 테마를 바꾸면 JS로 다크 값을 갈아 끼운다.
+
+**다크에서 테마가 구분되게 (v1.3, BANB-33)** — 클라이언트 피드백 "다크에서 클린·베리·포근 차이가 거의 안 느껴짐".
+v1.2 다크는 세 테마 모두 바탕·카드가 거의 같은 검정 회색이고 포인트 색은 ＋·저장 버튼 같은 작은 곳에만 있어서, 화면 대부분이 같아 보였다. 그래서 다크에서만 아래 4가지를 바꿨다(라이트는 그대로).
+
+1. **바탕에 테마 빛깔**: `bg`·`surface`·`surface-sunken`·`border`·글자 회색 단계에 포인트 색 쪽 색조를 아주 조금 넣는다. 클린 = 푸른 초록빛 검정, 베리 = 자줏빛 검정, 포근 = 갈색빛 검정. 화면 전체 분위기가 테마마다 달라진다.
+2. **요약 카드(`hero-bg`)는 세 테마 모두 포인트 색 바탕**: 클린 짙은 초록 `#123B2A`, 베리 짙은 자주 `#3F1D39`, 포근 짙은 살구 갈색 `#4A2819`. 라벨(`hero-label`)은 밝은 포인트 색. 홈에서 가장 큰 카드라 한눈에 테마가 보인다. 라이트는 지금처럼 포근만 색이 있다.
+3. **선택 표시를 진하게**: `primary-soft`(탭 알약·선택 칩 바탕)를 더 진하게, `primary-strong`(그 위 글자·아이콘)을 더 밝게.
+4. **빨강(음수·오류)과 떨어뜨리기**: 음수 `#EE8F99`(색상각 354°)에 가깝던 포인트 색을 옮겼다. 베리 `#F08CC0`(329°) → `#EA8CD2`(315°, 자줏빛 베리), 포근 `#FF8A74`(9°) → `#FFA36B`(23°, 살구). 클린 초록은 그대로. 포근 `member-1`·`avatar-1`도 같은 살구 `#F0A27E`로 맞췄다.
+
+> **결정 기록 (디자인, 2026-11-09)** — 다크 3테마 구분은 **새 토큰 없이 기존 다크 토큰 값만 바꿔서** 해결한다. 컴포넌트 CSS는 손대지 않아도 된다(개발 반영 = `src/styles/tokens.css` 다크 값 교체, BANB-35). 다크 포근의 포인트 색은 코랄이 아니라 살구가 된다 — 다크에서 코랄은 음수 빨강과 구분이 안 되기 때문(라이트 포근은 코랄 `#C44536` 그대로).
 
 ### 1.5 강조 표현 토큰
 
@@ -932,32 +944,32 @@
 }
 @media (prefers-color-scheme: dark) {
   [data-theme="berry"] {
-    --color-bg: #131416;
-    --color-surface: #1D1E21;
-    --color-surface-sunken: #27292D;
-    --color-border: #34363B;
-    --color-border-strong: #7B8089;
-    --color-text: #F1F2F4;
-    --color-text-sub: #B8BCC3;
-    --color-text-weak: #989CA4;
-    --color-primary: #F08CC0;
-    --color-primary-pressed: #E673AE;
-    --color-primary-strong: #F5A9D0;
-    --color-primary-soft: #3A1F2E;
-    --color-on-primary: #1F0F18;
-    --color-inverse-action: #8A2D5F;
+    --color-bg: #151217;
+    --color-surface: #1F1A22;
+    --color-surface-sunken: #2A232D;
+    --color-border: #3A313D;
+    --color-border-strong: #857A8B;
+    --color-text: #F4EFF5;
+    --color-text-sub: #C2B6C6;
+    --color-text-weak: #A193A6;
+    --color-primary: #EA8CD2;
+    --color-primary-pressed: #DD72C3;
+    --color-primary-strong: #F4B3E3;
+    --color-primary-soft: #47203F;
+    --color-on-primary: #1F0F1C;
+    --color-inverse-action: #8A2D72;
     --color-saving: #93C4AD;
-    --color-hero-bg: #1D1E21;
-    --color-hero-label: #B8BCC3;
-    --color-member-1: #F08CC0;
-    --color-member-2: #9C4E78;
+    --color-hero-bg: #3F1D39;
+    --color-hero-label: #F4B3E3;
+    --color-member-1: #EA8CD2;
+    --color-member-2: #A0548F;
     --color-member-3: #8E8994;
     --color-member-4: #5A5560;
-    --color-avatar-1: #27292D;
-    --color-avatar-2: #27292D;
-    --color-avatar-3: #27292D;
-    --color-avatar-4: #27292D;
-    --color-on-avatar: #F1F2F4;
+    --color-avatar-1: #2A232D;
+    --color-avatar-2: #2A232D;
+    --color-avatar-3: #2A232D;
+    --color-avatar-4: #2A232D;
+    --color-on-avatar: #F4EFF5;
     --card-shadow: none;
   }
 }
@@ -995,32 +1007,32 @@
 }
 @media (prefers-color-scheme: dark) {
   [data-theme="clean"] {
-    --color-bg: #101214;
-    --color-surface: #1B1E22;
-    --color-surface-sunken: #262A2F;
-    --color-border: #33383E;
-    --color-border-strong: #7A808A;
-    --color-text: #F2F4F6;
-    --color-text-sub: #B5BBC3;
-    --color-text-weak: #959BA4;
+    --color-bg: #0D1311;
+    --color-surface: #161E1B;
+    --color-surface-sunken: #202A26;
+    --color-border: #2C3833;
+    --color-border-strong: #74827C;
+    --color-text: #EEF4F1;
+    --color-text-sub: #B1BEB8;
+    --color-text-weak: #909D97;
     --color-primary: #3FC08A;
     --color-primary-pressed: #2FA877;
-    --color-primary-strong: #6FD3A8;
-    --color-primary-soft: #12301F;
+    --color-primary-strong: #7ADBB0;
+    --color-primary-soft: #14402D;
     --color-on-primary: #04140D;
     --color-inverse-action: #006B47;
-    --color-saving: #B7A6E8;
-    --color-hero-bg: #1B1E22;
-    --color-hero-label: #B5BBC3;
+    --color-saving: #C2B3F0;
+    --color-hero-bg: #123B2A;
+    --color-hero-label: #9FE6C6;
     --color-member-1: #3FC08A;
     --color-member-2: #2A7A58;
     --color-member-3: #8F96A0;
     --color-member-4: #4E555E;
-    --color-avatar-1: #262A2F;
-    --color-avatar-2: #262A2F;
-    --color-avatar-3: #262A2F;
-    --color-avatar-4: #262A2F;
-    --color-on-avatar: #F2F4F6;
+    --color-avatar-1: #202A26;
+    --color-avatar-2: #202A26;
+    --color-avatar-3: #202A26;
+    --color-avatar-4: #202A26;
+    --color-on-avatar: #EEF4F1;
     --card-shadow: none;
   }
 }
@@ -1058,28 +1070,28 @@
 }
 @media (prefers-color-scheme: dark) {
   [data-theme="cozy"] {
-    --color-bg: #171312;
-    --color-surface: #221C1A;
-    --color-surface-sunken: #2E2624;
-    --color-border: #3D3330;
-    --color-border-strong: #85766F;
-    --color-text: #F5EEEB;
-    --color-text-sub: #C4B6B1;
-    --color-text-weak: #A39590;
-    --color-primary: #FF8A74;
-    --color-primary-pressed: #F27560;
-    --color-primary-strong: #FFB3A3;
-    --color-primary-soft: #3D211C;
-    --color-on-primary: #1F0E0B;
-    --color-inverse-action: #9E3226;
+    --color-bg: #1A1310;
+    --color-surface: #261C18;
+    --color-surface-sunken: #33261F;
+    --color-border: #47362D;
+    --color-border-strong: #8F7B71;
+    --color-text: #F7EEE9;
+    --color-text-sub: #CDBAB0;
+    --color-text-weak: #AA978D;
+    --color-primary: #FFA36B;
+    --color-primary-pressed: #F28D52;
+    --color-primary-strong: #FFC8A6;
+    --color-primary-soft: #4A2819;
+    --color-on-primary: #1F0E05;
+    --color-inverse-action: #A14B14;
     --color-saving: #93C4AD;
-    --color-hero-bg: #3D211C;
-    --color-hero-label: #FFB3A3;
-    --color-member-1: #E89A84;
+    --color-hero-bg: #4A2819;
+    --color-hero-label: #FFC8A6;
+    --color-member-1: #F0A27E;
     --color-member-2: #D9B95F;
     --color-member-3: #8FB07F;
     --color-member-4: #9F97D6;
-    --color-avatar-1: #E89A84;
+    --color-avatar-1: #F0A27E;
     --color-avatar-2: #D9B95F;
     --color-avatar-3: #8FB07F;
     --color-avatar-4: #9F97D6;
