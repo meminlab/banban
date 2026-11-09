@@ -634,7 +634,8 @@ button { font: inherit; }
 .filter-status__reset { min-height: 44px; margin-right: -12px; padding: 0 12px; border: 0; background: transparent; color: var(--color-text); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; }
 .filter-status__reset:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
 .button--link { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--color-primary); font: inherit; text-decoration: underline; cursor: pointer; }
-.filter-group { min-width: 0; }
+.filter-group { min-width: 0; margin: 0; padding-inline: 0; border: 0; }
+.filter-group > legend { float: left; width: 100%; padding: 0; } /* 떠 있는 legend = 묶음의 첫 줄 (gap 8로 칩과 띄움) */
 .filter-actions { position: sticky; bottom: 0; padding-top: 12px; background: var(--color-surface); }
 
 /* 날짜 하루 = 카드 1장 (design.md 5.3): 머리 13/600 text-weak + 오른쪽 그날 지출 합 */
@@ -916,6 +917,8 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
   cursor: pointer;
 }
 .cat-cell:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 0; }
+/* 필터 격자(BANB-32): 칸 = label + 숨긴 checkbox */
+.cat-grid--check .cat-cell:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 0; }
 .cat-cell__circle { position: relative; display: inline-flex; }
 .cat-cell__name {
   max-width: 100%;

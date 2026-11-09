@@ -121,12 +121,17 @@ export function pocketFilterOptions(
     .map((p) => ({ id: p.id, label: p.name }));
 }
 
-export interface CategoryFilterGroup {
-  type: TransactionType;
-  options: FilterOption[];
+/** 카테고리 선택지: 아이콘 격자에 그릴 대분류 (design.md 5.17, BANB-32) */
+export interface CategoryFilterOption extends FilterOption {
+  category: Category;
 }
 
-/** 카테고리: 유형별 대분류. 숨긴 대분류는 이 달 내역에 쓰였거나(소분류 포함) 이미 골랐을 때만 */
+export interface CategoryFilterGroup {
+  type: TransactionType;
+  options: CategoryFilterOption[];
+}
+
+/** 카테고리: 유형별 대분류(기본 순서). 숨긴 대분류는 이 달 내역에 쓰였거나(소분류 포함) 이미 골랐을 때만 */
 export function categoryFilterGroups(
   categories: Category[],
   usedCategoryIds: ReadonlySet<string>,
@@ -139,7 +144,7 @@ export function categoryFilterGroups(
     options: categories
       .filter((c) => c.type === type && c.parent_id === null && (!c.is_hidden || usedParents.has(c.id)))
       .sort(byOrder)
-      .map((c) => ({ id: c.id, label: c.name })),
+      .map((c) => ({ id: c.id, label: c.name, category: c })),
   })).filter((g) => g.options.length > 0);
 }
 
