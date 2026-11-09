@@ -6,12 +6,12 @@
     <!-- 브라우저 막대·홈 화면 앱 상태 표시줄 색 = 헤더 surface (design.md 1.4). 라이트는 세 테마 공통, 다크는 테마마다
          (아래 스크립트와 src/app/theme.tsx 가 고른 테마 값으로 갈아 끼운다) -->
     <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1B1E22" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#161E1B" media="(prefers-color-scheme: dark)" />
     <!-- BANB-29: 첫 그리기 전에 기기에 저장한 테마를 붙인다(새로고침 때 클린이 잠깐 보이는 깜빡임 방지).
          키·값 목록·다크 색은 src/data/theme.ts·src/domain/theme.ts 와 같아야 한다(src/app/theme.test.tsx 가 검사) -->
     <script id="theme-boot">
       (function () {
-        var dark = { clean: '#1B1E22', berry: '#1D1E21', cozy: '#221C1A' };
+        var dark = { clean: '#161E1B', berry: '#1F1A22', cozy: '#261C18' };
         var theme = 'clean';
         try {
           var saved = localStorage.getItem('banban.theme');

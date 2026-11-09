@@ -82,7 +82,7 @@ beforeEach(() => {
   const meta = document.createElement('meta');
   meta.setAttribute('name', 'theme-color');
   meta.setAttribute('media', '(prefers-color-scheme: dark)');
-  meta.setAttribute('content', '#1B1E22');
+  meta.setAttribute('content', '#161E1B');
   document.head.append(meta);
   fake.user = { id: 'u1', email: 'a@example.com', name: 'A', avatarUrl: null };
   fake.server = {};
@@ -117,7 +117,7 @@ describe('index.html 첫 그리기 스크립트', () => {
     if (v !== null) localStorage.setItem(DEVICE_THEME_KEY, v);
     boot();
     expect(root().getAttribute('data-theme')).toBe('clean');
-    expect(darkMeta()?.getAttribute('content')).toBe('#1B1E22');
+    expect(darkMeta()?.getAttribute('content')).toBe('#161E1B');
   });
 
   it('localStorage 를 못 써도 멈추지 않고 clean', () => {
@@ -154,7 +154,7 @@ describe('설정 › 화면 테마', () => {
     renderAt('/settings/theme');
     await user.click(await screen.findByRole('radio', { name: /베리/ }));
     expect(root().getAttribute('data-theme')).toBe('berry');
-    expect(darkMeta()?.getAttribute('content')).toBe('#1D1E21');
+    expect(darkMeta()?.getAttribute('content')).toBe('#1F1A22');
     expect(localStorage.getItem(DEVICE_THEME_KEY)).toBe('berry');
     expect(fake.saveCalls).toEqual(['berry']);
     expect(await screen.findByRole('status')).toHaveTextContent('테마를 바꿨어요');
@@ -180,7 +180,7 @@ describe('설정 › 화면 테마', () => {
     await user.click(screen.getByRole('radio', { name: /베리/ }));
     expect(await screen.findByRole('status')).toHaveTextContent('테마를 저장하지 못했어요. 다시 시도해 주세요');
     expect(root().getAttribute('data-theme')).toBe('cozy');
-    expect(darkMeta()?.getAttribute('content')).toBe('#221C1A');
+    expect(darkMeta()?.getAttribute('content')).toBe('#261C18');
     expect(localStorage.getItem(DEVICE_THEME_KEY)).toBe('cozy');
     expect(screen.getByRole('radio', { name: /포근/ })).toHaveAttribute('aria-checked', 'true');
   });
