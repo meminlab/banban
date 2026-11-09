@@ -1,20 +1,24 @@
-import { Coins, Grid3x3, Info, Send } from 'lucide-react';
+import { ChevronRight, Grid3x3, Info, PiggyBank, Send, Vibrate } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../../app/games';
 import { useLedgerId } from '../../app/guards';
-import { MEMBERS_PATH, omokPath } from '../../app/routes';
+import { MEMBERS_PATH, STACK_PATH, omokPath } from '../../app/routes';
 import { useLoad } from '../../app/useLoad';
 import { GameAvatar } from '../../components/GameAvatar';
 import { PlayInviteBanner, playErrorMessage } from '../../components/PlayInvite';
 import { StatusScreen } from '../../components/StatusScreen';
 import { SubPageTopbar } from '../../components/SubPageTopbar';
-import { inviteGame, listFinishedGames } from '../../data/game';
+import { inviteGame, listFinishedGames, listStackBests } from '../../data/game';
+import { readGameVibrate, saveGameVibrate } from '../../data/gamePrefs';
+import { formatWon } from '../../domain/format';
 import { formatHeadToHead, headToHead, isBusy, myOpenGame, opponentOf, turnText } from '../../domain/omok';
+import { myBest } from '../../domain/stack';
 
 /**
- * 같이 놀기 화면 (BANB-49, design.md 5.28): 두던 판 → 게임(오목 + 반반 쌓기 "곧 만나요", BANB-51) → 상대 고르기(화면 안 라디오, 멤버 2명이면 미리 골라 둠)
- * → 안내 → 전적 → "○○님 초대하기" → 대기실. 진행 중인 판이 있으면 새 초대는 막는다(한 사람 진행 중 판 1개).
+ * 미니게임 화면 (BANB-49 → v1.8, design.md 5.32): 두던 판 → 게임 목록(둘이 같이: 오목 / 혼자서: 반반 쌓기)
+ * → 오목 상대 고르기(화면 안 라디오, 멤버 2명이면 미리 골라 둠) → 안내 → "○○님 초대하기" → 대기실 · 진동 설정.
+ * 진행 중인 판이 있으면 새 초대는 막는다(한 사람 진행 중 판 1개). 혼자 쓰는 가계부도 반반 쌓기는 할 수 있다.
  */
 export function PlayHomePage() {
   const ledgerId = useLedgerId();
@@ -23,13 +27,15 @@ export function PlayHomePage() {
   const nameOf = useMemberName();
   const now = useNow(1000);
   const finished = useLoad(() => listFinishedGames(ledgerId), [ledgerId]);
+  const stackBests = useLoad(() => listStackBests(ledgerId), [ledgerId]);
+  const [vibrateOn, setVibrateOn] = useState(readGameVibrate);
   const [picked, setPicked] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!ready && failed)
-    return <StatusScreen kind="error" message="같이 놀기를 불러오지 못했어요. 네트워크를 확인해 주세요." onRetry={refresh} />;
-  if (!ready) return <StatusScreen kind="loading" message="같이 놀기를 불러오고 있어요" />;
+    return <StatusScreen kind="error" message="미니게임을 불러오지 못했어요. 네트워크를 확인해 주세요." onRetry={refresh} />;
+  if (!ready) return <StatusScreen kind="loading" message="미니게임을 불러오고 있어요" />;
   if (!me) return <StatusScreen kind="error" message="이 가계부의 멤버가 아니에요" />;
 
   const others = members.filter((m) => m.left_at === null && m.id !== me);
@@ -38,6 +44,16 @@ export function PlayHomePage() {
   // 고를 수 있는 상대가 1명이면 미리 골라 둔다 (버튼 한 번으로 초대)
   const opponent = picked && selectable.some((m) => m.id === picked) ? picked : selectable.length === 1 ? selectable[0].id : null;
   const records = finished.state.status === 'ready' ? finished.state.data : null;
+  // 오목 행 보조 줄 = 전적 (상대가 1명이면 그 사람, 여럿이면 가장 최근 상대). 전적 없으면 설명
+  const recent = records?.find((g) => g.black_id === me || g.white_id === me);
+  const recordWith = others.length === 1 ? others[0].id : recent ? opponentOf(recent, me) : null;
+  const omokRecord = records && recordWith ? headToHead(records, me, recordWith) : null;
+  const omokDesc = mine
+    ? '두던 판을 끝내면 새로 둘 수 있어요'
+    : others.length === 0
+      ? '같이 쓰는 멤버가 있어야 해요'
+      : null;
+  const stackBest = stackBests.state.status === 'ready' ? myBest(stackBests.state.data, me) : null;
 
   async function send() {
     if (!opponent || mine || sending) return;
@@ -56,7 +72,7 @@ export function PlayHomePage() {
 
   return (
     <div className="shell">
-      <SubPageTopbar title="같이 놀기" fallback="/" />
+      <SubPageTopbar title="미니게임" fallback="/" />
       <PlayInviteBanner />
       <main className="content content--no-tabbar play-home">
         {mine && mine.kind !== 'invited-me' && (
@@ -75,25 +91,48 @@ export function PlayHomePage() {
         )}
 
         <section className="play-panel" aria-label="게임">
+          <h2 className="play-section">둘이 같이</h2>
           <ul className="play-games">
-            <li className={`play-game${mine ? ' is-disabled' : ''}`}>
+            <li className={`play-game${mine || others.length === 0 ? ' is-disabled' : ''}`}>
               <span className="play-game__icon" aria-hidden="true">
                 <Grid3x3 size={24} />
               </span>
               <span className="play-game__body">
                 <span className="play-game__name">오목</span>
-                <span className="play-game__desc">{mine ? '두던 판을 끝내면 새로 둘 수 있어요' : '다섯 개를 먼저 이으면 이겨요'}</span>
+                <span className="play-game__desc">
+                  {omokDesc ??
+                    (omokRecord && omokRecord.win + omokRecord.loss + omokRecord.draw > 0 && recordWith ? (
+                      <>
+                        {nameOf(recordWith)}님과 <b>{formatHeadToHead(omokRecord)}</b>
+                      </>
+                    ) : (
+                      '다섯 개를 먼저 이으면 이겨요'
+                    ))}
+                </span>
               </span>
             </li>
-            {/* BANB-51: 반반 쌓기(BANB-52)는 머지 전까지 "곧 만나요" — 누를 수 없음 */}
-            <li className="play-game is-soon" aria-disabled="true">
-              <span className="play-game__icon" aria-hidden="true">
-                <Coins size={24} />
-              </span>
-              <span className="play-game__body">
-                <span className="play-game__name">반반 쌓기</span>
-                <span className="play-game__desc">곧 만나요</span>
-              </span>
+          </ul>
+          <h2 className="play-section">혼자서</h2>
+          <ul className="play-games">
+            <li>
+              <Link to={STACK_PATH} className="play-game play-game--link">
+                <span className="play-game__icon" aria-hidden="true">
+                  <PiggyBank size={24} />
+                </span>
+                <span className="play-game__body">
+                  <span className="play-game__name">반반 쌓기</span>
+                  <span className="play-game__desc">
+                    {stackBest !== null ? (
+                      <>
+                        내 최고 <b>{formatWon(stackBest)}</b>
+                      </>
+                    ) : (
+                      '동전을 쌓아 한 줄씩 저금해요'
+                    )}
+                  </span>
+                </span>
+                <ChevronRight size={20} aria-hidden="true" className="play-game__arrow" />
+              </Link>
             </li>
           </ul>
         </section>
@@ -147,27 +186,6 @@ export function PlayHomePage() {
           </section>
         )}
 
-        {others.length > 0 && (
-          <section className="play-panel" aria-labelledby="play-record-title">
-            <h2 id="play-record-title" className="play-panel__label">
-              전적
-            </h2>
-            {finished.state.status === 'error' ? (
-              <p className="play-help">전적을 불러오지 못했어요</p>
-            ) : (
-              <ul className="play-records">
-                {others.map((m) => (
-                  <li key={m.id} className="play-record">
-                    <GameAvatar memberId={m.id} members={members} size={32} />
-                    <span className="play-record__name">{m.display_name}님과</span>
-                    <b className="play-record__value">{records ? formatHeadToHead(headToHead(records, me, m.id)) : ''}</b>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
-
         {error && (
           <p className="play-error" role="alert">
             {error}
@@ -179,6 +197,28 @@ export function PlayHomePage() {
             {sending ? '보내고 있어요' : opponent ? `${nameOf(opponent)}님 초대하기` : selectable.length === 0 ? '모두 다른 판을 두는 중이에요' : '상대를 골라 주세요'}
           </button>
         )}
+        <section className="play-panel" aria-label="진동">
+          <label className="switch-row">
+            <Vibrate size={20} strokeWidth={2} aria-hidden="true" />
+            <span className="switch-row__text">
+              <span className="switch-row__label">진동</span>
+              <span className="switch-row__sub" id="play-vibrate-sub">
+                줄을 저금하거나 끝날 때 짧게 울려요
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={vibrateOn}
+              aria-describedby="play-vibrate-sub"
+              onChange={(e) => {
+                setVibrateOn(e.target.checked);
+                saveGameVibrate(e.target.checked);
+              }}
+            />
+          </label>
+        </section>
       </main>
     </div>
   );

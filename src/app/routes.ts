@@ -108,7 +108,9 @@ export const ledgerManageDetailPath = (id: string) => `${LEDGER_MANAGE_PATH}/${i
 export const MEMBERS_PATH = '/settings/members';
 /** 초대 링크: /join/<코드> (lib/ledgerRules JOIN_PATH_PREFIX 와 같음) */
 export const JOIN_PATH = '/join/:code';
-/** 같이 놀기 (BANB-49): 게임 고르기·상대 고르기·전적 */
+/** 미니게임 화면 (BANB-49 같이 놀기 → v1.8 미니게임, design.md 5.32): 게임 고르기·상대 고르기 */
 export const PLAY_PATH = '/play';
+/** 반반 쌓기 1인 모드 (BANB-52) */
+export const STACK_PATH = '/play/stack';
 /** 오목 한 판 (대기실·대국·결과) */
 export const omokPath = (gameId: string) => `/play/omok/${gameId}`;
