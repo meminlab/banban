@@ -6,7 +6,7 @@
  */
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
-import type { Game, GameEndReason, GameMove, GameStatus } from './types';
+import type { Game, GameEndReason, GameMove, GameStatus, StackBest } from './types';
 
 const GAME_COLUMNS =
   'id, ledger_id, kind, black_id, white_id, status, winner_id, end_reason, move_count, created_by, rematch_of, created_at, invite_expires_at, started_at, last_move_at, finished_at';
@@ -25,7 +25,8 @@ export type GameErrorCode =
   | 'GAME_NOT_ACTIVE'
   | 'GAME_NOT_YOUR_TURN'
   | 'GAME_BAD_CELL'
-  | 'GAME_CELL_TAKEN';
+  | 'GAME_CELL_TAKEN'
+  | 'STACK_BAD_SCORE';
 
 const CODES: GameErrorCode[] = [
   'NOT_IN_LEDGER',
@@ -41,6 +42,7 @@ const CODES: GameErrorCode[] = [
   'GAME_NOT_YOUR_TURN',
   'GAME_BAD_CELL',
   'GAME_CELL_TAKEN',
+  'STACK_BAD_SCORE',
 ];
 
 /** 서버가 거부한 요청 (code 로 문구를 고른다). 네트워크 오류는 그대로 던진다 */
@@ -260,4 +262,29 @@ export function subscribeGameRoom(gameId: string, myMemberId: string, handlers: 
       void getSupabase().removeChannel(current.channel);
     }, 1000);
   };
+}
+
+/* ───────────────────────── 반반 쌓기 (BANB-52): 가계부 × 멤버 최고 기록 ───────────────────────── */
+
+/** 이 가계부 멤버들의 최고 기록 (읽기 권한: 같은 가계부 현재 멤버만) */
+export async function listStackBests(ledgerId: string): Promise<StackBest[]> {
+  const { data, error } = await getSupabase()
+    .from('game_stack_best')
+    .select('member_id, best_amount, best_lines')
+    .eq('ledger_id', ledgerId);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({ ...r, best_amount: Number(r.best_amount) })) as StackBest[];
+}
+
+export interface StackScoreResult {
+  /** 이번 판 전 내 최고 기록 (첫 기록이면 null) */
+  previous_best: number | null;
+  best_amount: number;
+  is_new: boolean;
+}
+
+/** 판이 끝날 때 1번: 내 기록이 더 높을 때만 서버가 바꾼다 (본인 기록만) */
+export async function recordStackScore(ledgerId: string, amount: number, lines: number): Promise<StackScoreResult> {
+  const r = await rpc<StackScoreResult>('record_stack_score', { p_ledger_id: ledgerId, p_amount: amount, p_lines: lines });
+  return { ...r, previous_best: r.previous_best == null ? null : Number(r.previous_best), best_amount: Number(r.best_amount) };
 }

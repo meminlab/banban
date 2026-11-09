@@ -119,11 +119,16 @@ select c.relname                                          as table_name,
         and has_function_privilege('authenticated', 'public.cancel_game(uuid)', 'execute')
         and not has_function_privilege('authenticated', 'public.game_close_stale(uuid)', 'execute')
         and (select count(*) from pg_publication_tables where pubname = 'supabase_realtime'
-              and schemaname = 'public' and tablename in ('game', 'game_move')) = 2) as game_omok
+              and schemaname = 'public' and tablename in ('game', 'game_move')) = 2) as game_omok,
+       (to_regclass('public.game_stack_best') is not null
+        and not has_table_privilege('authenticated', 'public.game_stack_best', 'insert')
+        and not has_table_privilege('authenticated', 'public.game_stack_best', 'update')
+        and has_function_privilege('authenticated', 'public.record_stack_score(uuid,bigint,integer)', 'execute')
+        and not has_function_privilege('anon', 'public.record_stack_score(uuid,bigint,integer)', 'execute')) as game_stack
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move', 'game_stack_best')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)

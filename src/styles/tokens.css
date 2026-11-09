@@ -86,6 +86,18 @@
   --color-stone-black: #1E1D1F;
   --color-stone-white: #FFFFFF;
   --color-stone-edge: #7A6A55;
+  /* 반반 쌓기 판·조각 (design.md 1.8, 테마 공통) */
+  --color-stack-board: #F7F0E4;
+  --color-stack-dot: #D9CBB3;
+  --color-stack-ghost: #8C7E6A;
+  --color-piece-coin: #E9B949;
+  --color-piece-coin-edge: #9C6E12;
+  --color-piece-bill: #A8D09C;
+  --color-piece-bill-line: #4F7F46;
+  --color-piece-wallet: #BC8660;
+  --color-piece-wallet-line: #6E4426;
+  --color-piece-piggy: #F3A9B6;
+  --color-piece-piggy-line: #A84A5E;
 
   color-scheme: light dark;
 }
@@ -107,6 +119,17 @@
     --color-stone-black: #121113;
     --color-stone-white: #F4EFE6;
     --color-stone-edge: #B39D79;
+    --color-stack-board: #2A2521;
+    --color-stack-dot: #4A4038;
+    --color-stack-ghost: #A89A86;
+    --color-piece-coin: #D7A53C;
+    --color-piece-coin-edge: #F6D98F;
+    --color-piece-bill: #6E9C66;
+    --color-piece-bill-line: #D3EBCB;
+    --color-piece-wallet: #9A6B48;
+    --color-piece-wallet-line: #EBCBAE;
+    --color-piece-piggy: #C67786;
+    --color-piece-piggy-line: #FFD9E0;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;

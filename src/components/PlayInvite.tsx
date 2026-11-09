@@ -1,14 +1,12 @@
 import { ChevronRight, Gamepad2, X } from 'lucide-react';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../app/games';
 import { useLedgerId } from '../app/guards';
 import { omokPath, PLAY_PATH } from '../app/routes';
-import { GameError, inviteGame, listFinishedGames, respondGame } from '../data/game';
+import { GameError, inviteGame, respondGame } from '../data/game';
 import type { Game } from '../data/types';
 import {
-  formatHeadToHead,
-  headToHead,
   inviteMessage,
   inviteRemainingMs,
   minutesLeftText,
@@ -245,29 +243,14 @@ function CardLabel({ isNew }: { isNew?: boolean }) {
 }
 
 /**
- * 홈 맨 아래 "같이 놀기" 카드 (design.md 5.28): 기본 / 초대 보냄 / 초대 받음 / 대국 중(내 차례·상대 차례).
- * 카드 3줄(라벨 / 문장 / 한 줄). 멤버가 나 혼자면 숨김.
+ * 홈 맨 아래 "같이 놀기" (design.md 5.28 + v1.8 5.32): 할 일이 있을 때(초대 보냄 · 초대 받음 · 대국 중)만 3줄 카드,
+ * 평소엔 한 줄(52) "같이 놀기 · 오목 · 반반 쌓기" → 미니게임 화면. 멤버가 나 혼자면 숨김.
  */
 export function PlayHomeCard() {
-  const ledgerId = useLedgerId();
-  const { me, members, open, ready } = useGames();
+  const { me, members, ready } = useGames();
   const mine = useMyOpenGame();
   const nameOf = useMemberName();
   const now = useNow(1000);
-  const [finished, setFinished] = useState<Game[] | null>(null);
-
-  // 판이 끝나 진행 중 목록이 바뀌면 전적을 다시 받는다
-  const openKey = open.map((g) => `${g.id}:${g.status}`).join(',');
-  useEffect(() => {
-    let alive = true;
-    listFinishedGames(ledgerId).then(
-      (games) => alive && setFinished(games),
-      () => alive && setFinished(null),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [ledgerId, openKey]);
 
   if (!ready || !me) return null;
   const others = members.filter((m) => m.left_at === null && m.id !== me);
@@ -300,23 +283,17 @@ export function PlayHomeCard() {
     );
   }
 
-  // 기본: 상대 1명이면 이름, 여럿이면 "오목 한 판 어때요?" + 가장 최근 상대 전적
-  const recent = finished?.find((g) => g.black_id === me || g.white_id === me);
-  const recordWith = others.length === 1 ? others[0].id : recent ? opponentOf(recent, me) : null;
-  const record = recordWith && finished ? headToHead(finished, me, recordWith) : null;
+  // 평소: 한 줄 (정기 내역 제안 줄과 같은 모양, 닫기 X 없음)
   return (
-    <Link to={PLAY_PATH} className="play-card play-card--link" id={PLAY_CARD_ID} data-testid="play-card">
-      <CardLabel />
-      <span className="play-card__title">{others.length === 1 ? `${others[0].display_name}님과 오목 한 판 어때요?` : '오목 한 판 어때요?'}</span>
-      <span className="play-card__sub">
-        {record && record.win + record.loss + record.draw > 0 ? (
-          <>
-            전적 <b>{formatHeadToHead(record)}</b>
-          </>
-        ) : (
-          '아직 둔 판이 없어요'
-        )}
-      </span>
-    </Link>
+    <div className="month-check recurring-row play-row play-row--home" id={PLAY_CARD_ID} data-testid="play-card">
+      <Link to={PLAY_PATH} className="month-check__body recurring-row__body" aria-label="같이 놀기: 오목, 반반 쌓기">
+        <Gamepad2 size={20} strokeWidth={2} aria-hidden="true" className="play-row__icon" />
+        <span className="recurring-row__text">같이 놀기</span>
+        <span className="play-row__hint" aria-hidden="true">
+          오목 · 반반 쌓기
+        </span>
+        <ChevronRight size={20} strokeWidth={2} aria-hidden="true" />
+      </Link>
+    </div>
   );
 }

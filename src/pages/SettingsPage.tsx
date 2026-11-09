@@ -217,8 +217,6 @@ export function SettingsPage() {
             <MenuRow to={CATEGORY_SETTINGS_PATH} icon={Tag} label="카테고리" />
             <MenuRow to={POCKET_SETTINGS_PATH} icon={Wallet} label="주머니" />
             <MenuRow to={RECURRING_SETTINGS_PATH} icon={Repeat} label="정기 내역" />
-            {/* BANB-51: 게임 진입점. 같은 가계부 멤버끼리 하는 놀이라 지금 가계부 묶음에 둔다 (홈 카드도 그대로) */}
-            <MenuRow to={PLAY_PATH} icon={Gamepad2} label="미니게임" />
           </ul>
         </nav>
 
@@ -226,6 +224,8 @@ export function SettingsPage() {
           <ul className="menu-list">
             <MenuRow to={LEDGER_MANAGE_PATH} icon={Settings2} label="가계부 관리" />
             <MenuRow to={THEME_SETTINGS_PATH} icon={Palette} label="화면 테마" value={THEME_LABEL[theme]} />
+            {/* design.md 5.32 묶음 ②: 게임은 앱을 쓰는 방식에 가까워 화면 테마 옆에 둔다 (가계부 묶음은 돈·내역 설정만, BANB-52 디자인 결정) */}
+            <MenuRow to={PLAY_PATH} icon={Gamepad2} label="미니게임" />
           </ul>
         </nav>
 

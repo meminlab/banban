@@ -146,6 +146,7 @@ describe('설정 메뉴', () => {
       '정기 내역',
       '가계부 관리',
       '화면 테마',
+      '미니게임',
     ]);
     expect(await screen.findByRole('link', { name: /가계부 이름/ })).toHaveTextContent('우리집');
     expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();

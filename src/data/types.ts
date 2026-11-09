@@ -242,3 +242,10 @@ export interface GameMove {
   member_id: string;
   created_at: string;
 }
+
+/** 반반 쌓기 최고 기록 (BANB-52): 가계부 × 멤버 1개 */
+export interface StackBest {
+  member_id: string;
+  best_amount: number;
+  best_lines: number;
+}
