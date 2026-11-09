@@ -1,6 +1,6 @@
 import { ChevronRight, Grid3x3, Info, PiggyBank, Send, Vibrate } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../../app/games';
 import { useLedgerId } from '../../app/guards';
 import { MEMBERS_PATH, STACK_PATH, omokPath } from '../../app/routes';
@@ -32,6 +32,20 @@ export function PlayHomePage() {
   const [picked, setPicked] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const location = useLocation();
+  // 오목 판에서 "나가기"로 왔을 때 한 번 (BANB-53 "판은 그대로 두고 나갈게요"). 새로고침·뒤로가기로 다시 뜨지 않게 state 를 지운다
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => {
+    const text = (location.state as { playFlash?: string } | null)?.playFlash;
+    if (!text) return;
+    setFlash(text);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate]);
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 2500);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   if (!ready && failed)
     return <StatusScreen kind="error" message="미니게임을 불러오지 못했어요. 네트워크를 확인해 주세요." onRetry={refresh} />;
@@ -78,14 +92,14 @@ export function PlayHomePage() {
         {mine && mine.kind !== 'invited-me' && (
           <section className="play-panel" aria-labelledby="play-open-title">
             <p id="play-open-title" className="play-panel__label">
-              두던 판이 있어요
+              {mine.kind === 'playing' ? '진행 중인 오목이 있어요' : '두던 판이 있어요'}
             </p>
             <p className="play-panel__title">
               {nameOf(opponentOf(mine.game, me))}님과 오목 ·{' '}
               <span className="is-accent">{mine.kind === 'waiting' ? '답을 기다리는 중' : turnText(mine.game, me, nameOf)}</span>
             </p>
             <Link to={omokPath(mine.game.id)} className="button button--primary button--block play-link-button">
-              이어서 두기
+              {mine.kind === 'playing' ? '이어 두기' : '이어서 두기'}
             </Link>
           </section>
         )}
@@ -222,6 +236,11 @@ export function PlayHomePage() {
           </label>
         </section>
       </main>
+      {flash && (
+        <p className="toast toast--no-tabbar" role="status">
+          {flash}
+        </p>
+      )}
     </div>
   );
 }

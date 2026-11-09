@@ -5,6 +5,7 @@ import { BOARD_SIZE, cellIndex, cellLabel, ZOOM_LINES, type Board, type Stone } 
 const PAD = 0.525;
 const STONE_R = 0.435; // 돌 지름 ≈ 줄 간격 0.87
 const LAST_R = 0.57; // 마지막 수 고리 지름 26
+const FORBID_R = 0.2; // 33 금지 X 반 너비 (줄 간격 기준, 360px 에서 약 9px)
 const STAR_POINTS: [number, number][] = [
   [3, 3],
   [3, 11],
@@ -31,6 +32,8 @@ export function OmokBoard({
   winLine,
   zoomOrigin,
   onPan,
+  forbidden,
+  onForbidden,
 }: {
   board: Board;
   selected: [number, number] | null;
@@ -48,6 +51,9 @@ export function OmokBoard({
   /** 확대 창 왼쪽 위. null = 전체 */
   zoomOrigin: [number, number] | null;
   onPan: (dx: number, dy: number) => void;
+  /** 33 금지 자리 (cellIndex). 내 차례에만 넘긴다 — X 표시, 누르면 onForbidden (돌은 고르지 않음) */
+  forbidden?: ReadonlySet<number>;
+  onForbidden?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; moved: boolean; id: number } | null>(null);
@@ -71,8 +77,12 @@ export function OmokBoard({
     requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>(`[data-cell="${x}-${y}"]`)?.focus());
   }
 
+  const isForbidden = (x: number, y: number) => forbidden?.has(cellIndex(x, y)) ?? false;
+
   function pick(x: number, y: number) {
-    if (interactive && board[cellIndex(x, y)] === null) onSelect(x, y);
+    if (!interactive || board[cellIndex(x, y)] !== null) return;
+    if (isForbidden(x, y)) onForbidden?.();
+    else onSelect(x, y);
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>, x: number, y: number) {
@@ -129,7 +139,7 @@ export function OmokBoard({
           role="gridcell"
           data-cell={`${x}-${y}`}
           className="omok-cell"
-          aria-label={`${cellLabel(x, y)}, ${stone ? STONE_NAME[stone] : '빈칸'}${isLast ? ', 마지막 수' : ''}`}
+          aria-label={`${cellLabel(x, y)}, ${stone ? STONE_NAME[stone] : isForbidden(x, y) ? '33이라 둘 수 없는 자리' : '빈칸'}${isLast ? ', 마지막 수' : ''}`}
           aria-selected={isSelected}
           aria-disabled={!interactive || stone !== null}
           tabIndex={focusAt[0] === x && focusAt[1] === y ? 0 : -1}
@@ -196,6 +206,17 @@ export function OmokBoard({
           <g className="omok-guide">
             <line x1={-1} y1={selected[1]} x2={BOARD_SIZE} y2={selected[1]} />
             <line x1={selected[0]} y1={-1} x2={selected[0]} y2={BOARD_SIZE} />
+          </g>
+        )}
+        {forbidden && forbidden.size > 0 && (
+          <g className="omok-forbidden">
+            {[...forbidden].map((i) => {
+              const fx = i % BOARD_SIZE;
+              const fy = Math.floor(i / BOARD_SIZE);
+              return (
+                <path key={`f${i}`} d={`M${fx - FORBID_R} ${fy - FORBID_R}L${fx + FORBID_R} ${fy + FORBID_R}M${fx + FORBID_R} ${fy - FORBID_R}L${fx - FORBID_R} ${fy + FORBID_R}`} />
+              );
+            })}
           </g>
         )}
         {stones}

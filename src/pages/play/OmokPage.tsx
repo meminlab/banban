@@ -4,12 +4,15 @@ import {
   CircleX,
   Clock,
   Coffee,
+  EllipsisVertical,
   Flag,
   Handshake,
   LoaderCircle,
+  LogOut,
   Move,
   RotateCcw,
   Smile,
+  Timer,
   Trophy,
   WifiOff,
   ZoomIn,
@@ -25,16 +28,21 @@ import { GameAvatar } from '../../components/GameAvatar';
 import { Icon } from '../../components/Icon';
 import { OmokBoard } from '../../components/OmokBoard';
 import { playErrorMessage, RespondButtons } from '../../components/PlayInvite';
+import { Sheet } from '../../components/Sheet';
 import { StatusScreen } from '../../components/StatusScreen';
 import {
   cancelGame,
+  claimTurnTimeout,
   getGame,
+  getServerNow,
   GameError,
   inviteGame,
   listFinishedGames,
   listMoves,
+  offerDraw,
   playMove,
   resignGame,
+  respondDraw,
   subscribeGameRoom,
   sweepGames,
   type GameResult,
@@ -42,10 +50,13 @@ import {
 import type { Game, GameMove, GameStatus, Member } from '../../data/types';
 import {
   buildBoard,
+  canOfferDraw,
   cellIndex,
   cellLabel,
+  clockOffset,
   colorOf,
   effectiveStatus,
+  forbiddenCells,
   formatHeadToHead,
   formatRemaining,
   headToHead,
@@ -55,8 +66,11 @@ import {
   moveZoom,
   myOpenGame,
   opponentOf,
+  remainingSeconds,
+  remainingText,
   resultCopy,
   roomCopy,
+  TURN_WARN_SECONDS,
   turnText,
   winningLine,
   zoomOrigin as zoomOriginFor,
@@ -70,6 +84,11 @@ const AWAY_DELAY_MS = 10_000;
 const BOTH_IN_MS = 1500;
 /** 받은 사람이 수락한 뒤 보낸 사람을 기다리는 최대 시간 (그 뒤엔 판으로, 자리 비움 표시) */
 const WAIT_INVITER_MS = 10_000;
+/** 시간 초과 확정이 "마감 전"으로 거부되면(기기·서버 시계 차이) 다시 묻는 간격·횟수 */
+const CLAIM_RETRY_MS = 1000;
+const CLAIM_RETRIES = 5;
+/** 판을 나갈 때 미니게임 화면에 띄울 알림 (location.state.playFlash) */
+export const LEAVE_FLASH = '판은 그대로 두고 나갈게요';
 
 type RoomState =
   | { status: 'loading' }
@@ -89,10 +108,17 @@ function useGameRoom(gameId: string, me: string | null) {
   const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
   const [channelDown, setChannelDown] = useState(false);
   const [resyncs, setResyncs] = useState(0);
+  // 서버 시각 - 기기 시각 (ms). 30초 마감은 서버 시각이라 남은 시간을 이 값으로 보정해 그린다
+  const [offset, setOffset] = useState(0);
   const seq = useRef(0);
 
   const load = useCallback(() => {
     const mine = ++seq.current;
+    const sent = Date.now();
+    getServerNow().then(
+      (server) => setOffset(clockOffset(server, sent, Date.now())),
+      () => undefined,
+    );
     Promise.all([getGame(gameId), listMoves(gameId)]).then(
       ([game, moves]) => {
         if (mine !== seq.current) return;
@@ -150,18 +176,43 @@ function useGameRoom(gameId: string, me: string | null) {
   const apply = useCallback((r: GameResult, move?: GameMove) => {
     setState((s) => {
       if (s.status !== 'ready') return s;
+      // 실시간으로 이미 더 뒤의 판을 받았으면 마감·제안은 그쪽을 둔다
+      const newer = r.move_count >= s.game.move_count;
       const game: Game = {
         ...s.game,
         status: r.status,
         move_count: Math.max(s.game.move_count, r.move_count),
         winner_id: r.winner_id,
         end_reason: r.end_reason,
+        ...(newer && r.turn_deadline !== undefined ? { turn_deadline: r.turn_deadline } : {}),
+        ...(newer && r.draw_offer_by !== undefined ? { draw_offer_by: r.draw_offer_by } : {}),
+        ...(newer && r.draw_offer_count !== undefined ? { draw_offer_count: r.draw_offer_count } : {}),
       };
       return { ...s, game, moves: move ? mergeMoves(s.moves, [move]).moves : s.moves };
     });
   }, []);
 
-  return { state, present, connected: !offline && !channelDown, resyncs, load, apply };
+  return { state, present, connected: !offline && !channelDown, resyncs, offset, load, apply };
+}
+
+/**
+ * 지금 차례의 남은 초 (서버 시각 기준, 올림). 마감이 없으면 null, 지났으면 0 이하.
+ * 0.2초마다 재지만 숫자가 바뀔 때만 다시 그린다
+ */
+function useTurnSeconds(deadline: string | null, offset: number): number | null {
+  const [sec, setSec] = useState<number | null>(null);
+  useEffect(() => {
+    if (!deadline) {
+      setSec(null);
+      return;
+    }
+    const at = Date.parse(deadline);
+    const tick = () => setSec(Math.ceil((at - (Date.now() + offset)) / 1000));
+    tick();
+    const t = setInterval(tick, 200);
+    return () => clearInterval(t);
+  }, [deadline, offset]);
+  return sec;
 }
 
 /** 오목 한 판: 대기실 / 대국 / 결과 (BANB-49, design.md 5.28~5.31) */
@@ -226,8 +277,9 @@ function Room({ game, moves, me, room }: { game: Game; moves: GameMove[]; me: st
 
   // 대기실 → 판 넘어가기: 보낸 사람은 invited → active 를 보면, 받은 사람은 수락하고 들어오면 "둘 다 왔어요!" 1.5초
   const justAccepted = (location.state as { justAccepted?: boolean } | null)?.justAccepted === true;
+  // 30초 판(renju_lite)은 수락하는 순간 흑(받은 사람)의 시계가 가므로 보낸 사람을 기다리지 않고 바로 판으로 간다 (BANB-53)
   const [phase, setPhase] = useState<'both' | 'wait-inviter' | null>(() =>
-    justAccepted && status === 'active' && game.move_count === 0 ? 'wait-inviter' : null,
+    justAccepted && status === 'active' && game.move_count === 0 && game.rule !== 'renju_lite' ? 'wait-inviter' : null,
   );
   const prevStatus = useRef<GameStatus>(game.status);
   useEffect(() => {
@@ -442,18 +494,58 @@ function InviteeButtons({ game, load }: { game: Game; load: () => void }) {
 /* ───────────────────────── 대국 (5.29) ───────────────────────── */
 
 function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: GameMove[]; me: string; status: GameStatus; room: RoomApi }) {
+  const navigate = useNavigate();
   const nameOf = useMemberName();
   const { members } = useGames();
   const opp = opponentOf(game, me);
   const oppName = nameOf(opp);
   const myStone = colorOf(game, me);
   const active = status === 'active';
+  // renju_lite = 33 금지 + 한 수 30초 (BANB-53). 옛 판(free)은 예전 그대로
+  const renju = game.rule === 'renju_lite';
 
   // 실시간이 수를 먼저 보내고 판 상태를 나중에 보낼 수 있어 둘 중 큰 쪽으로 차례를 정한다
   const moveCount = Math.max(game.move_count, moves.length);
   const turnOf = active ? (moveCount % 2 === 0 ? game.black_id : game.white_id) : null;
   const myTurn = turnOf === me;
   const board = useMemo(() => buildBoard(moves), [moves]);
+
+  // 한 수 30초: 남은 초(서버 시각 기준). 마감이 지나면 화면이 시간 초과 확정을 부른다 (서버가 now() > 마감일 때만 닫음)
+  const turnSec = useTurnSeconds(active && renju ? game.turn_deadline : null, room.offset);
+  const overdue = turnSec !== null && turnSec <= 0;
+  const warn = turnSec !== null && !overdue && turnSec <= TURN_WARN_SECONDS;
+  const { apply, load } = room;
+  useEffect(() => {
+    if (!overdue) return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attempt = (n: number) =>
+      claimTurnTimeout(game.id).then(
+        (r) => {
+          if (!alive) return;
+          apply(r);
+          load();
+        },
+        (e) => {
+          if (!alive) return;
+          // 마감 전(시계 차이)·네트워크 오류면 잠시 뒤 다시. 그 밖의 거부(이미 끝남 등)는 서버 판으로 맞춘다
+          const retry = !(e instanceof GameError) || e.code === 'GAME_NOT_TIMED_OUT';
+          if (retry && n < CLAIM_RETRIES) timer = setTimeout(() => attempt(n + 1), CLAIM_RETRY_MS);
+          else load();
+        },
+      );
+    attempt(0);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [overdue, game.id, game.turn_deadline, apply, load]);
+
+  // 33 금지 자리: 내 차례에만 X (서버 play_move 가 같은 규칙으로 거부한다)
+  const forbidden = useMemo(
+    () => (renju && active && myTurn && !overdue ? forbiddenCells(board, myStone) : undefined),
+    [renju, active, myTurn, overdue, board, myStone],
+  );
   const last = moves.length > 0 ? moves[moves.length - 1] : null;
   const winLine = useMemo(
     () => (status === 'finished' && game.end_reason === 'five' && last ? winningLine(board, last.x, last.y) : null),
@@ -464,6 +556,7 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmResign, setConfirmResign] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [zoom, setZoom] = useState<[number, number] | null>(null);
   const [dragHint, setDragHint] = useState(false);
   const [announce, setAnnounce] = useState('');
@@ -493,6 +586,15 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
     if (last.member_id !== me) setAnnounce(`${oppName}님이 ${cellLabel(last.x, last.y)}에 뒀어요. ${active ? '내 차례예요' : ''}`);
   }, [last, me, oppName, active]);
 
+  // 내 차례 10초 남음을 한 번 읽어 주기
+  const warnedAt = useRef<string | null>(null);
+  useEffect(() => {
+    if (warn && myTurn && game.turn_deadline && warnedAt.current !== game.turn_deadline) {
+      warnedAt.current = game.turn_deadline;
+      setAnnounce(remainingText(TURN_WARN_SECONDS));
+    }
+  }, [warn, myTurn, game.turn_deadline]);
+
   // 토스트 2.5초
   useEffect(() => {
     if (!toast) return;
@@ -501,7 +603,10 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
   }, [toast]);
 
   // 고른 칸이 그사이 채워졌거나 내 차례가 아니게 되면 지운다
-  const selectedValid = selected && myTurn && room.connected && board[cellIndex(selected[0], selected[1])] === null ? selected : null;
+  const selectedValid =
+    selected && myTurn && !overdue && room.connected && board[cellIndex(selected[0], selected[1])] === null && !forbidden?.has(cellIndex(selected[0], selected[1]))
+      ? selected
+      : null;
 
   async function place() {
     if (!selectedValid || busy) return;
@@ -523,6 +628,37 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
     } finally {
       setBusy(false);
     }
+  }
+
+  async function offer() {
+    setMenuOpen(false);
+    setBusy(true);
+    try {
+      apply(await offerDraw(game.id));
+    } catch (e) {
+      setToast(playErrorMessage(e, nameOf, opp));
+      load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function answerDraw(accept: boolean) {
+    setBusy(true);
+    try {
+      const r = await respondDraw(game.id, accept);
+      apply(r);
+      if (!r.applied) load();
+    } catch (e) {
+      setToast(playErrorMessage(e, nameOf, opp));
+      load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function leave() {
+    navigate(PLAY_PATH, { replace: true, state: { playFlash: LEAVE_FLASH } });
   }
 
   async function resign() {
@@ -550,7 +686,13 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
 
   // 아래 버튼
   let main: ReactNode;
-  if (!room.connected) {
+  if (active && overdue) {
+    main = (
+      <button type="button" className="button button--primary play-bottom__main" disabled>
+        <LoaderCircle size={20} className="play-spin" aria-hidden="true" /> 시간이 다 됐어요
+      </button>
+    );
+  } else if (!room.connected) {
     main = (
       <button type="button" className="button button--primary play-bottom__main" disabled>
         <LoaderCircle size={20} className="play-spin" aria-hidden="true" /> 연결하는 중…
@@ -586,9 +728,25 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
       <Coffee size={16} aria-hidden="true" />
       {oppName}님이 잠시 자리를 비웠어요. 돌아오면 이어서 해요
     </p>
+  ) : active && myTurn && warn && turnSec !== null ? (
+    <p className="omok-help-warn">{remainingText(turnSec)}</p>
   ) : active && myTurn ? (
     <p className="play-help">{selectedValid ? '다른 곳을 누르면 옮겨져요' : '놓을 곳을 누르면 미리 보여 드려요'}</p>
   ) : null;
+
+  // 무승부 제안: 받은 쪽은 수락/거절 카드, 보낸 쪽은 기다림 안내 (제안 중에도 시간은 흐른다)
+  const drawFromOpp = active && !overdue && game.draw_offer_by === opp;
+  const drawFromMe = active && !overdue && game.draw_offer_by === me;
+  const canOffer = active && !overdue && canOfferDraw({ ...game, move_count: moveCount }, me);
+  const offerHint = !myTurn
+    ? '내 차례에만 제안할 수 있어요'
+    : drawFromMe
+      ? `${oppName}님 답을 기다리고 있어요`
+      : drawFromOpp
+        ? `${oppName}님 제안에 먼저 답해 주세요`
+        : canOffer
+          ? '상대가 수락하면 비긴 걸로 끝나요'
+          : `${oppName}님이 한 수 둔 뒤에 다시 제안할 수 있어요`;
 
   const players: [string, Stone][] = [
     [game.black_id, 'black'],
@@ -601,9 +759,14 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
         title="오목"
         right={
           active ? (
-            <button type="button" className="button button--text omok-resign" disabled={busy} onClick={() => setConfirmResign(true)}>
-              <Flag size={18} aria-hidden="true" /> 기권
-            </button>
+            <span className="omok-topbar-actions">
+              <button type="button" className="button button--text omok-resign" onClick={leave}>
+                <LogOut size={18} aria-hidden="true" /> 나가기
+              </button>
+              <button type="button" className="icon-button" aria-label="판 메뉴" aria-haspopup="dialog" disabled={busy} onClick={() => setMenuOpen(true)}>
+                <EllipsisVertical size={22} aria-hidden="true" />
+              </button>
+            </span>
           ) : undefined
         }
       />
@@ -627,7 +790,15 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
         </ul>
 
         <div className="omok-turn">
-          {turnOf ? (
+          {turnSec !== null && (
+            <span className={`omok-turn__timer${warn || overdue ? ' is-warn' : ''}`} role="timer" aria-label={remainingText(remainingSeconds(turnSec * 1000))}>
+              <Timer size={14} aria-hidden="true" />
+              {remainingSeconds(turnSec * 1000)}초
+            </span>
+          )}
+          {active && overdue ? (
+            <span className="omok-turn__text is-mine">시간이 다 됐어요</span>
+          ) : turnOf ? (
             <>
               <GameAvatar memberId={turnOf} members={members} size={32} stone={colorOf(game, turnOf)} />
               <span className={`omok-turn__text${myTurn ? ' is-mine' : ''}`}>{turnText({ ...game, move_count: moveCount }, me, nameOf)}</span>
@@ -644,13 +815,15 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
             selected={selectedValid}
             onSelect={(x, y) => setSelected([x, y])}
             onConfirm={place}
-            interactive={myTurn && !busy && room.connected}
+            interactive={myTurn && !busy && !overdue && room.connected}
             pendingStone={myStone}
             lastMove={last ? [last.x, last.y] : null}
             lastSeq={last?.seq ?? 0}
             winLine={winLine}
             zoomOrigin={zoom}
             onPan={(dx, dy) => setZoom((z) => (z ? moveZoom(z, dx, dy) : z))}
+            forbidden={forbidden}
+            onForbidden={() => setToast('33이라 둘 수 없어요')}
           />
           {zoom && dragHint && (
             <span className="omok-drag-hint">
@@ -659,6 +832,28 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
           )}
         </div>
 
+        {drawFromOpp && (
+          <section className="omok-draw" role="alert" aria-label="무승부 제안">
+            <p className="omok-draw__title">
+              <Handshake size={18} aria-hidden="true" />
+              {oppName}님이 무승부를 제안했어요
+            </p>
+            <div className="play-actions">
+              <button type="button" className="button button--secondary" disabled={busy} onClick={() => answerDraw(false)}>
+                거절
+              </button>
+              <button type="button" className="button button--primary" disabled={busy} onClick={() => answerDraw(true)}>
+                수락
+              </button>
+            </div>
+          </section>
+        )}
+        {drawFromMe && (
+          <p className="notice-box">
+            <Handshake size={16} aria-hidden="true" />
+            무승부를 제안했어요. {oppName}님 답을 기다리고 있어요
+          </p>
+        )}
         {help}
         <p className="sr-only" aria-live="polite">
           {announce}
@@ -688,9 +883,39 @@ function BoardScreen({ game, moves, me, status, room }: { game: Game; moves: Gam
 
       {(status === 'finished' || status === 'abandoned') && <ResultSheet game={{ ...game, status }} me={me} members={members} />}
 
+      {menuOpen && (
+        <Sheet title="판 메뉴" onClose={() => setMenuOpen(false)}>
+          <ul className="omok-menu">
+            <li>
+              <button type="button" className="omok-menu__item" disabled={!canOffer || busy} onClick={offer}>
+                <Handshake size={20} aria-hidden="true" />
+                <span>
+                  무승부 제안
+                  <span className="omok-menu__sub">{offerHint}</span>
+                </span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="omok-menu__item omok-menu__item--danger"
+                disabled={busy}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setConfirmResign(true);
+                }}
+              >
+                <Flag size={20} aria-hidden="true" />
+                기권
+              </button>
+            </li>
+          </ul>
+        </Sheet>
+      )}
+
       {confirmResign && (
         <Dialog
-          title="기권할까요?"
+          title="정말 기권할까요?"
           onCancel={() => setConfirmResign(false)}
           actions={
             <>

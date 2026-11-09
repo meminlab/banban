@@ -43,6 +43,10 @@ function game(patch: Partial<Game>): Game {
     started_at: null,
     last_move_at: null,
     finished_at: null,
+    rule: 'free',
+    turn_deadline: null,
+    draw_offer_by: null,
+    draw_offer_count: null,
     ...patch,
   };
 }
@@ -88,7 +92,7 @@ describe('홈 "같이 놀기" (design.md 5.32 줄이기)', () => {
   it('대국 중이면 3줄 카드', () => {
     games.open = [game({ status: 'active', started_at: '2026-11-09T07:56:00Z', move_count: 4 })];
     renderCard();
-    expect(screen.getByText(/준호님과 오목 두는 중 · 4수/)).toBeInTheDocument();
+    expect(screen.getByText('진행 중인 오목이 있어요 · 이어 두기')).toBeInTheDocument();
   });
 
   it('혼자 쓰는 가계부면 숨김', () => {

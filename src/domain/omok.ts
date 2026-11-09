@@ -9,8 +9,12 @@ export const BOARD_SIZE = 15;
 export const CELL_COUNT = BOARD_SIZE * BOARD_SIZE;
 /** 초대 유효 시간 (서버 invite_expires_at = 만든 시각 + 10분) */
 export const INVITE_MINUTES = 10;
-/** 이 시간 동안 수가 없으면 판을 "중단"으로 닫는다 */
+/** 이 시간 동안 수가 없으면 판을 "중단"으로 닫는다 (free 판만. renju_lite 는 30초 마감) */
 export const ABANDON_HOURS = 24;
+/** renju_lite 한 수 시간 (서버 turn_deadline = 대국 시작·둔 시각 + 30초) */
+export const TURN_SECONDS = 30;
+/** 이 초 이하로 남으면 차례 줄 강조 + "남은 시간 N초예요" */
+export const TURN_WARN_SECONDS = 10;
 
 export type Stone = 'black' | 'white';
 /** 판: index = y * 15 + x (행 우선) */
@@ -72,15 +76,16 @@ export function mergeMoves(known: readonly GameMove[], incoming: readonly GameMo
   return { moves, gap };
 }
 
-type GameTimes = Pick<Game, 'status' | 'invite_expires_at' | 'started_at' | 'last_move_at'>;
+type GameTimes = Pick<Game, 'status' | 'invite_expires_at' | 'started_at' | 'last_move_at'> & { rule?: Game['rule'] };
 
 /**
- * 지금 시각 기준 상태: 서버가 아직 닫지 않은 지난 초대(10분)·멈춘 판(24시간)도 닫힌 것으로 본다.
- * 서버는 다음 쓰기나 sweep_games 때 같은 규칙으로 닫는다
+ * 지금 시각 기준 상태: 서버가 아직 닫지 않은 지난 초대(10분)·멈춘 판(free 24시간)도 닫힌 것으로 본다.
+ * 서버는 다음 쓰기나 sweep_games 때 같은 규칙으로 닫는다.
+ * renju_lite 의 30초 마감은 여기서 보지 않는다 — 기기 시계가 아닌 서버 시각으로 판정해야 해서 판 화면이 claim_turn_timeout 을 부른다
  */
 export function effectiveStatus(game: GameTimes, now: Date): GameStatus {
   if (game.status === 'invited' && Date.parse(game.invite_expires_at) <= now.getTime()) return 'expired';
-  if (game.status === 'active') {
+  if (game.status === 'active' && game.rule !== 'renju_lite') {
     const base = game.last_move_at ?? game.started_at;
     if (base && Date.parse(base) + ABANDON_HOURS * 3600_000 <= now.getTime()) return 'abandoned';
   }
@@ -88,6 +93,105 @@ export function effectiveStatus(game: GameTimes, now: Date): GameStatus {
 }
 
 export const isOpenStatus = (s: GameStatus) => s === 'invited' || s === 'active';
+
+/* ───────────── 한 수 30초 (BANB-53) ───────────── */
+
+/** 서버 시각 - 기기 시각 (ms). 요청을 보낸 때와 받은 때의 가운데를 서버 시각을 잰 때로 본다 */
+export function clockOffset(serverMs: number, sentAtMs: number, receivedAtMs: number): number {
+  return serverMs - (sentAtMs + receivedAtMs) / 2;
+}
+
+/** 지금 차례의 남은 ms (서버 기준 지금 serverNowMs). 마감이 없는 판·대국 중이 아니면 null. 음수 = 지남 */
+export function turnRemainingMs(game: Pick<Game, 'status' | 'turn_deadline'>, serverNowMs: number): number | null {
+  if (game.status !== 'active' || !game.turn_deadline) return null;
+  return Date.parse(game.turn_deadline) - serverNowMs;
+}
+
+/** 화면에 보일 남은 초 (올림, 0 이상) */
+export const remainingSeconds = (ms: number) => Math.max(0, Math.ceil(ms / 1000));
+
+/** "남은 시간 8초예요" */
+export const remainingText = (seconds: number) => `남은 시간 ${seconds}초예요`;
+
+/* ───────────── 33 금지 (BANB-53, renju_lite) ───────────── */
+
+/**
+ * (x, y)에 stone 을 두면 그 돌을 지나는 5개 이상 연속(장목 포함)이 되나. (x, y)는 빈칸으로 본다
+ */
+export function makesFive(board: Board, x: number, y: number, stone: Stone): boolean {
+  for (const [dx, dy] of DIRS) {
+    let len = 1;
+    for (const sign of [1, -1]) {
+      let k = 1;
+      while (inBoard(x + sign * k * dx, y + sign * k * dy) && board[cellIndex(x + sign * k * dx, y + sign * k * dy)] === stone) {
+        len += 1;
+        k += 1;
+      }
+    }
+    if (len >= 5) return true;
+  }
+  return false;
+}
+
+/**
+ * (x, y)에 stone 을 두면 33인가 — 서버 omok_is_double_three 와 같은 규칙.
+ * 그 수를 지나는 4방향마다
+ *   - 4: 빈칸 하나를 더 두면 그 수를 지나는 5개 이상 연속 → 3으로 세지 않는다 (44·43 허용)
+ *   - 열린 3: 빈칸 e 하나를 더 두면 그 수와 e 를 포함한 정확히 4개 연속 + 양끝이 판 안 빈칸 (한 칸 띈 X·XX 포함)
+ * 열린 3인 방향이 2개 이상이면 true. 그 빈칸이 다시 금지수인지는 보지 않는다(단순화)
+ */
+export function doubleThreeAt(board: Board, x: number, y: number, stone: Stone): boolean {
+  // 1 = 내 돌(새 돌 포함), 2 = 상대 돌, 0 = 빈칸, -1 = 판 밖
+  const at = (cx: number, cy: number): number => {
+    if (!inBoard(cx, cy)) return -1;
+    if (cx === x && cy === y) return 1;
+    const v = board[cellIndex(cx, cy)];
+    return v === null ? 0 : v === stone ? 1 : 2;
+  };
+  let threes = 0;
+  for (const [dx, dy] of DIRS) {
+    let four = false;
+    let open = false;
+    for (let k = -4; k <= 4; k += 1) {
+      if (k === 0 || at(x + k * dx, y + k * dy) !== 0) continue;
+      const mine = (d: number) => d === k || at(x + d * dx, y + d * dy) === 1;
+      let s = 0;
+      while (mine(s - 1)) s -= 1;
+      let t = 0;
+      while (mine(t + 1)) t += 1;
+      const len = t - s + 1;
+      if (len >= 5) four = true;
+      else if (len === 4 && k >= s && k <= t && at(x + (s - 1) * dx, y + (s - 1) * dy) === 0 && at(x + (t + 1) * dx, y + (t + 1) * dy) === 0)
+        open = true;
+    }
+    if (open && !four) threes += 1;
+  }
+  return threes >= 2;
+}
+
+/** 금지수: 빈칸이고, 5목이 되지 않고(승리가 먼저), 33 */
+export function isForbidden(board: Board, x: number, y: number, stone: Stone): boolean {
+  return inBoard(x, y) && board[cellIndex(x, y)] === null && !makesFive(board, x, y, stone) && doubleThreeAt(board, x, y, stone);
+}
+
+/** 판 전체의 금지 자리 (index = cellIndex) */
+export function forbiddenCells(board: Board, stone: Stone): Set<number> {
+  const out = new Set<number>();
+  for (let y = 0; y < BOARD_SIZE; y += 1)
+    for (let x = 0; x < BOARD_SIZE; x += 1) if (isForbidden(board, x, y, stone)) out.add(cellIndex(x, y));
+  return out;
+}
+
+/* ───────────── 무승부 제안 (BANB-53) ───────────── */
+
+/** 내가 지금 무승부를 제안할 수 있나: 대국 중·내 차례·답을 기다리는 제안 없음·지난 제안 뒤 수가 늘었음(상대가 한 수 둠) */
+export function canOfferDraw(
+  game: Pick<Game, 'status' | 'move_count' | 'black_id' | 'white_id' | 'draw_offer_by' | 'draw_offer_count'>,
+  me: string,
+): boolean {
+  if (turnMemberId(game) !== me || game.draw_offer_by) return false;
+  return game.draw_offer_count == null || game.move_count > game.draw_offer_count;
+}
 
 /** 초대가 만료될 때까지 남은 ms (0 이상) */
 export function inviteRemainingMs(game: Pick<Game, 'invite_expires_at'>, now: Date): number {
@@ -229,7 +333,13 @@ export function resultCopy(game: Game, me: string, nameOf: (memberId: string) =>
     };
   }
   if (game.end_reason === 'draw') return { icon: 'handshake', title: '비겼어요', line: '판이 꽉 찼어요. 막상막하네요', win: false, counted: true };
+  if (game.end_reason === 'draw_agreed') return { icon: 'handshake', title: '무승부로 끝냈어요', line: '서로 비기기로 했어요. 한 판 더 할까요?', win: false, counted: true };
   const won = game.winner_id === me;
+  if (game.end_reason === 'turn_timeout') {
+    return won
+      ? { icon: 'trophy', title: '이겼어요!', line: `시간이 다 됐어요. 이번 판은 내가 이겼어요`, win: true, counted: true }
+      : { icon: 'clock', title: '시간이 다 됐어요', line: `이번 판은 ${opp}이 이겼어요`, win: false, counted: true };
+  }
   if (game.end_reason === 'resign') {
     return won
       ? { icon: 'trophy', title: '이겼어요!', line: `${opp}이 기권했어요`, win: true, counted: true }

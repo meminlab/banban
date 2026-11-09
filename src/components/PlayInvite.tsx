@@ -36,6 +36,12 @@ export function playErrorMessage(e: unknown, nameOf?: (id: string) => string, op
         return '이미 돌이 있는 자리예요';
       case 'GAME_NOT_ACTIVE':
         return '이미 끝난 판이에요';
+      case 'GAME_FORBIDDEN_33':
+        return '33이라 둘 수 없어요';
+      case 'GAME_DRAW_TOO_SOON':
+        return `${opp}이 한 수 둔 뒤에 다시 제안할 수 있어요`;
+      case 'GAME_DRAW_PENDING':
+        return `${opp} 무승부 제안에 먼저 답해 주세요`;
       case 'GAME_NOT_FOUND':
       case 'NOT_IN_LEDGER':
         return '이 판은 볼 수 없어요';
@@ -273,7 +279,7 @@ export function PlayHomeCard() {
     const sub =
       mine.kind === 'waiting'
         ? `오목 · ${minutesLeftText(inviteRemainingMs(g, now))}`
-        : `${opp}님과 오목 두는 중 · ${g.move_count}수`;
+        : '진행 중인 오목이 있어요 · 이어 두기';
     return (
       <Link to={omokPath(g.id)} className="play-card play-card--link" id={PLAY_CARD_ID} data-testid="play-card">
         <CardLabel />

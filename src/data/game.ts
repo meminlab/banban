@@ -6,10 +6,10 @@
  */
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
-import type { Game, GameEndReason, GameMove, GameStatus, StackBest } from './types';
+import type { Game, GameEndReason, GameMove, GameRule, GameStatus, StackBest } from './types';
 
 const GAME_COLUMNS =
-  'id, ledger_id, kind, black_id, white_id, status, winner_id, end_reason, move_count, created_by, rematch_of, created_at, invite_expires_at, started_at, last_move_at, finished_at';
+  'id, ledger_id, kind, black_id, white_id, status, winner_id, end_reason, move_count, created_by, rematch_of, created_at, invite_expires_at, started_at, last_move_at, finished_at, rule, turn_deadline, draw_offer_by, draw_offer_count';
 const MOVE_COLUMNS = 'game_id, ledger_id, seq, x, y, member_id, created_at';
 
 export type GameErrorCode =
@@ -26,6 +26,11 @@ export type GameErrorCode =
   | 'GAME_NOT_YOUR_TURN'
   | 'GAME_BAD_CELL'
   | 'GAME_CELL_TAKEN'
+  | 'GAME_FORBIDDEN_33'
+  | 'GAME_NOT_TIMED_OUT'
+  | 'GAME_DRAW_PENDING'
+  | 'GAME_DRAW_TOO_SOON'
+  | 'GAME_NOT_DRAW_TARGET'
   | 'STACK_BAD_SCORE';
 
 const CODES: GameErrorCode[] = [
@@ -42,6 +47,11 @@ const CODES: GameErrorCode[] = [
   'GAME_NOT_YOUR_TURN',
   'GAME_BAD_CELL',
   'GAME_CELL_TAKEN',
+  'GAME_FORBIDDEN_33',
+  'GAME_NOT_TIMED_OUT',
+  'GAME_DRAW_PENDING',
+  'GAME_DRAW_TOO_SOON',
+  'GAME_NOT_DRAW_TARGET',
   'STACK_BAD_SCORE',
 ];
 
@@ -67,6 +77,12 @@ export interface GameResult {
   winner_id: string | null;
   end_reason: GameEndReason | null;
   applied: boolean;
+  rule?: GameRule;
+  turn_deadline?: string | null;
+  draw_offer_by?: string | null;
+  draw_offer_count?: number | null;
+  /** 서버 지금 시각 (화면 시계 보정) */
+  server_now?: string;
   seq?: number;
 }
 
@@ -143,7 +159,27 @@ export function resignGame(gameId: string): Promise<GameResult> {
   return rpc<GameResult>('resign_game', { p_game_id: gameId });
 }
 
-/** 지난 초대(10분)·멈춘 판(24시간)을 서버에서 닫는다 (상대 화면에도 반영) */
+/** 시간 초과 확정 (BANB-53): 서버가 마감이 지났을 때만 차례인 사람 패로 닫는다. 마감 전이면 GAME_NOT_TIMED_OUT */
+export function claimTurnTimeout(gameId: string): Promise<GameResult> {
+  return rpc<GameResult>('claim_turn_timeout', { p_game_id: gameId });
+}
+
+/** 무승부 제안 (내 차례에만) */
+export function offerDraw(gameId: string): Promise<GameResult> {
+  return rpc<GameResult>('offer_draw', { p_game_id: gameId });
+}
+
+/** 무승부 제안에 답하기 (제안받은 사람). 마감이 지났으면 applied = false + 시간 초과 */
+export function respondDraw(gameId: string, accept: boolean): Promise<GameResult> {
+  return rpc<GameResult>('respond_draw', { p_game_id: gameId, p_accept: accept });
+}
+
+/** 서버 지금 시각 (ms). 남은 시간을 서버 기준으로 그리기 위한 보정에 쓴다 */
+export async function getServerNow(): Promise<number> {
+  return Date.parse(await rpc<string>('game_server_now', {}));
+}
+
+/** 지난 초대(10분)·멈춘 판(24시간)·마감 지난 판(30초)을 서버에서 닫는다 (상대 화면에도 반영) */
 export function sweepGames(ledgerId: string): Promise<number> {
   return rpc<number>('sweep_games', { p_ledger_id: ledgerId });
 }
