@@ -196,8 +196,24 @@ begin
   select v_ledger, p.type, p.amount, p.d, c.id, pk.id,
          v_ma, p.is_fixed, p.memo, 'manual', v_ma, v_ma
   from _seed_plan p
-  join public.category par on par.ledger_id = v_ledger and par.type = p.type and par.parent_id is null and par.name = p.cat_parent
-  join public.category c   on c.ledger_id = v_ledger and c.parent_id = par.id and c.name = p.cat_child
+  -- 계획은 옛 기본 이름(대분류|소분류)으로 적혀 있다 → BANB-36 기본 20개(대분류 = 같은 이름 소분류)로 옮겨 저장
+  join public.category par on par.ledger_id = v_ledger and par.type = p.type and par.parent_id is null
+   and par.name = case
+     when p.cat_parent = '식비' and p.cat_child = '카페/간식' then '카페·간식'
+     when p.cat_parent = '주거' then '주거·관리비'
+     when p.cat_parent = '통신' then '통신·구독'
+     when p.cat_parent = '교통' then '교통·차량'
+     when p.cat_parent = '생활' then '생활·마트'
+     when p.cat_parent = '쇼핑' then '쇼핑·미용'
+     when p.cat_parent = '건강' then '의료·건강'
+     when p.cat_parent = '문화·여가' then '문화·여행'
+     when p.cat_parent in ('교육', '육아') then '교육·육아'
+     when p.cat_parent in ('보험', '반려동물', '대출이자') then '기타'
+     when p.cat_parent in ('상여', '이자·배당') then '부수입'
+     when p.cat_parent in ('적금', '예금', '청약') then '적금·예금'
+     else p.cat_parent
+   end
+  join public.category c   on c.ledger_id = v_ledger and c.parent_id = par.id and c.name = par.name
   left join public.pocket pk on pk.ledger_id = v_ledger and pk.name = p.pocket
   order by p.d;
   get diagnostics v_inserted = row_count;

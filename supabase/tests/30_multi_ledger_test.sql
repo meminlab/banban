@@ -77,7 +77,7 @@ select test.expect_count('select * from public.ledger', 3);
 select test.expect_count('select * from test.my_active', 3);
 select test.expect_count($$select * from public.member where user_id = auth.uid() and role = 'owner'$$, 3);
 select test.expect_count($$select ledger_id from public.pocket group by ledger_id having count(*) = 4$$, 3);
-select test.expect_count($$select ledger_id from public.category group by ledger_id having count(*) = 70$$, 3);
+select test.expect_count($$select ledger_id from public.category group by ledger_id having count(*) = 40$$, 3);
 select test.expect_count($$select * from public.user_preference where user_id = auth.uid() and last_ledger_id = test.id('L3')$$, 1);
 
 -- 전환: 현재 멤버인 가계부만 기록

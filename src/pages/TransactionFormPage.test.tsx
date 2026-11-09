@@ -10,7 +10,7 @@ import { todayKST } from '../domain/transactionForm';
 // ── 저장소 모듈 가짜
 const fake = vi.hoisted(() => ({
   transactions: [] as unknown[],
-  recent: [] as string[],
+  uses: [] as { category_id: string; occurred_on: string; created_at: string }[],
   addChild: vi.fn(),
   addParent: vi.fn(),
   create: vi.fn(),
@@ -52,8 +52,11 @@ const c = (id: string, type: Category['type'], parent_id: string | null, name: s
 });
 const CATEGORIES: Category[] = [
   { ...c('food', 'expense', null, '식비'), icon: 'utensils-crossed' },
+  { ...c('food-self', 'expense', 'food', '식비', 0), icon: 'utensils-crossed' },
   { ...c('food-out', 'expense', 'food', '외식', 1), icon: 'utensils' },
   c('food-mart', 'expense', 'food', '장보기', 2),
+  { ...c('cafe', 'expense', null, '카페·간식', 2), icon: 'coffee' },
+  { ...c('cafe-self', 'expense', 'cafe', '카페·간식', 0), icon: 'coffee' },
   c('salary', 'income', null, '급여'),
   c('salary-1', 'income', 'salary', '급여'),
   c('fund', 'saving', null, '적금'),
@@ -86,7 +89,7 @@ const B_ENTRY: Transaction = {
 };
 
 vi.mock('../data/transaction', () => ({
-  listRecentCategoryIds: async () => fake.recent,
+  listCategoryUses: async () => fake.uses,
   getTransactionFormOptions: async () => ({ categories: CATEGORIES, pockets: POCKETS, members: MEMBERS }),
   listMonthTransactions: async () => fake.transactions,
   getTransaction: async (id: string) => fake.transactions.find((t) => (t as Transaction).id === id) ?? null,
@@ -107,7 +110,7 @@ function renderAt(path: string) {
 
 beforeEach(() => {
   fake.transactions = [B_ENTRY];
-  fake.recent = [];
+  fake.uses = [];
   fake.addChild.mockReset();
   fake.addParent.mockReset();
   fake.create.mockReset().mockResolvedValue('new-id');
@@ -118,11 +121,12 @@ beforeEach(() => {
 const amountInput = () => screen.getByLabelText('금액');
 const categoryField = () => screen.getByLabelText('카테고리');
 
-/** 카테고리 행 → 선택 시트 → 이름으로 고르기 */
-async function pickCategory(user: ReturnType<typeof userEvent.setup>, name: string) {
+/** 카테고리 행 → 선택 시트 → 대분류(→ 소분류)로 고르기 */
+async function pickCategory(user: ReturnType<typeof userEvent.setup>, parent: string, child?: string) {
   await user.click(categoryField());
   const sheet = await screen.findByRole('dialog', { name: /카테고리$/ });
-  await user.click(within(sheet).getAllByRole('radio', { name })[0]);
+  await user.click(within(sheet).getByRole('radio', { name: new RegExp(`^${parent}`) }));
+  if (child) await user.click(within(sheet).getByRole('radio', { name: child }));
 }
 
 /** 선택 시트의 칸 이름들 (추가 칸 제외) */
@@ -177,7 +181,7 @@ describe('내역 입력', () => {
   ])('금액 %s 는 저장되지 않고 안내가 나온다', async (amount, message) => {
     const user = await openNewForm();
     await user.type(amountInput(), amount);
-    await pickCategory(user, '외식');
+    await pickCategory(user, '식비', '외식');
     await user.click(screen.getByRole('radio', { name: '공동소비' }));
     await user.click(screen.getByRole('button', { name: '저장' }));
     expect(screen.getByText(message)).toBeInTheDocument();
@@ -186,8 +190,8 @@ describe('내역 입력', () => {
 
   it('유형을 바꾸면 카테고리 선택지가 바뀌고, 지출이 아니면 주머니·고정지출이 사라진다', async () => {
     const user = await openNewForm();
-    expect(await sheetOptions(user)).toEqual(['외식', '장보기']);
-    await pickCategory(user, '외식');
+    expect(await sheetOptions(user)).toEqual(['식비', '카페·간식']);
+    await pickCategory(user, '식비', '외식');
     expect(screen.getByRole('group', { name: '주머니' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: '고정지출' })).toBeInTheDocument();
 
@@ -204,7 +208,7 @@ describe('내역 입력', () => {
   it('저장하면 입력값으로 내역을 만들고 가계부 탭에서 "저장했어요"를 보여 준다', async () => {
     const user = await openNewForm();
     await user.type(amountInput(), '12000');
-    await pickCategory(user, '장보기');
+    await pickCategory(user, '식비', '장보기');
     await user.click(screen.getByRole('radio', { name: '개인용돈' }));
     await user.click(screen.getByRole('radio', { name: '비' }));
     await user.click(screen.getByRole('checkbox', { name: '고정지출' }));
@@ -238,7 +242,7 @@ describe('내역 입력', () => {
     fake.create.mockRejectedValueOnce(new Error('network'));
     const user = await openNewForm();
     await user.type(amountInput(), '5000');
-    await pickCategory(user, '외식');
+    await pickCategory(user, '식비', '외식');
     await user.click(screen.getByRole('radio', { name: '공동소비' }));
     await user.click(screen.getByRole('button', { name: '저장' }));
 
@@ -253,36 +257,69 @@ describe('내역 입력', () => {
 });
 
 describe('카테고리 선택 시트·추가 (BANB-24)', () => {
-  it('최근 쓴 것 → 대분류 구역 → 그 밖의 분류. 아이콘이 없는 소분류는 대분류 아이콘으로 보인다', async () => {
-    fake.recent = ['food-mart', 'salary-1', 'food-mart'];
+  it('대분류 격자 한 단계: 같은 이름만 있으면 바로 선택, 소분류가 있으면 맨 앞 대분류 이름 → 소분류 (BANB-36)', async () => {
     const user = await openNewForm();
     await user.click(categoryField());
-    const sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
-    const recent = within(sheet).getByRole('region', { name: '최근 쓴 것' });
-    expect(within(recent).getAllByRole('radio').map((r) => r.querySelector('.cat-cell__name')?.textContent)).toEqual(['장보기']);
-    const food = within(sheet).getByRole('region', { name: '식비' });
-    const mart = within(food).getByRole('radio', { name: '장보기' });
-    expect(mart.querySelector('svg')).not.toBeNull(); // 첫 글자가 아니라 대분류 아이콘
+    let sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
     expect(within(sheet).getByRole('button', { name: '추가' })).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: /전체 보기/ })).not.toBeInTheDocument(); // 8개 이하
 
-    // 최근 쓴 것과 원래 구역에 같은 칸이 있어도, 그룹마다 선택은 하나
-    await user.click(mart);
-    await user.click(categoryField());
-    const again = await screen.findByRole('dialog', { name: '지출 카테고리' });
-    for (const g of within(again).getAllByRole('radiogroup')) {
-      expect(within(g).queryAllByRole('radio', { checked: true }).length).toBeLessThanOrEqual(1);
-    }
-    expect(within(again).getAllByRole('radio', { checked: true })).toHaveLength(2);
-    await user.click(within(again).getByRole('button', { name: '닫기' }));
-    await user.click(categoryField());
-    const sheet2 = await screen.findByRole('dialog', { name: '지출 카테고리' });
-    const mart2 = within(within(sheet2).getByRole('region', { name: '식비' })).getByRole('radio', { name: '장보기' });
-
-    await user.click(mart2);
+    // 카페·간식: 바로 선택(같은 이름 소분류로 저장)
+    await user.click(within(sheet).getByRole('radio', { name: '카페·간식' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(categoryField()).toHaveTextContent('카페·간식');
+    expect(categoryField()).not.toHaveTextContent('›');
+
+    // 식비: 두 번째 단계 — 식비(대분류 자체) · 외식 · 장보기
+    await user.click(categoryField());
+    sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
+    expect(within(sheet).getByRole('radio', { name: '카페·간식' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(within(sheet).getByRole('radio', { name: '식비, 소분류 고르기' }));
+    const step = within(sheet).getByRole('radiogroup', { name: '식비' });
+    expect(within(step).getAllByRole('radio').map((r) => r.querySelector('.cat-cell__name')?.textContent)).toEqual(['식비', '외식', '장보기']);
+    expect(within(step).getByRole('radio', { name: '장보기' }).querySelector('svg')).not.toBeNull(); // 아이콘 없는 소분류는 대분류 아이콘
+    // 뒤로 갔다가 다시
+    await user.click(within(sheet).getByRole('button', { name: '대분류로 돌아가기' }));
+    await user.click(within(sheet).getByRole('radio', { name: '식비, 소분류 고르기' }));
+    await user.click(within(sheet).getByRole('radio', { name: '식비' }));
+    expect(categoryField()).toHaveTextContent('식비');
+    expect(categoryField()).not.toHaveTextContent('›');
+
+    await pickCategory(user, '식비', '장보기');
     expect(categoryField()).toHaveTextContent('식비 › 장보기');
     await user.click(categoryField());
-    expect(within(await screen.findByRole('dialog')).getAllByRole('radio', { name: '장보기' })[0]).toHaveAttribute('aria-checked', 'true');
+    sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
+    expect(within(sheet).getByRole('radio', { name: /^식비/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('자주 쓰는 8개 먼저(최근 3개월 내역 수 순), 나머지는 "전체 보기"', async () => {
+    const extra = Array.from({ length: 8 }, (_, i) => [
+      c(`x${i}`, 'expense', null, `항목${i + 1}`, 10 + i),
+      c(`x${i}-self`, 'expense', `x${i}`, `항목${i + 1}`, 0),
+    ]).flat();
+    CATEGORIES.push(...extra);
+    try {
+      fake.uses = [
+        { category_id: 'x7-self', occurred_on: '2026-11-01', created_at: '2026-11-01T00:00:00Z' },
+        { category_id: 'x7-self', occurred_on: '2026-11-02', created_at: '2026-11-02T00:00:00Z' },
+        { category_id: 'food-out', occurred_on: '2026-11-03', created_at: '2026-11-03T00:00:00Z' },
+      ];
+      const user = await openNewForm();
+      await user.click(categoryField());
+      const sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
+      const frequent = within(sheet).getByRole('radiogroup', { name: '자주 쓰는 것' });
+      const cellNames = (el: HTMLElement) => within(el).getAllByRole('radio').map((r) => r.querySelector('.cat-cell__name')?.textContent);
+      expect(cellNames(frequent)).toEqual(['항목8', '식비', '카페·간식', '항목1', '항목2', '항목3', '항목4', '항목5']);
+      expect(within(sheet).queryByRole('radiogroup', { name: '전체' })).not.toBeInTheDocument();
+      const more = within(sheet).getByRole('button', { name: /전체 보기 \(2개 더\)/ });
+      expect(more).toHaveAttribute('aria-expanded', 'false');
+      await user.click(more);
+      expect(more).toHaveAttribute('aria-expanded', 'true');
+      expect(cellNames(within(sheet).getByRole('radiogroup', { name: '전체' }))).toEqual(['항목6', '항목7']);
+      expect(within(sheet).getByRole('button', { name: '추가' })).toBeInTheDocument();
+    } finally {
+      CATEGORIES.splice(CATEGORIES.length - extra.length, extra.length);
+    }
   });
 
   it('추가: 이름·대분류·아이콘을 골라 추가하면 선택 시트로 돌아와 그 카테고리가 선택돼 있고, 그대로 저장된다', async () => {
@@ -308,6 +345,8 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
 
     expect(fake.addChild).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', parentId: 'food', name: '야식', icon: 'pizza', sortOrder: 3 });
     const sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
+    // 시트로 돌아오면 식비 칸이 선택돼 있고, 두 번째 단계에 새 소분류가 선택돼 있다
+    await user.click(within(sheet).getByRole('radio', { name: '식비, 소분류 고르기', checked: true }));
     expect(within(sheet).getByRole('radio', { name: '야식' })).toHaveAttribute('aria-checked', 'true');
     await user.click(within(sheet).getByRole('button', { name: '닫기' }));
     expect(categoryField()).toHaveTextContent('식비 › 야식');
@@ -319,7 +358,7 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
 
   it('새 대분류로 추가할 수 있고, 실패하면 화면에 남아 다시 시도한다', async () => {
     fake.addParent.mockRejectedValueOnce(new Error('network')).mockImplementation(async (i: { name: string; icon: string | null }) => ({
-      parent: { ...c('np', 'expense', null, i.name, 2), icon: i.icon },
+      parent: { ...c('np', 'expense', null, i.name, 3), icon: i.icon },
       child: { ...c('np-c', 'expense', 'np', i.name, 1), icon: i.icon },
     }));
     const user = await openNewForm();
@@ -334,11 +373,10 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     expect(within(editor).getByLabelText('이름')).toHaveValue('반려견');
 
     await user.click(within(editor).getByRole('button', { name: '추가하기' }));
-    expect(fake.addParent).toHaveBeenLastCalledWith({ ledgerId: 'L', type: 'expense', name: '반려견', icon: 'dog', sortOrder: 2 });
+    expect(fake.addParent).toHaveBeenLastCalledWith({ ledgerId: 'L', type: 'expense', name: '반려견', icon: 'dog', sortOrder: 3 });
     const sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
-    // 같은 이름 하나뿐이라 "그 밖의 분류"에 들어가고 선택돼 있다
-    const others = within(sheet).getByRole('region', { name: '그 밖의 분류' });
-    expect(within(others).getByRole('radio', { name: '반려견' })).toHaveAttribute('aria-checked', 'true');
+    // 같은 이름 하나뿐이라 대분류 칸 하나로 보이고 선택돼 있다
+    expect(within(sheet).getByRole('radio', { name: '반려견' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('아이콘을 안 고르면 이름 첫 글자로 미리 보인다', async () => {

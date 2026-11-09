@@ -28,7 +28,7 @@ select public.create_ledger('우리집 가계부', '맴맴');
 insert into public.transaction (ledger_id, type, amount, category_id, pocket_id, spender_id, created_by, updated_by)
 select l.id, 'expense', 12345, c.id, p.id, m.id, m.id, m.id
 from public.ledger l join public.member m on m.ledger_id = l.id
-join public.category c on c.ledger_id = l.id and c.name = '외식'
+join public.category c on c.ledger_id = l.id and c.name = '식비' and c.parent_id is not null
 join public.pocket p on p.ledger_id = l.id and p.name = '공동소비';
 reset role;
 SQL

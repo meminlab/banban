@@ -76,7 +76,8 @@ npm run dev                  # http://localhost:5173
       - `20261106170000_category_icon.sql` — 카테고리 아이콘(`category.icon`, Lucide 이름, null 허용). 기본 매핑 함수 `default_category_icon` + 새 가계부 기본값에 아이콘. 기존 가계부는 이름이 기본값과 같은 카테고리만 채움(이름 바꾼 것·직접 만든 것은 비워 둠 → 앱이 대분류 아이콘/첫 글자로 표시)
       - `20261106180000_asset_history_window.sql` — 잔액 이력 범위 조회 함수 (추이에 필요한 범위만)
       - `20261106190000_profile_theme.sql` — 사람별 화면 테마(`profile.theme`: clean·berry·cozy, 기본 clean). 저장은 `set_my_theme(p_theme)` 함수로 자기 행만 (profile 직접 수정 권한은 그대로 없음)
-   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, `category_icon=true`, `history_window=true`, `profile_theme=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
+      - `20261109000000_category_simplify.sql` — 카테고리 간소화(BANB-36). 새 가계부 기본값 20개(`default_categories_v2`: 지출 12·수입 4·저축 4, 대분류마다 같은 이름 소분류 1개). 기존 가계부: 없는 기본 대분류 추가, 같은 이름 소분류가 없는 대분류에 하나 추가, 내역에 안 쓰인 **옛 기본 이름**만 숨김(삭제·내역 변경 없음, 직접 만든 것·이름 바꾼 것·이미 숨긴 것은 그대로), 기본 20개를 맨 앞 순서로. **적용 직전·직후에 `supabase/seed/category_simplify_snapshot.sql`을 실행해 결과가 같은지 비교**
+   2. `supabase/tests/check_applied.sql` — 적용 확인. 10행(asset_balance_history 포함) 모두 `asset_net_worth=true` 와 `rls_enabled=true`, `anon_select=false`, `authenticated_select=true`, `rpc=true`, `leave_rpc=true`, `invite_rules=true`, `profile_sync=true`, `n1_rule=true`, `member_limit_4=true`, `multi_ledger=true`, `category_icon=true`, `history_window=true`, `profile_theme=true`, `category_simplify=true`, policies는 ledger 2 / member 2 / invite 3 / 나머지 1
    3. `supabase/tests/10_rls_test.sql` — 권한 규칙 자체 테스트. 가짜 사용자로 가입·초대·참여·차단을 확인하고 **마지막에 ROLLBACK 해서 아무것도 남기지 않는다**. 오류 없이 끝나면 통과, 실패하면 `TEST FAILED: ...` 오류가 보인다
    4. `supabase/tests/20_category_pocket_test.sql` — 카테고리·주머니 관리 규칙 테스트 (같은 방식, 마지막에 ROLLBACK)
    5. `supabase/tests/30_multi_ledger_test.sql`, `supabase/tests/40_asset_net_worth_test.sql`, `supabase/tests/50_category_icon_test.sql`, `supabase/tests/60_asset_history_window_test.sql`, `supabase/tests/70_profile_theme_test.sql` — 여러 가계부 / 자산 이력·보관·권한 / 카테고리 아이콘 / 잔액 이력 범위 조회 / 화면 테마 테스트 (같은 방식)
@@ -111,7 +112,9 @@ npm run dev                  # http://localhost:5173
 ## QA 기준 데이터 (자산 1단계, 테스트 DB 전용)
 
 `supabase/seed/qa_assets_v4.sql` — QA 테스트 케이스 v4 "기준 데이터"(9~11월 잔액 이력, 보관 자산)를 만든다. 이력 시각을 관리자 권한으로 직접 넣으므로 **운영 DB에서는 실행하지 않는다**. 설정(`banban.qa_seed = 'test-db-only'`)이 없으면 `QA_SEED_NOT_ALLOWED`로 멈춘다. 계정 이메일은 파일 위쪽 `c_email_a/b/c`를 바꾼다. 실행법은 파일 머리말 참고.
-카테고리 아이콘(BANB-24) 로컬 확인(Docker): `bash supabase/seed/check_category_icon.sh` — 기존 가계부에 마이그레이션 적용 시 기본 70개 채움·이름 바꾼/직접 만든 것은 비움, 새 가계부 70개, check_applied `category_icon=true`.
+카테고리 아이콘(BANB-24) 로컬 확인(Docker): `bash supabase/seed/check_category_icon.sh` — 기존 가계부에 마이그레이션 적용 시 기본 70개 채움·이름 바꾼/직접 만든 것은 비움, 새 가계부 70개, check_applied `category_icon=true`. (BANB-24 시점까지의 마이그레이션 기준)
+
+카테고리 간소화(BANB-36) 로컬 확인(Docker): `bash supabase/seed/check_category_simplify.sh` — 옛 기본값 가계부에 내역을 넣고 적용 → 적용 전/후 조회 결과 같음(`supabase/seed/out/`에 남김), 쓰인 것 유지·안 쓴 옛 기본값만 숨김·직접 만든 것 유지, 기본 20개 추가·순서, 다시 실행해도 변경 0, 새 가계부 40개, check_applied `category_simplify=true`.
 
 로컬 확인(Docker): `bash supabase/seed/check_qa_assets_v4.sh` — 기존 자산 이력 채우기, check_applied, 설정 없을 때 거부, v4 기대값(월말·현재 순자산, 사람별)을 SQL로 계산해 비교.
 
@@ -178,6 +181,6 @@ npm run dev                  # http://localhost:5173
   - 보관된 가계부의 초대 코드로는 참여 불가(`INVITE_NOT_FOUND`)
 - 다른 가계부의 카테고리·주머니·멤버는 참조 불가 (복합 외래키)
 - 사용 중인 카테고리·주머니는 삭제 불가 → 숨김 처리
-- 가계부 생성 시 기본 카테고리(대분류 27 / 소분류 43)와 기본 주머니 4개 자동 생성
+- 가계부 생성 시 기본 카테고리(대분류 20 + 같은 이름 소분류 20, BANB-36)와 기본 주머니 4개 자동 생성. 화면은 대분류만 보이고(한 단계), 같은 이름 소분류는 대분류 자체 선택지로 쓴다
 - 이름(가계부·멤버·카테고리·주머니·자산) 1~20자, 메모 100자
 - 테이블 권한은 기본값에 기대지 않고 마이그레이션에서 명시적으로 부여

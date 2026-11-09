@@ -8,9 +8,10 @@
 --           member_limit_4 = true (20261106140000 마이그레이션: 기본 상한 4, 기존 가계부 모두 4, 멤버는 못 바꿈)
 --           multi_ledger = true (20261106150000 마이그레이션: 1인 1가계부 제거, 1인 상한 5, 마지막으로 본 가계부, leave_ledger(uuid))
 --           asset_net_worth = true (20261106160000 마이그레이션: 자산 종류 12개, 보관, 잔액 이력 트리거, 이력 직접 쓰기·자산 삭제 불가)
---           category_icon = true (20261106170000 마이그레이션: category.icon 컬럼·기본 매핑 함수, 새 가계부 기본값에 아이콘)
+--           category_icon = true (20261106170000 마이그레이션: category.icon 컬럼·기본 매핑 함수, 새 가계부 기본값에 아이콘 — 20261109000000 이후 기본값은 default_categories_v2)
 --           history_window = true (20261106180000 마이그레이션: 잔액 이력 범위 조회 함수, 로그인 사용자만 실행·권한 규칙 그대로)
 --           profile_theme = true (20261106190000 마이그레이션: profile.theme 기본 clean·허용 값 3종, set_my_theme 로그인 사용자만, profile 직접 수정 불가 그대로)
+--           category_simplify = true (20261109000000 마이그레이션: 새 기본 카테고리 20개, 모든 가계부에 기본 20개 대분류, 목록 함수 직접 실행 불가)
 --           (asset_balance_history 행이 추가되어 10행. 이력 테이블 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
@@ -56,7 +57,7 @@ select c.relname                                          as table_name,
        (exists (select 1 from information_schema.columns
                  where table_schema = 'public' and table_name = 'category' and column_name = 'icon')
         and to_regprocedure('public.default_category_icon(text,text,text)') is not null
-        and (select prosrc like '%default_category_icon%' from pg_proc
+        and (select prosrc like '%icon%' from pg_proc
               where oid = 'public.seed_ledger_defaults(uuid)'::regprocedure)
         and not has_function_privilege('authenticated', 'public.default_category_icon(text,text,text)', 'execute')) as category_icon,
        (to_regprocedure('public.asset_balance_history_window(uuid,timestamptz)') is not null
@@ -71,7 +72,17 @@ select c.relname                                          as table_name,
         and has_function_privilege('authenticated', 'public.set_my_theme(text)', 'execute')
         and not has_function_privilege('anon', 'public.set_my_theme(text)', 'execute')
         and not has_table_privilege('authenticated', 'public.profile', 'update')
-        and not exists (select 1 from public.profile where theme not in ('clean', 'berry', 'cozy'))) as profile_theme
+        and not exists (select 1 from public.profile where theme not in ('clean', 'berry', 'cozy'))) as profile_theme,
+       (to_regprocedure('public.default_categories_v2()') is not null
+        and (select count(*) from public.default_categories_v2()) = 20
+        and (select prosrc like '%default_categories_v2%' from pg_proc
+              where oid = 'public.seed_ledger_defaults(uuid)'::regprocedure)
+        and not has_function_privilege('authenticated', 'public.default_categories_v2()', 'execute')
+        -- 모든 가계부에 새 기본 20개(같은 이름 대분류)가 있다
+        and not exists (select 1 from public.ledger l cross join public.default_categories_v2() d
+                         where not exists (select 1 from public.category p where p.ledger_id = l.id and p.type = d.type
+                                             and p.parent_id is null and p.name = d.name))
+       ) as category_simplify
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
