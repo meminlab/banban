@@ -1,15 +1,11 @@
 import { Calendar, List, ListFilter } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import {
-  transactionPath,
-  type LedgerFlash,
-  type TransactionFormState,
-} from '../app/routes';
-import { CategoryIcon } from '../components/CategoryIcon';
+import { type LedgerFlash, type TransactionFormState } from '../app/routes';
 import { MonthNav } from '../components/MonthNav';
 import { Sheet } from '../components/Sheet';
+import { TxRow, useTxLabels, type TxLabels } from '../components/TxRow';
 import { getTransactionFormOptions, listMonthTransactions, type TransactionFormOptions } from '../data/transaction';
 import type { Transaction, TransactionType } from '../data/types';
 import {
@@ -32,8 +28,6 @@ import {
   spenderFilterOptions,
   sumExpense,
   toggleFilter,
-  txRowText,
-  UNKNOWN_CATEGORY,
   type DayTotals,
   type FilterKey,
   type FilterOption,
@@ -42,14 +36,12 @@ import {
 } from '../domain/ledgerView';
 import { addMonths, formatYearMonth, isInMonth, type YearMonth } from '../domain/month';
 import { MINUS } from '../domain/format';
-import { TYPE_LABEL, TYPE_ORDER, formatNumber, memberLabel, todayKST } from '../domain/transactionForm';
+import { TYPE_LABEL, TYPE_ORDER, formatNumber, todayKST } from '../domain/transactionForm';
 
 const FLASH_TEXT: Record<LedgerFlash, string> = {
   saved: '저장했어요.',
   deleted: '삭제했어요.',
 };
-
-const SIGN: Record<TransactionType, string> = { expense: '−', income: '+', saving: '' };
 
 type MonthData = { month: YearMonth; items: Transaction[]; options: TransactionFormOptions };
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: MonthData };
@@ -74,16 +66,6 @@ function useMonthTransactions(ledgerId: string, month: YearMonth) {
   // 달을 바꾼 직후 지난 달 데이터를 새 달 이름으로 보여 주지 않게
   const current: LoadState = state.status === 'ready' && state.data.month !== month ? { status: 'loading' } : state;
   return { state: current, retry };
-}
-
-/** 금액: 숫자+"원"을 한 덩어리로 (숫자 중간에서 줄바꿈하지 않음) */
-function Money({ amount, type }: { amount: number; type?: TransactionType }) {
-  return (
-    <span className="money">
-      {type ? SIGN[type] : ''}
-      {formatNumber(amount)}원
-    </span>
-  );
 }
 
 /**
@@ -232,39 +214,6 @@ function filterResultText(items: Transaction[], types: TransactionType[]): strin
 
 // ── 내역 한 줄
 
-function useLabels(options: TransactionFormOptions) {
-  return useMemo(() => {
-    const categoryById = new Map(options.categories.map((c) => [c.id, c]));
-    const memberById = new Map(options.members.map((m) => [m.id, m]));
-    return (t: Transaction) => {
-      const category = categoryById.get(t.category_id);
-      const parent = category?.parent_id ? categoryById.get(category.parent_id) : null;
-      return { ...txRowText(t, categoryById, memberLabel(memberById.get(t.spender_id))), category, parent };
-    };
-  }, [options]);
-}
-
-type Labels = ReturnType<typeof useLabels>;
-
-/** 내역 행 (design.md 5.3 v1.4): [아이콘] 제목(메모·소분류) / "대분류 · 사람" — 배지 없음. 금액은 수입만 포인트 색 */
-function TxRow({ t, labels, returnState }: { t: Transaction; labels: Labels; returnState: TransactionFormState }) {
-  const { title, sub, category, parent } = labels(t);
-  return (
-    <li>
-      <Link to={transactionPath(t.id)} state={returnState} className="tx-row">
-        <CategoryIcon category={category ?? { name: UNKNOWN_CATEGORY, icon: null }} parent={parent} />
-        <span className="tx-row__main">
-          <span className="tx-row__title">{title}</span>
-          {sub && <span className="tx-row__sub">{sub}</span>}
-        </span>
-        <span className={`tx-row__amount tx-row__amount--${t.type}`}>
-          <Money amount={t.amount} type={t.type} />
-        </span>
-      </Link>
-    </li>
-  );
-}
-
 /** 날짜 하루 = 카드 1장. 머리 "11월 6일 (금)" + 오른쪽 그날 지출 합(지출 없는 날은 비움) */
 function DayCard({
   date,
@@ -275,7 +224,7 @@ function DayCard({
 }: {
   date: string;
   items: Transaction[];
-  labels: Labels;
+  labels: TxLabels;
   returnState: TransactionFormState;
   titleId: string;
 }) {
@@ -321,7 +270,7 @@ function MonthList({
   options: TransactionFormOptions;
   returnState: TransactionFormState;
 }) {
-  const labels = useLabels(options);
+  const labels = useTxLabels(options);
   const groups = useMemo(() => groupByDate(items), [items]);
   return (
     <div className="day-groups">
@@ -364,7 +313,7 @@ function CalendarView({
   onResetFilter: () => void;
   filtered: boolean;
 }) {
-  const labels = useLabels(options);
+  const labels = useTxLabels(options);
   const weeks = useMemo(() => calendarWeeks(month), [month]);
   const totals = useMemo(() => dailyTotals(items, month), [items, month]);
   const today = todayKST();

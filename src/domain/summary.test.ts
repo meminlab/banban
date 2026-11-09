@@ -121,13 +121,11 @@ describe('computeMonthSummary', () => {
     ]);
   });
 
-  it('카테고리 대분류 상위 5개 (소분류 합산, 금액 큰 순)', () => {
+  it('카테고리 대분류 상위 3개 (소분류 합산, 금액 큰 순)', () => {
     expect(s.expenseBy.topCategories.map((r) => [r.label, r.amount])).toEqual([
       ['주거', 1200000],
       ['식비', 120000],
       ['통신', 65000],
-      ['교통', 30000],
-      ['생활', 20000],
     ]);
   });
 

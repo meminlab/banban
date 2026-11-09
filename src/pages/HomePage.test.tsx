@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { vi } from 'vitest';
 import type { MonthSummaryData } from '../data/summary';
 import type { Asset, AssetBalanceHistory, AssetKind } from '../data/types';
@@ -11,6 +11,28 @@ const fake = vi.hoisted(() => ({
 }));
 vi.mock('../data/summary', () => ({ getMonthSummaryData: (l: string, m: string) => fake.get(l, m) }));
 vi.mock('../app/guards', () => ({ useLedgerId: () => 'ledger-1' }));
+
+const txDb = vi.hoisted(() => ({
+  latest: vi.fn<(ledgerId: string, month: string, limit: number) => Promise<unknown[]>>(),
+}));
+vi.mock('../data/transaction', () => ({
+  listLatestTransactions: (l: string, m: string, n: number) => txDb.latest(l, m, n),
+  getTransactionFormOptions: async () => ({
+    categories: [
+      { id: 'food', ledger_id: 'ledger-1', type: 'expense', parent_id: null, name: '식비', sort_order: 1, is_hidden: false, icon: 'utensils', created_at: '' },
+      { id: 'food.out', ledger_id: 'ledger-1', type: 'expense', parent_id: 'food', name: '외식', sort_order: 1, is_hidden: false, icon: null, created_at: '' },
+    ],
+    pockets: [],
+    members: [
+      { id: 'mA', ledger_id: 'ledger-1', user_id: 'u1', role: 'owner', display_name: '김', joined_at: '2026-11-01', left_at: null },
+      { id: 'mB', ledger_id: 'ledger-1', user_id: 'u2', role: 'member', display_name: '반', joined_at: '2026-11-02', left_at: null },
+    ],
+  }),
+}));
+const recentTx = (id: string, memo: string | null, amount: number, occurred_on: string) => ({
+  id, ledger_id: 'ledger-1', type: 'expense', amount, occurred_on, category_id: 'food.out', pocket_id: 'p1', spender_id: 'mB',
+  is_fixed: false, memo, source: 'manual', created_by: 'mB', updated_by: 'mB', created_at: `${occurred_on}T00:00:00Z`, updated_at: '',
+});
 
 const assetDb = vi.hoisted(() => ({
   assets: [] as Asset[],
@@ -44,7 +66,12 @@ vi.mock('../data/asset', () => ({
   },
 }));
 
-/** 홈은 링크(자산 탭·자산 추가)가 있어 라우터 안에서 그린다 */
+function LedgerProbe() {
+  const { search } = useLocation();
+  return <p>가계부 탭 화면{search}</p>;
+}
+
+/** 홈은 링크(자산 탭·자산 추가·가계부 탭·수정 화면)가 있어 라우터 안에서 그린다 */
 function HomePage() {
   return (
     <MemoryRouter initialEntries={['/']}>
@@ -52,6 +79,8 @@ function HomePage() {
         <Route path="/" element={<HomePageInner />} />
         <Route path="/assets" element={<p>자산 탭 화면</p>} />
         <Route path="/assets/new" element={<p>자산 추가 화면</p>} />
+        <Route path="/ledger" element={<LedgerProbe />} />
+        <Route path="/ledger/:id" element={<p>수정 화면</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -91,6 +120,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-11-06T03:00:00Z'));
   fake.get.mockReset();
+  txDb.latest.mockReset().mockResolvedValue([]);
   assetDb.assets = [];
   assetDb.history = [];
   assetDb.fail = 0;
@@ -121,16 +151,11 @@ describe('홈: 월 요약', () => {
     expect(within(who).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['김 250,000원', '반 750,000원']);
     expect(who).not.toHaveTextContent('%');
 
-    // 사람별은 누가 썼나로 옮겼고, 나머지 나눠 보기는 그대로 (결정 대기, BANB-37)
+    // 지출 나눠 보기는 없다 → 어디에 썼나(대분류 상위 3) (BANB-37 기획 결정 ③)
+    expect(screen.queryByRole('region', { name: '지출 나눠 보기' })).toBeNull();
     expect(screen.queryByRole('list', { name: '사람별' })).toBeNull();
-    const scope = screen.getByRole('list', { name: '공동·개인' });
-    expect(within(scope).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
-      '공동750,000원75%',
-      '개인250,000원25%',
-    ]);
-    expect(screen.getByRole('list', { name: '주머니별' })).toHaveTextContent('공동소비750,000원75%');
-    expect(screen.getByRole('list', { name: '고정·변동' })).toHaveTextContent('고정750,000원75%변동250,000원25%');
-    expect(screen.getByRole('list', { name: '카테고리 상위 5개' })).toHaveTextContent('식비1,000,000원100%');
+    const where = screen.getByRole('region', { name: '어디에 썼나' });
+    expect(within(where).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['식비1,000,000원']);
   });
 
   it('지금 멤버가 1명이면 누가 썼나를 숨긴다 (나간 멤버는 세지 않음)', async () => {
@@ -156,7 +181,40 @@ describe('홈: 월 요약', () => {
     expect(remainingOf()).toHaveTextContent(/^0원$/);
     expect(card).toHaveTextContent('이 달에 입력한 내역이 없어요.');
     expect(within(screen.getByRole('region', { name: '누가 썼나' })).getByText('이 달 지출이 없어요.')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: '지출 나눠 보기' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '어디에 썼나' })).toBeNull(); // 지출 없으면 숨김
+    expect(screen.queryByRole('region', { name: '최근 내역' })).toBeNull(); // 내역 없으면 숨김
+  });
+
+  it('어디에 썼나: 상위 3개만, "전체"는 같은 달 가계부 탭 목록', async () => {
+    const categories = ['a', 'b', 'c', 'd'].map((id, i) => ({ id, parent_id: null, name: `분류${id}`, sort_order: i }));
+    const transactions = [400, 300, 200, 100].map((amount, i) => ({
+      type: 'expense' as const, amount, occurred_on: `${'2026-10'}-0${i + 1}`, category_id: ['a', 'b', 'c', 'd'][i], pocket_id: 'p1', spender_id: 'mA', is_fixed: false,
+    }));
+    fake.get.mockImplementation(async () => ({ ...REFS, categories, transactions }));
+    const user = userEvent.setup();
+    render(<HomePage />);
+    await screen.findByRole('region', SUMMARY);
+    await user.click(screen.getByRole('button', { name: '이전 달' }));
+    const where = await screen.findByRole('region', { name: '어디에 썼나' });
+    expect(within(where).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['분류a400원', '분류b300원', '분류c200원']);
+    await user.click(within(where).getByRole('link', { name: '10월 내역 전체 보기' }));
+    expect(screen.getByText('가계부 탭 화면?month=2026-10')).toBeInTheDocument();
+  });
+
+  it('최근 내역: 그 달 최근 3건, 행은 가계부 탭 내역 행과 같고 누르면 수정 화면', async () => {
+    fake.get.mockImplementation(async (_l, m) => data(m));
+    txDb.latest.mockResolvedValue([recentTx('r1', '저녁', 32000, '2026-11-05'), recentTx('r2', null, 12000, '2026-11-04')]);
+    const user = userEvent.setup();
+    render(<HomePage />);
+    const recent = await screen.findByRole('region', { name: '최근 내역' });
+    expect(txDb.latest).toHaveBeenCalledWith('ledger-1', '2026-11', 3);
+    const rows = within(recent).getAllByRole('link');
+    expect(rows.map((a) => a.querySelector('.tx-row__main')!.textContent + a.querySelector('.tx-row__amount')!.textContent)).toEqual([
+      '저녁식비 · 반−32,000원',
+      '외식식비 · 반−12,000원',
+    ]);
+    await user.click(rows[0]);
+    expect(screen.getByText('수정 화면')).toBeInTheDocument();
   });
 
   it('이전 달 / 다음 달로 이동하면 그 달을 다시 불러온다 (연도 넘김)', async () => {

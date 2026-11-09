@@ -116,14 +116,13 @@ button { font: inherit; }
 .tabbar__add:focus-visible { outline-offset: 2px; }
 
 /* 탭 화면 카드 공통 — 강조 표현 토큰(design.md 1.5)만 쓴다. 클린: 화면 끝까지·모서리 0·그림자 없음 */
-.shell--tabs :is(.summary-card, .asset-card, .home-nw, .home .who-spent, .home .breakdown, .ledger .day-group) {
+.shell--tabs :is(.summary-card, .asset-card, .home-nw, .home .who-spent, .home .where-spent, .home .recent, .ledger .day-group) {
   margin-inline: calc(var(--card-gutter) - var(--content-pad));
   border: var(--card-border);
   border-radius: var(--card-radius);
   background: var(--color-surface);
   box-shadow: var(--card-shadow);
 }
-.shell--tabs .home .breakdown { padding: 16px; }
 
 .placeholder {
   padding: 32px 16px;
@@ -237,7 +236,7 @@ button { font: inherit; }
 .home__status { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0; color: var(--color-text-sub); text-align: center; }
 .home__status p { margin: 0; line-height: 1.5; }
 .home__empty { margin: 12px 0 0; color: var(--color-text-sub); }
-/* 요약 카드 바탕·라벨은 테마 토큰(design.md 1.1 hero-bg/hero-label). 위 공통 카드 규칙(:is 안 .home .breakdown 때문에 0,3,0)의 surface를 덮도록 같은 무게로 쓴다 (BANB-34) */
+/* 요약 카드 바탕·라벨은 테마 토큰(design.md 1.1 hero-bg/hero-label). 위 공통 카드 규칙(:is 안 .home .who-spent 등 때문에 0,3,0)의 surface를 덮도록 같은 무게로 쓴다 (BANB-34) */
 .shell--tabs .home .summary-card { background: var(--color-hero-bg); }
 
 /* 이번 달 카드 (design.md 5.23 홈 3): 라벨 / hero 금액 / 한 줄 요약 — 3줄 */
@@ -268,23 +267,26 @@ button { font: inherit; }
 .who-spent__color--3 { background: var(--color-member-3); }
 .who-spent__color--4 { background: var(--color-member-4); }
 
-.breakdown { display: flex; flex-direction: column; gap: 16px; }
-.breakdown__title { margin: 0; font-size: 1rem; }
-.breakdown__group h3 { margin: 0 0 8px; font-size: 0.875rem; color: var(--color-text-sub); font-weight: 700; }
-.breakdown__group ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
-.breakdown__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 3.5em;
-  align-items: baseline;
-  column-gap: 8px;
-  row-gap: 4px;
-  font-variant-numeric: tabular-nums;
-}
-.breakdown__label { overflow-wrap: anywhere; }
-.breakdown__amount { font-weight: 700; text-align: right; white-space: nowrap; }
-.breakdown__ratio { color: var(--color-text-sub); text-align: right; font-size: 0.875rem; }
-.breakdown__bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--color-chart-track); overflow: hidden; }
-.breakdown__bar > span { display: block; height: 100%; background: var(--color-chart-bar); }
+/* 홈 카드 머리: 제목 17/700 + 오른쪽 "전체 ›" (44 영역) */
+.home-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.home-card__title { margin: 0; font-size: 1.0625rem; font-weight: 700; }
+.home-card__more { min-height: 44px; display: inline-flex; align-items: center; gap: 2px; margin: -12px -8px -12px 0; padding: 0 8px; color: var(--color-text-sub); font-size: 0.875rem; font-weight: 600; text-decoration: none; }
+.home-card__more:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+
+/* 어디에 썼나 (design.md 5.4 3번): 제목 / 대분류 상위 3개 막대 (chart-bar 단색) */
+.where-spent { display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+.where-spent__list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.where-spent__row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 8px; font-size: 0.9375rem; }
+.where-spent__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.where-spent__amount { font-weight: 700; }
+.where-spent__bar { grid-column: 1 / -1; height: 8px; border-radius: var(--radius-full); background: var(--color-chart-track); overflow: hidden; }
+.where-spent__bar > span { display: block; height: 100%; border-radius: inherit; background: var(--color-chart-bar); }
+
+/* 최근 내역 (design.md 5.4 4번): 카드 1장, 행은 가계부 탭 내역 행과 같다 */
+.recent { display: flex; flex-direction: column; gap: 4px; padding: 20px 20px 8px; }
+.recent .tx-list { padding-bottom: 0; }
+.recent .hint { margin: 8px 0; }
+.recent .button { align-self: flex-start; margin-bottom: 12px; }
 
 /* ── 공통 버튼 보조 */
 .button--small { min-height: 44px; padding: 0 14px; font-size: 0.9375rem; }
