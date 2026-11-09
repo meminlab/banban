@@ -269,6 +269,8 @@ describe('홈: 월 요약', () => {
       '저녁식비 · 반−32,000원',
       '외식식비 · 반−12,000원',
     ]);
+    // 행 앞 카테고리 아이콘 원 40 (design.md 4.1 목록 행, BANB-32)
+    rows.forEach((a) => expect(a.querySelector('.cat-icon--row')).not.toBeNull());
     await user.click(rows[0]);
     expect(screen.getByText('수정 화면')).toBeInTheDocument();
   });

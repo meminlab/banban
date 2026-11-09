@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { type TransactionFormState } from '../app/routes';
+import { CategoryCheckGrid } from '../components/CategoryPicker';
 import { MonthNav } from '../components/MonthNav';
 import { Sheet } from '../components/Sheet';
 import { TxRow, useTxLabels, type TxLabels } from '../components/TxRow';
@@ -443,7 +444,7 @@ function FilterSheet({
       />
       <FilterChips legend="사람" options={spenders} selected={filter.spenders} onToggle={toggle('spenders')} />
       {categoryGroups.map((g) => (
-        <FilterChips
+        <CategoryCheckGrid
           key={g.type}
           legend={`${TYPE_LABEL[g.type]} 카테고리`}
           options={g.options}

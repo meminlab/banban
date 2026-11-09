@@ -119,6 +119,45 @@ export function CategoryPicker({
   );
 }
 
+/**
+ * 가계부 탭 필터의 카테고리 고르기 (BANB-32, design.md 5.17 격자 모양).
+ * 여러 개 고르기(checkbox). 선택 표시는 선택 시트와 같다(primary 원 + Check 배지 + 이름 700).
+ * 필터라서 "추가" 칸·자주 쓰는 순서·"전체 보기"·두 번째 단계(소분류)는 없다 — 대분류 단위, 기본 순서.
+ */
+export function CategoryCheckGrid({
+  legend,
+  options,
+  selected,
+  onToggle,
+}: {
+  legend: string;
+  options: { id: string; label: string; category: Pick<Category, 'name' | 'icon'> }[];
+  selected: readonly string[];
+  onToggle: (id: string) => void;
+}) {
+  if (options.length === 0) return null;
+  return (
+    <fieldset className="manage-sheet__section filter-group">
+      <legend className="manage-sheet__label">{legend}</legend>
+      <div className="cat-grid cat-grid--check">
+        {options.map((o) => {
+          const checked = selected.includes(o.id);
+          return (
+            <label key={o.id} className={`cat-cell${checked ? ' is-selected' : ''}`}>
+              <input type="checkbox" className="visually-hidden" checked={checked} onChange={() => onToggle(o.id)} />
+              <span className="cat-cell__circle">
+                <CategoryIcon category={o.category} size="grid" />
+                {checked && <CheckBadge />}
+              </span>
+              <span className="cat-cell__name">{o.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 function CheckBadge() {
   return (
     <span className="cat-cell__check" aria-hidden="true">

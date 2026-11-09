@@ -34,7 +34,7 @@ const CATEGORIES: Category[] = [
   c('food', 'expense', null, '식비', 1),
   c('food-out', 'expense', 'food', '외식', 1),
   c('food-mart', 'expense', 'food', '장보기', 2),
-  c('home', 'expense', null, '주거', 2),
+  { ...c('home', 'expense', null, '주거', 2), icon: 'house' },
   c('home-rent', 'expense', 'home', '월세'),
   c('salary', 'income', null, '급여'),
   c('salary-1', 'income', 'salary', '급여'),
@@ -225,6 +225,48 @@ describe('가계부 탭: 필터', () => {
     renderAt('/ledger?type=income');
     await screen.findByRole('heading', { name: '11월 5일 (목)' });
     expect(screen.getByText('필터 결과 1건 · 수입 3,000,000')).toBeInTheDocument();
+  });
+});
+
+describe('카테고리 아이콘 (BANB-32)', () => {
+  it('내역 행 아이콘 원 40: 자기 아이콘 없으면 대분류 아이콘 → 그것도 없으면 이름 첫 글자', async () => {
+    renderAt('/ledger');
+    await screen.findByRole('heading', { name: '11월 5일 (목)' });
+    const row = (name: RegExp) => listItems().find((a) => name.test(a.textContent!))!;
+    // 월세(아이콘 없음) → 대분류 주거의 house 아이콘
+    const rent = row(/월세/).querySelector('.cat-icon--row')!;
+    expect(rent.querySelector('svg')).not.toBeNull();
+    expect(rent.querySelector('.cat-icon__letter')).toBeNull();
+    // 외식(아이콘 없음, 대분류 식비도 없음) → 첫 글자
+    expect(row(/저녁/).querySelector('.cat-icon--row .cat-icon__letter')).toHaveTextContent('외');
+  });
+
+  it('필터의 카테고리는 아이콘 격자: 여러 개 고르고 풀 수 있고, 선택 표시는 원 + Check 배지. 추가 칸 없음', async () => {
+    const user = userEvent.setup();
+    renderAt('/ledger');
+    await screen.findByRole('heading', { name: '11월 5일 (목)' });
+    await user.click(screen.getByRole('button', { name: '필터' }));
+    const sheet = screen.getByRole('dialog', { name: '필터' });
+    const expense = within(sheet).getByRole('group', { name: '지출 카테고리' });
+    expect(expense.querySelectorAll('.cat-cell .cat-icon--grid')).toHaveLength(2); // 식비·주거 (숨긴 옛분류는 안 쓰였으면 없음)
+    expect(within(sheet).queryByText('추가')).not.toBeInTheDocument();
+    expect(within(sheet).queryByText(/전체 보기/)).not.toBeInTheDocument();
+
+    const food = within(expense).getByRole('checkbox', { name: '식비' });
+    const home = within(expense).getByRole('checkbox', { name: '주거' });
+    await user.click(food);
+    await user.click(home);
+    expect(food).toBeChecked();
+    expect(home).toBeChecked();
+    expect(food.closest('.cat-cell')).toHaveClass('is-selected');
+    expect(food.closest('.cat-cell')!.querySelector('.cat-cell__check')).not.toBeNull();
+    expect(within(sheet).getByRole('button', { name: '3건 보기' })).toBeInTheDocument();
+
+    await user.click(home); // 풀기
+    expect(home.closest('.cat-cell')).not.toHaveClass('is-selected');
+    expect(home.closest('.cat-cell')!.querySelector('.cat-cell__check')).toBeNull();
+    await user.click(within(sheet).getByRole('button', { name: '2건 보기' }));
+    expect(screen.getByText('필터 결과 2건 · 지출 82,000')).toBeInTheDocument();
   });
 });
 
