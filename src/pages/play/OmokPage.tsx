@@ -84,7 +84,10 @@ type RoomState =
 function useGameRoom(gameId: string, me: string | null) {
   const [state, setState] = useState<RoomState>({ status: 'loading' });
   const [present, setPresent] = useState<string[] | null>(null);
-  const [connected, setConnected] = useState(true);
+  // 연결 상태는 두 가지를 따로 본다: 기기 오프라인(online/offline 이벤트) · 실시간 채널 끊김(채널 상태).
+  // 짧은 끊김에서는 채널이 끊긴 적 없이 그대로일 수 있어, 기기 쪽이 돌아오면 그것만으로 풀려야 한다 (QA BANB-49 주요 결함)
+  const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && navigator.onLine === false);
+  const [channelDown, setChannelDown] = useState(false);
   const [resyncs, setResyncs] = useState(0);
   const seq = useRef(0);
 
@@ -102,9 +105,16 @@ function useGameRoom(gameId: string, me: string | null) {
   useEffect(() => {
     load();
     const onVisible = () => document.visibilityState === 'visible' && load();
-    const onOffline = () => setConnected(false);
+    const onOffline = () => setOffline(true);
+    // 다시 온라인: 서버 판으로 맞추고(그사이 놓친 수) 고른 칸은 해제(resyncs)
+    const onOnline = () => {
+      setOffline(false);
+      setResyncs((n) => n + 1);
+      load();
+    };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnline);
     let stop = () => {};
     if (me) {
       try {
@@ -122,7 +132,7 @@ function useGameRoom(gameId: string, me: string | null) {
             setResyncs((n) => n + 1);
             load();
           },
-          onConnected: setConnected,
+          onConnected: (up) => setChannelDown(!up),
         });
       } catch {
         // 실시간을 열지 못해도 판은 보인다 (다시 열면 맞춰진다)
@@ -132,6 +142,7 @@ function useGameRoom(gameId: string, me: string | null) {
       stop();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnline);
     };
   }, [gameId, me, load]);
 
@@ -150,7 +161,7 @@ function useGameRoom(gameId: string, me: string | null) {
     });
   }, []);
 
-  return { state, present, connected, resyncs, load, apply };
+  return { state, present, connected: !offline && !channelDown, resyncs, load, apply };
 }
 
 /** 오목 한 판: 대기실 / 대국 / 결과 (BANB-49, design.md 5.28~5.31) */
