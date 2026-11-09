@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반반 같이 놀기 — 홈 카드·초대·대기실·오목 판·결과 시안 (BANB-48)</title>
+<!-- 미리보기 전용 CDN. 앱은 npm pretendard / lucide-react 로 번들한다 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<style>
+/* 클린 라이트·다크 토큰 (design.md 1.1·1.6 그대로) + v1.7 새 토큰 game-* / stone-* (1.7) */
+[data-theme="clean"]{--color-bg:#F2F4F6;--color-surface:#FFFFFF;--color-surface-sunken:#F2F4F6;--color-border:#E5E8EB;--color-border-strong:#878E98;--color-text:#191C21;--color-text-sub:#5F6670;--color-text-weak:#69707A;--color-primary:#007F55;--color-primary-strong:#006B47;--color-primary-soft:#E6F4EE;--color-on-primary:#FFFFFF;--scrim:rgb(15 16 18 / .45);
+  --color-event-together:#FFDCCF;--color-event-1:#D6E4FF;--color-event-2:#FFEDA8;--color-event-3:#E6DBFF;--color-event-4:#CFEDE4;
+  --color-game-board:#EFDDB8;--color-game-line:#8C7350;--color-stone-black:#1E1D1F;--color-stone-white:#FFFFFF;--color-stone-edge:#7A6A55;
+  --card-gutter:0px;--card-radius:0px;--control-radius:12px;}
+[data-theme="clean"][data-mode="dark"]{--color-bg:#0D1311;--color-surface:#161E1B;--color-surface-sunken:#202A26;--color-border:#2C3833;--color-border-strong:#74827C;--color-text:#EEF4F1;--color-text-sub:#B1BEB8;--color-text-weak:#909D97;--color-primary:#3FC08A;--color-primary-strong:#7ADBB0;--color-primary-soft:#14402D;--color-on-primary:#04140D;--scrim:rgb(0 0 0 / .6);
+  --color-event-together:#6B3328;--color-event-1:#26406B;--color-event-2:#4F5216;--color-event-3:#3E3168;--color-event-4:#164A40;
+  --color-game-board:#5A4A35;--color-game-line:#B39D79;--color-stone-black:#121113;--color-stone-white:#F4EFE6;--color-stone-edge:#B39D79;}
+* { box-sizing:border-box; }
+body { margin:0; padding:28px; background:#D9DBDF; font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif; word-break:keep-all; color:#1D1F23; }
+h1 { font-size:24px; margin:0 0 4px; } .lead { margin:0 0 8px; font-size:15px; color:#4A4F57; max-width:1100px; line-height:22px; }
+h2 { font-size:17px; margin:28px 0 10px; }
+.row { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+.cap { font-size:13px; font-weight:600; color:#4A4F57; margin:0 0 8px 4px; }
+.anno { font-size:13px; color:#33373D; width:330px; margin:0; padding-left:18px; line-height:20px; }
+.phone { width:360px; height:760px; position:relative; overflow:hidden; border-radius:28px; box-shadow:0 10px 36px rgb(0 0 0 / .18); background:var(--color-bg); color:var(--color-text); }
+.money, .num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+.acc { color:var(--color-primary-strong); }
+svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
+.ib { width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); flex:none; }
+.hdr { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 12px; z-index:2; }
+.lsw { display:flex; align-items:center; gap:6px; height:40px; padding:0 10px 0 14px; border-radius:999px; background:var(--color-surface-sunken); font-weight:700; font-size:16px; }
+.lsw svg { width:18px; height:18px; color:var(--color-text-sub); }
+.sh { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; padding:0 8px; gap:4px; z-index:2; } .sh b { font-size:18px; font-weight:600; flex:1; }
+.sh .ib { color:var(--color-text); }
+.tbtn { height:44px; padding:0 10px; display:flex; align-items:center; gap:4px; font-size:15px; font-weight:600; color:var(--color-text-sub); }
+.tbtn svg { width:18px; height:18px; }
+.scroll { position:absolute; top:56px; left:0; right:0; bottom:64px; overflow:hidden; }
+.stack { padding:0 0 24px; display:flex; flex-direction:column; gap:12px; }
+.card { margin:0 var(--card-gutter); background:var(--color-surface); border-radius:var(--card-radius); padding:20px; }
+.mrow { height:48px; display:flex; align-items:center; justify-content:center; gap:2px; font-weight:700; font-size:17px; }
+.mrow .ib { color:var(--color-text); }
+.k { font-size:15px; font-weight:500; color:var(--color-text-sub); display:flex; align-items:center; gap:6px; }
+.k .go { margin-left:auto; color:var(--color-text-weak); display:flex; }
+.big { font-size:28px; line-height:36px; font-weight:700; letter-spacing:-0.02em; margin-top:4px; }
+.sub { font-size:14px; color:var(--color-text-sub); margin-top:6px; line-height:20px; }
+.sub b { font-weight:700; color:var(--color-text); }
+.t18 { font-size:18px; line-height:26px; font-weight:700; letter-spacing:-0.01em; margin-top:6px; }
+.tabbar { position:absolute; left:0; right:0; bottom:0; height:64px; background:var(--color-surface); border-top:1px solid var(--color-border); display:grid; grid-template-columns:1fr 1fr 64px 1fr 1fr; align-items:center; padding:0 4px; z-index:2; }
+.tab { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; color:var(--color-text-sub); }
+.tab .pill { width:52px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.tab .pill svg { width:24px; height:24px; stroke-width:1.75; }
+.tab.on { color:var(--color-text); font-weight:700; } .tab.on .pill { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.plus { width:52px; height:52px; border-radius:18px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; justify-self:center; }
+.plus svg { width:26px; height:26px; }
+.nudge { display:flex; align-items:center; height:52px; padding:0 4px 0 20px; background:var(--color-surface); font-size:15px; font-weight:600; gap:8px; }
+.nudge svg.lead { color:var(--color-primary); }
+.nudge .go { display:flex; color:var(--color-text-weak); }
+.nudge .x { margin-left:auto; }
+/* 아바타 = 일정 색(1.6) + 이니셜, 돌 표시 */
+.av { width:32px; height:32px; border-radius:99px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--color-text); flex:none; position:relative; }
+.av.l { width:56px; height:56px; font-size:20px; }
+.av .st { position:absolute; right:-2px; bottom:-2px; width:14px; height:14px; border-radius:99px; box-shadow:0 0 0 2px var(--color-surface), inset 0 0 0 1px var(--color-stone-edge); }
+.av.l .st { width:20px; height:20px; }
+.st.b { background:var(--color-stone-black); } .st.w { background:var(--color-stone-white); }
+.e-1 { background:var(--color-event-1); } .e-2 { background:var(--color-event-2); }
+/* 버튼 */
+.btn1 { height:52px; border-radius:var(--control-radius); background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; gap:6px; font-size:16px; font-weight:700; }
+.btn1.m, .btn2.m { height:44px; font-size:15px; }
+.btn1.off { background:var(--color-surface-sunken); color:var(--color-text-weak); }
+.btn2 { height:52px; border-radius:var(--control-radius); border:1px solid var(--color-border-strong); background:var(--color-surface); display:flex; align-items:center; justify-content:center; gap:6px; font-size:16px; font-weight:600; color:var(--color-text); }
+.btns { display:flex; gap:8px; } .btns > * { flex:1; }
+.fix { position:absolute; left:0; right:0; bottom:0; padding:12px 16px 16px; background:var(--color-surface); display:flex; gap:8px; z-index:3; }
+.fix .btn1 { flex:1; }
+.badge { height:20px; padding:0 6px; border-radius:8px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:3px; background:var(--color-surface-sunken); color:var(--color-text-sub); }
+.badge.p { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.badge svg { width:12px; height:12px; }
+.hint { padding:12px; border-radius:12px; background:var(--color-surface-sunken); font-size:14px; font-weight:500; color:var(--color-text-sub); display:flex; gap:8px; line-height:20px; }
+.hint svg { width:16px; height:16px; margin-top:2px; }
+/* 시트·확인 창·토스트 */
+.scrim { position:absolute; inset:0; background:var(--scrim); z-index:5; }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:24px 24px 0 0; z-index:6; padding:0 0 20px; }
+.grab { width:36px; height:4px; border-radius:9px; background:var(--color-border-strong); margin:8px auto 0; }
+.shd { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 20px; font-size:18px; font-weight:600; }
+.shd .ib { color:var(--color-text); }
+.dlg { position:absolute; left:20px; right:20px; top:250px; background:var(--color-surface); border-radius:16px; padding:24px 20px 16px; z-index:6; }
+.dlg b { font-size:18px; font-weight:600; display:block; } .dlg p { font-size:15px; color:var(--color-text-sub); margin:8px 0 20px; line-height:22px; }
+.dangef { background:#B23A48; color:#fff; }
+.toast { position:absolute; left:50%; transform:translateX(-50%); bottom:84px; background:var(--color-text); color:var(--color-surface); border-radius:999px; padding:12px 20px; font-size:15px; font-weight:500; display:flex; gap:8px; align-items:center; white-space:nowrap; z-index:7; box-shadow:0 4px 12px rgb(15 16 18 / .08); }
+.toast svg { width:16px; height:16px; }
+/* 앱 안 배너 */
+.banner { position:absolute; top:64px; left:12px; right:12px; background:var(--color-surface); border-radius:16px; padding:14px 14px 12px; z-index:4; box-shadow:0 8px 24px rgb(15 16 18 / .16); }
+.banner .top { display:flex; gap:10px; align-items:center; }
+.banner .top b { font-size:15px; font-weight:600; line-height:21px; display:block; } .banner .top div > span { font-size:13px; color:var(--color-text-sub); }
+.banner .btns { margin-top:12px; }
+/* 목록 행 */
+.lrow { display:flex; align-items:center; gap:12px; min-height:64px; padding:0 20px; }
+.lrow .ic { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; flex:none; color:var(--color-text); }
+.lrow .t { flex:1; min-width:0; } .lrow .t b { display:block; font-size:16px; font-weight:600; line-height:22px; } .lrow .t span { display:block; font-size:13px; color:var(--color-text-sub); line-height:18px; }
+.lrow .go { color:var(--color-text-weak); display:flex; }
+.lrow.dis .t b, .lrow.dis .t span { color:var(--color-text-weak); } .lrow.dis .av { opacity:.5; }
+.radio { width:22px; height:22px; border-radius:99px; box-shadow:inset 0 0 0 2px var(--color-border-strong); flex:none; }
+.radio.on { box-shadow:inset 0 0 0 7px var(--color-primary); }
+.sect { font-size:13px; font-weight:600; color:var(--color-text-sub); padding:0 20px; margin:4px 0 0; }
+/* 대기실 */
+.room { position:absolute; top:56px; left:0; right:0; bottom:0; background:var(--color-surface); display:flex; flex-direction:column; align-items:center; padding:56px 24px 0; text-align:center; }
+.vs { display:flex; align-items:flex-start; gap:20px; margin-bottom:32px; }
+.pl { display:flex; flex-direction:column; align-items:center; gap:8px; width:100px; }
+.pl b { font-size:16px; font-weight:600; } .pl small { font-size:13px; color:var(--color-text-sub); display:flex; gap:4px; align-items:center; }
+.pl small svg { width:14px; height:14px; }
+.pl small.ok { color:var(--color-primary-strong); font-weight:600; }
+.pl.wait .av { opacity:.45; }
+.vsx { font-size:15px; font-weight:700; color:var(--color-text-weak); margin-top:18px; }
+.room h3 { font-size:22px; line-height:30px; margin:0; font-weight:700; letter-spacing:-0.01em; }
+.room p { font-size:15px; color:var(--color-text-sub); margin:8px 0 0; line-height:22px; }
+.timer { font-size:28px; font-weight:700; margin-top:20px; font-variant-numeric:tabular-nums; }
+.circ { width:72px; height:72px; border-radius:99px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); margin:0 auto 16px; }
+.circ svg { width:32px; height:32px; }
+.circ.p { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+/* 오목 판 화면 */
+.game { position:absolute; top:56px; left:0; right:0; bottom:0; background:var(--color-surface); }
+.players { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px 12px 0; }
+.pc { height:52px; border-radius:var(--control-radius); display:flex; align-items:center; gap:10px; padding:0 12px; box-shadow:inset 0 0 0 1px var(--color-border); }
+.pc b { font-size:15px; font-weight:600; display:block; line-height:20px; } .pc div > span { font-size:12px; color:var(--color-text-sub); display:block; line-height:16px; }
+.pc.turn { background:var(--color-primary-soft); box-shadow:inset 0 0 0 2px var(--color-primary); }
+.pc.turn div > span { color:var(--color-primary-strong); font-weight:600; }
+.pc.away .av { opacity:.45; } .pc.away b { color:var(--color-text-weak); }
+.turnline { height:48px; display:flex; align-items:center; justify-content:center; gap:8px; font-size:18px; font-weight:700; }
+.turnline .mv { position:absolute; right:16px; font-size:13px; font-weight:500; color:var(--color-text-weak); }
+.turnline.wait { color:var(--color-text-sub); font-weight:600; font-size:17px; }
+.boardwrap { margin:0 8px; position:relative; }
+.boardwrap svg.bd { display:block; width:344px; height:344px; border-radius:12px; background:var(--color-game-board); }
+.zoomtag { position:absolute; left:8px; top:8px; background:rgb(0 0 0 / .55); color:#fff; font-size:12px; font-weight:600; border-radius:99px; padding:4px 10px; display:flex; gap:4px; align-items:center; }
+.zoomtag svg { width:14px; height:14px; }
+.mini { position:absolute; right:8px; top:8px; width:56px; height:56px; border-radius:6px; background:var(--color-game-board); box-shadow:0 0 0 2px rgb(0 0 0 / .35); }
+.gbar { position:absolute; left:0; right:0; bottom:0; padding:12px 16px 16px; display:flex; gap:8px; align-items:center; background:var(--color-surface); }
+.gbar .zb { width:52px; height:52px; border-radius:var(--control-radius); border:1px solid var(--color-border-strong); display:flex; align-items:center; justify-content:center; color:var(--color-text); flex:none; }
+.gbar .zb.on { background:var(--color-primary-soft); border-color:var(--color-primary); color:var(--color-primary-strong); }
+.gbar .btn1 { flex:1; }
+.gnote { margin:16px 16px 0; }
+.gtip { margin:14px 16px 0; text-align:center; font-size:13px; color:var(--color-text-weak); line-height:18px; }
+.ministrip { display:flex; flex-direction:column; gap:12px; width:360px; }
+.ministrip .card { box-shadow:0 2px 10px rgb(0 0 0 / .08); border-radius:16px; }
+.mcap { font-size:12px; font-weight:600; color:#4A4F57; margin:0 0 -6px 4px; }
+/* 결과 시트 */
+.res { text-align:center; padding:4px 20px 0; }
+.res h3 { font-size:22px; line-height:30px; margin:0; font-weight:700; }
+.res p { font-size:15px; color:var(--color-text-sub); margin:6px 0 0; line-height:22px; }
+.rec { margin:16px 0 0; height:44px; border-radius:12px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; gap:8px; font-size:15px; font-weight:600; }
+.rec .av { width:24px; height:24px; font-size:11px; }
+.res .note { font-size:13px; color:var(--color-text-sub); margin:10px 0 0; }
+</style></head><body>
+<h1>반반 같이 놀기 (오목 1차) — 시안 (BANB-48)</h1>
+<p class="lead">기준: BANB-2 "미니게임 '같이 놀기' 명세"(클라이언트 승인 2026-11-09), design.md v1.7(1.7 게임 색, 5.28~5.31). 클린 라이트 360×760 + 오목 판 클린 다크 1장. 시안 데이터: 멤버 민지(멤버 1, 하늘)·준호(멤버 2, 노랑). 설명이 따로 없으면 <b>민지 폰</b> 화면이고, 민지가 준호를 초대했으므로 <b>준호 = 흑(먼저)</b>, 민지 = 백.</p>
+<div id="rows"></div>
+<script>
+const ic = (n, s='') => `<i data-lucide="${n}"${s?` style="${s}"`:''}></i>`;
+const won = (v, sign='') => `<span class="money">${sign}${Math.abs(v).toLocaleString('ko-KR')}<span style="font-size:.75em;font-weight:600;margin-left:1px">원</span></span>`;
+const TABS = [['home','house','홈'],['ledger','notebook-pen','가계부'],['+'],['cal','calendar-heart','일정'],['asset','landmark','자산']];
+const tabbar = on => `<div class="tabbar">${TABS.map(t => t[0]==='+' ? `<div class="plus">${ic('plus')}</div>` : `<div class="tab ${t[0]===on?'on':''}"><span class="pill">${ic(t[1])}</span>${t[2]}</div>`).join('')}</div>`;
+const hdr = () => `<div class="hdr"><div class="lsw">우리집 가계부 ${ic('chevrons-up-down')}</div><div class="ib">${ic('settings')}</div></div>`;
+/* 사람: 이니셜 + 일정 색 + 돌 */
+const P = { m:{n:'민지',i:'민',e:1}, j:{n:'준호',i:'준',e:2} };
+const av = (p, stone='', size='') => `<span class="av ${size} e-${P[p].e}">${P[p].i}${stone?`<i class="st ${stone}"></i>`:''}</span>`;
+
+/* ── 오목 판 SVG ── */
+const N = 15, PAD = 12, STEP = 320/14;
+const X = i => PAD + i*STEP;
+function board({ b=[], w=[], last=null, sel=null, mine='w', win=null, zoom=null, full=false, dimOthers=false } = {}) {
+  let s = '';
+  const vb = zoom ? `${X(zoom[0]-4)-STEP/2} ${X(zoom[1]-4)-STEP/2} ${STEP*9} ${STEP*9}` : '0 0 344 344';
+  for (let i=0;i<N;i++){ s += `<line x1="${X(0)}" y1="${X(i)}" x2="${X(14)}" y2="${X(i)}"/><line x1="${X(i)}" y1="${X(0)}" x2="${X(i)}" y2="${X(14)}"/>`; }
+  let g = `<g stroke="var(--color-game-line)" stroke-width="${zoom?0.75:1}">${s}</g>`;
+  g += [[3,3],[3,11],[11,3],[11,11],[7,7]].map(([x,y])=>`<circle cx="${X(x)}" cy="${X(y)}" r="${zoom?2:2.5}" fill="var(--color-game-line)"/>`).join('');
+  if (sel) g += `<g stroke="var(--color-primary)" stroke-width="${zoom?1.2:1.5}" opacity=".75"><line x1="${X(0)}" y1="${X(sel[1])}" x2="${X(14)}" y2="${X(sel[1])}"/><line x1="${X(sel[0])}" y1="${X(0)}" x2="${X(sel[0])}" y2="${X(14)}"/></g>`;
+  let stones = [];
+  if (full) { for (let y=0;y<N;y++) for (let x=0;x<N;x++) stones.push([x,y,((x>>1)+y)%2?'w':'b']); }
+  else { b.forEach(p=>stones.push([...p,'b'])); w.forEach(p=>stones.push([...p,'w'])); }
+  const isWin = (x,y) => win && win.some(p=>p[0]===x&&p[1]===y);
+  g += stones.map(([x,y,c]) => {
+    const op = dimOthers && win && !isWin(x,y) ? ' opacity=".45"' : '';
+    return `<g${op}><circle cx="${X(x)}" cy="${X(y)}" r="10" fill="var(--color-stone-${c==='b'?'black':'white'})" stroke="var(--color-stone-edge)" stroke-width="1"/>${c==='b'?`<circle cx="${X(x)-3}" cy="${X(y)-3}" r="3" fill="#fff" opacity=".14"/>`:''}</g>`;
+  }).join('');
+  if (last) g += `<circle cx="${X(last[0])}" cy="${X(last[1])}" r="13" fill="none" stroke="var(--color-primary)" stroke-width="2"/>`;
+  if (win) { g += `<line x1="${X(win[0][0])}" y1="${X(win[0][1])}" x2="${X(win[win.length-1][0])}" y2="${X(win[win.length-1][1])}" stroke="var(--color-primary)" stroke-width="3" stroke-linecap="round" opacity=".9"/>`; g += win.map(([x,y])=>`<circle cx="${X(x)}" cy="${X(y)}" r="13" fill="none" stroke="var(--color-primary)" stroke-width="2.5"/>`).join(''); }
+  if (sel) g += `<circle cx="${X(sel[0])}" cy="${X(sel[1])}" r="10" fill="var(--color-stone-${mine==='b'?'black':'white'})" stroke="var(--color-stone-edge)" opacity=".55"/><circle cx="${X(sel[0])}" cy="${X(sel[1])}" r="13.5" fill="none" stroke="var(--color-primary)" stroke-width="2.5"/>`;
+  return `<svg class="bd" viewBox="${vb}" role="grid" aria-label="오목 판 15×15">${g}</svg>`;
+}
+/* 샘플 대국 (0~14, x=열, y=행) */
+const B0 = [[7,7],[8,8],[6,8],[8,6],[9,7],[7,9],[5,7],[9,9]];
+const W0 = [[8,7],[7,8],[6,6],[9,8],[6,7],[10,7],[8,9]];
+const W1 = [...W0,[10,10]], B1 = [...B0];
+
+/* ── 판 화면 ── */
+const players = (turn, away='') => `<div class="players">
+  <div class="pc ${turn==='j'?'turn':''} ${away==='j'?'away':''}">${av('j','b')}<div><b>준호</b><span>${away==='j'?'자리 비움':turn==='j'?'차례예요':'흑 · 먼저'}</span></div></div>
+  <div class="pc ${turn==='m'?'turn':''}">${av('m','w')}<div><b>나</b><span>${turn==='m'?'내 차례예요':'백'}</span></div></div>
+</div>`;
+const gameHdr = () => `<div class="sh"><span class="ib">${ic('chevron-left')}</span><b>오목</b><span class="tbtn">${ic('flag')}기권</span></div>`;
+const gameScreen = ({ turn, bd, line, bar, note='', away='' }) => `<div class="phone">${gameHdr()}<div class="game">${players(turn, away)}
+  ${line}<div class="boardwrap">${bd}</div>${note}${bar}</div></div>`;
+const tlMine = mv => `<div class="turnline" style="position:relative">${av('m','w')}내 차례예요<span class="mv">${mv}수</span></div>`;
+const tlTheirs = (mv, txt='준호님 차례예요') => `<div class="turnline wait" style="position:relative">${av('j','b')}${txt}<span class="mv">${mv}수</span></div>`;
+const gbar = (main, zoomOn=false) => `<div class="gbar"><span class="zb ${zoomOn?'on':''}" aria-label="${zoomOn?'판 전체 보기':'확대해서 보기'}">${ic(zoomOn?'zoom-out':'zoom-in')}</span>${main}</div>`;
+
+const g1 = gameScreen({ turn:'m', line:tlMine(16), bd:board({b:B0,w:W0,last:[9,9]}), note:`<p class="gtip">놓을 곳을 누르면 미리 보여 드려요</p>`, bar:gbar(`<div class="btn1 off">둘 곳을 눌러 주세요</div>`) });
+const g2 = gameScreen({ turn:'m', line:tlMine(16), bd:board({b:B0,w:W0,last:[9,9],sel:[10,10]}), note:`<p class="gtip">다른 곳을 누르면 옮겨져요</p>`, bar:gbar(`<div class="btn1">${ic('check')}여기에 둘게요</div>`) });
+const g3 = gameScreen({ turn:'m', line:tlMine(16), bd:board({b:B0,w:W0,last:[9,9],sel:[10,10],zoom:[9,9]}) + `<span class="zoomtag">${ic('move')}끌어서 옮겨요</span>`, bar:gbar(`<div class="btn1">${ic('check')}여기에 둘게요</div>`, true) });
+const g4 = gameScreen({ turn:'j', line:tlTheirs(17), bd:board({b:B1,w:W1,last:[10,10]}), bar:gbar(`<div class="btn1 off">준호님이 두고 있어요</div>`) });
+const g5 = gameScreen({ turn:'j', away:'j', line:tlTheirs(17), bd:board({b:B1,w:W1,last:[10,10]}), note:`<div class="gnote"><div class="hint">${ic('coffee')}<span>준호님이 잠시 자리를 비웠어요. 돌아오면 이어서 해요</span></div></div>`, bar:gbar(`<div class="btn1 off">준호님을 기다리고 있어요</div>`) });
+const g6 = gameScreen({ turn:'m', line:tlMine(16), bd:board({b:B0,w:W0,last:[9,9]}), note:`<div class="gnote"><div class="hint">${ic('wifi-off')}<span>연결이 잠시 끊겼어요. 다시 연결하는 중이에요</span></div></div>`, bar:gbar(`<div class="btn1 off">${ic('loader-circle')}연결하는 중…</div>`) });
+const resign = gameScreen({ turn:'m', line:tlMine(16), bd:board({b:B0,w:W0,last:[9,9]}), bar:gbar(`<div class="btn1 off">둘 곳을 눌러 주세요</div>`) })
+  .replace(/<\/div>$/, `<div class="scrim"></div><div class="dlg" role="alertdialog"><b>기권할까요?</b><p>이번 판은 준호님 승리로 끝나요. 전적에도 남아요.</p><div class="btns"><div class="btn2 m">계속 둘게요</div><div class="btn1 m dangef">기권하기</div></div></div></div>`);
+
+/* ── 결과 ── */
+const WIN_W = [[5,4],[6,4],[7,4],[8,4],[9,4]];
+const winB = [[7,7],[8,8],[6,8],[8,6],[9,7],[7,9],[5,7],[9,9],[3,10],[9,10],[6,11]];
+const winW = [[8,7],[7,8],[6,6],[9,8],[6,7],[10,7],[8,9],[10,10],...WIN_W];
+const LOSE_B = [[5,5],[6,6],[7,7],[8,8],[9,9]];
+const loseB = [...LOSE_B,[6,8],[8,6],[7,9],[5,7],[10,5]];
+const loseW = [[8,7],[7,8],[6,7],[9,8],[4,4],[10,10],[6,5],[7,5],[8,10]];
+const resultSheet = (icon, cls, title, sub, rec, note) => `<div class="scrim" style="background:rgb(15 16 18 / .25)"></div><div class="sheet" role="dialog"><div class="grab"></div><div class="res" style="padding-top:20px">
+  <div class="circ ${cls}">${ic(icon)}</div><h3>${title}</h3><p>${sub}</p>
+  <div class="rec">${av('j')}<span>준호님과</span><span class="num">${rec}</span></div>
+  <div class="btns" style="margin-top:16px"><div class="btn2">나가기</div><div class="btn1">${ic('rotate-ccw')}한 판 더</div></div>
+  <p class="note">${note}</p></div></div>`;
+const resultScreen = (bdOpts, turn, sheet) => `<div class="phone">${gameHdr().replace(`<span class="tbtn">${ic('flag')}기권</span>`,'<span style="width:44px"></span>')}<div class="game">${players('')}<div class="turnline wait">대국이 끝났어요</div><div class="boardwrap">${board(bdOpts)}</div></div>${sheet}</div>`;
+const r1 = resultScreen({b:winB,w:winW,win:WIN_W,dimOthers:true}, '', resultSheet('trophy','p','이겼어요!','다섯 개를 이었어요','4승 2패 1무','다음 판은 내가 흑이에요 (흑백을 바꿔요)'));
+const r2 = resultScreen({b:loseB,w:loseW,win:LOSE_B,dimOthers:true}, '', resultSheet('smile','','아쉽게 졌어요','한 판 더 할까요?','3승 3패 1무','다음 판은 내가 흑이에요 (흑백을 바꿔요)'));
+const r3 = resultScreen({full:true}, '', resultSheet('handshake','','비겼어요','판이 꽉 찼어요. 막상막하네요','3승 2패 2무','다음 판은 내가 흑이에요 (흑백을 바꿔요)'));
+
+/* ── 홈 ── */
+const homeCard = (body) => `<div class="card">${body}</div>`;
+const hcBase = `<div class="k">${ic('gamepad-2','width:18px;height:18px')}같이 놀기<span class="go">${ic('chevron-right')}</span></div><div class="t18">준호님과 오목 한 판 어때요?</div><div class="sub">전적 <b class="num">3승 2패 1무</b></div>`;
+const hcSent = `<div class="k">${ic('gamepad-2','width:18px;height:18px')}같이 놀기<span class="go">${ic('chevron-right')}</span></div><div class="t18">준호님 답을 기다리고 있어요</div><div class="sub">오목 · <b class="num">9분</b> 남았어요</div>`;
+const hcGot = `<div class="k">${ic('gamepad-2','width:18px;height:18px')}같이 놀기<span class="badge p" style="margin-left:4px">새로</span></div><div class="t18">민지님이 오목 한 판 하자고 해요</div><div class="btns" style="margin-top:12px"><div class="btn2 m">다음에 할게요</div><div class="btn1 m">좋아요</div></div>`;
+const hcMine = `<div class="k">${ic('gamepad-2','width:18px;height:18px')}같이 놀기<span class="go">${ic('chevron-right')}</span></div><div class="t18 acc">내 차례예요</div><div class="sub">준호님과 오목 두는 중 · 16수</div>`;
+const hcTheirs = `<div class="k">${ic('gamepad-2','width:18px;height:18px')}같이 놀기<span class="go">${ic('chevron-right')}</span></div><div class="t18">준호님 차례예요</div><div class="sub">준호님과 오목 두는 중 · 17수</div>`;
+const recentRows = `<div class="card" style="padding:20px 0 8px"><div class="k" style="padding:0 20px">최근 내역<span class="go">${ic('chevron-right')}</span></div>
+  ${[['utensils','점심','식비 · 민지',12000],['coffee','커피','카페 · 준호',4500],['shopping-cart','장보기','생활 · 민지',38200]].map(([i,t,s,v])=>`<div class="lrow" style="min-height:60px"><span class="ic">${ic(i)}</span><div class="t"><b style="font-size:15px">${t}</b><span>${s}</span></div><b style="font-size:16px">${won(v,'−')}</b></div>`).join('')}</div>`;
+const h1 = `<div class="phone">${hdr()}<div class="scroll" style="display:flex;flex-direction:column;justify-content:flex-end"><div class="stack" style="padding-bottom:12px">
+  <div class="card"><div class="k">누가 썼나<span style="margin-left:auto;color:var(--color-text);font-weight:700" class="num">2,915,500</span></div><div style="display:flex;height:10px;border-radius:99px;overflow:hidden;margin-top:14px;gap:2px"><div style="width:58%;background:#007F55"></div><div style="flex:1;background:#5DBB92"></div></div><div class="sub">민지 <b>1,690,990</b> · 준호 <b>1,224,510</b></div></div>
+  <div class="card"><div class="k">어디에 썼나<span class="go">${ic('chevron-right')}</span></div><div style="height:10px;border-radius:99px;background:var(--color-surface-sunken);margin-top:14px;overflow:hidden"><div style="width:62%;height:100%;background:var(--color-primary)"></div></div><div class="sub">식비 · 생활 · 주거 외 4</div></div>
+  ${recentRows}
+  ${homeCard(hcBase)}
+</div></div>${tabbar('home')}</div>`;
+const h2 = `<div class="phone">${hdr()}<div class="scroll"><div class="stack">
+  <div class="card"><div class="k" style="font-size:18px;font-weight:700;color:var(--color-text)">${ic('heart','color:var(--color-primary);fill:var(--color-primary-soft)')}함께한 지 <span class="num">1,977</span>일째예요</div></div>
+  <div class="nudge">${ic('gamepad-2','color:var(--color-primary)')}<span>민지님이 오목 한 판 하자고 해요</span><span class="go">${ic('chevron-right')}</span><span class="ib x">${ic('x')}</span></div>
+  <div class="mrow"><span class="ib">${ic('chevron-left')}</span>11월<span class="ib">${ic('chevron-right')}</span></div>
+  <div class="card"><div class="k">11월 남은 돈</div><div class="big" style="font-size:36px;line-height:44px">${won(784500)}</div><div class="sub">수입 <b class="acc">4,200,000</b> · 지출 <b>2,915,500</b> · 저축 <b>500,000</b></div></div>
+</div></div>${tabbar('home')}</div>`;
+const banner = `<div class="banner" role="alert"><div class="top">${av('m')}<div style="flex:1"><b>민지님이 오목 한 판 하자고 해요</b><span>10분 안에 답해 주세요</span></div></div><div class="btns"><div class="btn2 m">나중에</div><div class="btn1 m">같이 놀기</div></div></div>`;
+const ledgerBg = `<div class="phone">${hdr()}<div class="scroll"><div class="mrow"><span class="ib">${ic('chevron-left')}</span>11월<span class="ib">${ic('chevron-right')}</span></div>
+  <div class="card" style="padding:0 0 8px">${[['9일 (월)',[['utensils','점심','식비 · 민지',12000],['coffee','커피','카페 · 준호',4500]]],['8일 (일)',[['shopping-cart','장보기','생활 · 민지',38200],['bus','교통카드 충전','교통 · 준호',50000],['film','영화','문화 · 민지',26000]]]].map(([d,rows])=>`<div style="padding:16px 20px 4px;font-size:13px;font-weight:600;color:var(--color-text-sub)">${d}</div>${rows.map(([i,t,s,v])=>`<div class="lrow" style="min-height:60px"><span class="ic">${ic(i)}</span><div class="t"><b style="font-size:15px">${t}</b><span>${s}</span></div><b style="font-size:16px">${won(v,'−')}</b></div>`).join('')}`).join('')}</div>
+</div>${tabbar('ledger')}${banner}</div>`;
+const cardStates = `<div class="ministrip">
+  <p class="mcap">기본 (전적 있음 / 없으면 "아직 둔 판이 없어요")</p>${homeCard(hcBase)}
+  <p class="mcap">초대 보냄 (민지 폰)</p>${homeCard(hcSent)}
+  <p class="mcap">초대 받음 (준호 폰)</p>${homeCard(hcGot)}
+  <p class="mcap">대국 중 · 내 차례</p>${homeCard(hcMine)}
+  <p class="mcap">대국 중 · 상대 차례</p>${homeCard(hcTheirs)}
+</div>`;
+
+/* ── 같이 놀기 홈 · 상대 고르기 ── */
+const playHome = (sheet='', ongoing=false) => `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>같이 놀기</b></div>
+<div class="scroll" style="bottom:0"><div class="stack" style="padding-top:12px">
+  ${ongoing?`<div class="card" style="padding:16px 20px"><div class="k">두던 판이 있어요</div><div class="t18">준호님과 오목 · <span class="acc">내 차례예요</span></div><div class="btn1 m" style="margin-top:12px">이어서 두기</div></div>`:''}
+  <div class="card" style="padding:8px 0">
+    <div class="lrow ${ongoing?'dis':''}" style="min-height:72px"><span class="ic" style="width:48px;height:48px">${ic('grid-3x3','width:24px;height:24px')}</span><div class="t"><b>오목</b><span>${ongoing?'두던 판을 끝내면 새로 둘 수 있어요':'다섯 개를 먼저 이으면 이겨요'}</span></div><span class="go">${ic('chevron-right')}</span></div>
+  </div>
+  <div class="card" style="padding:16px 20px"><div class="k">전적</div><div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:16px">${av('j')}<span style="flex:1">준호님과</span><b class="num">3승 2패 1무</b></div></div>
+</div></div>${sheet}</div>`;
+const pickSheet = (busy=false) => `<div class="scrim"></div><div class="sheet" role="dialog"><div class="grab"></div><div class="shd">누구랑 둘까요?<span class="ib">${ic('x')}</span></div>
+  <div class="lrow"><span class="radio ${busy?'':'on'}"></span>${av('j')}<div class="t"><b>준호</b><span>3승 2패 1무</span></div></div>
+  ${busy?`<div class="lrow dis"><span class="radio on"></span>${av('j')}<div class="t"><b>지우</b><span>다른 판을 두는 중이에요</span></div></div>`:''}
+  <div style="padding:8px 20px 0"><div class="hint">${ic('info')}<span>초대받은 사람이 흑으로 먼저 둬요.<br>10분 안에 답이 없으면 초대가 사라져요.</span></div></div>
+  <div style="padding:16px 16px 0"><div class="btn1">${ic('send')}준호님 초대하기</div></div></div>`;
+
+/* ── 대기실 ── */
+const roomHdr = () => `<div class="sh"><span class="ib">${ic('chevron-left')}</span><b>대기실</b></div>`;
+const room = (body, fix='') => `<div class="phone">${roomHdr()}<div class="room">${body}</div>${fix?`<div class="fix">${fix}</div>`:''}</div>`;
+const vs = (jState, mState='ok') => `<div class="vs">
+  <div class="pl ${jState==='wait'?'wait':''}">${av('j','b','l')}<b>준호</b>${jState==='ok'?`<small class="ok">${ic('circle-check')}들어왔어요</small>`:jState==='no'?`<small>${ic('circle-x')}못 와요</small>`:`<small>${ic('loader-circle')}기다리는 중</small>`}</div>
+  <span class="vsx">VS</span>
+  <div class="pl">${av('m','w','l')}<b>나</b><small class="ok">${ic('circle-check')}들어왔어요</small></div></div>`;
+const w1 = room(`${vs('wait')}<h3>준호님 답을 기다리고 있어요</h3><p>준호님 휴대폰에 초대를 보냈어요</p><div class="timer">9:41</div><p style="margin-top:2px;font-size:13px">지나면 초대가 사라져요</p>`, `<div class="btn2" style="flex:1">초대 취소</div>`);
+const w2 = room(`${vs('ok')}<h3>둘 다 왔어요!</h3><p>준호님이 흑으로 먼저 둬요.<br>곧 시작해요</p><div style="margin-top:28px;color:var(--color-primary)">${ic('loader-circle','width:28px;height:28px')}</div>`);
+const w3 = room(`<div style="height:24px"></div><div class="circ">${ic('clock')}</div><h3>초대가 만료됐어요</h3><p>10분 동안 답이 없었어요.<br>다음에 다시 불러 볼까요?</p>`, `<div class="btn2" style="flex:1">닫기</div><div class="btn1" style="flex:1.4">다시 초대하기</div>`);
+const w4 = room(`${vs('no')}<h3>준호님이 다음에 하재요</h3><p>나중에 다시 초대해 보세요</p>`, `<div class="btn1" style="flex:1">알겠어요</div>`);
+const inviteGone = `<div class="phone">${hdr()}<div class="scroll"><div class="stack"><div class="mrow"><span class="ib">${ic('chevron-left')}</span>11월<span class="ib">${ic('chevron-right')}</span></div></div></div>${tabbar('home')}
+  <div class="scrim"></div><div class="dlg" style="top:240px"><b>초대가 만료됐어요</b><p>민지님 초대가 10분이 지나 사라졌어요. 이번엔 내가 불러 볼까요?</p><div class="btns"><div class="btn2 m">닫기</div><div class="btn1 m">민지님 초대하기</div></div></div></div>`;
+
+/* ── 다크 ── */
+const d1 = g2;
+
+const SCREENS = [
+  ['home','1. 홈 — "같이 놀기" 카드', [[h1,'홈 맨 아래 (기본)'],[cardStates,'카드 상태 5가지']], ['홈 맨 아래(최근 내역 다음)에 카드 1장. 돈 숫자가 먼저 — 게임은 홈을 다 본 뒤에', '카드 3줄 규칙(5.23): "같이 놀기" 라벨 / 18 굵은 한 문장 / 한 줄(전적·남은 시간·몇 수째)', '카드 전체가 버튼 → 같이 놀기 화면. 단 "초대 받음"은 카드 안 버튼 2개(다음에 할게요 / 좋아요)', '대국 중 내 차례면 2줄을 포인트 색 "내 차례예요"', '가계부 멤버가 나 혼자면 카드 숨김("누가 썼나"와 같은 규칙)']],
+  ['invite','2. 초대 받음 — 앱 안 배너 · 홈 한 줄 (준호 폰)', [[ledgerBg,'앱 안 배너 (어느 탭에서나)'],[h2,'홈 맨 위 한 줄'],[inviteGone,'만료된 초대를 누르면']], ['초대가 오면 지금 보는 화면 위에 배너(실시간). [나중에] = 배너만 닫음, 초대는 홈에 남음 / [같이 놀기] = 수락 → 대기실', '홈에서는 함께한 날 카드 아래 한 줄(정기 내역 제안 5.27과 같은 모양) + 맨 아래 카드가 "초대 받음" 상태. X = 이 줄만 닫기(초대는 그대로)', '거절은 카드의 "다음에 할게요"에서만(배너에는 없음 — 실수로 거절하지 않게)', '10분이 지나 만료된 초대를 누르면 확인 창 + "민지님 초대하기"(역초대)']],
+  ['pick','3. 게임 고르기 · 상대 고르기', [[playHome(),'같이 놀기 화면'],[playHome(pickSheet()),'상대 고르기 시트'],[playHome('', true),'두던 판이 있을 때']], ['게임 목록(1차는 오목 1개) + 전적 카드. 2차 게임은 나오면 목록에 행 추가', '전적 = 나와 상대 둘 사이 승/패/무. 멤버가 3~4명이면 상대별로 한 줄씩', '오목 → 상대 고르기 시트. 멤버 2명이면 상대가 1명이라 미리 골라져 있어 버튼만 누르면 된다', '이미 다른 판을 두는 멤버는 흐리게 + "다른 판을 두는 중이에요"(고를 수 없음)', '내가 두던 판이 있으면 맨 위에 "이어서 두기" 카드, 오목 행은 비활성(1인 1판)']],
+  ['room','4. 대기실', [[w1,'답 기다림'],[w2,'둘 다 들어옴'],[w3,'초대 만료'],[w4,'거절']], ['위: 두 사람 얼굴(이니셜 + 일정 색) + 돌 색 표시 + 들어왔는지', '답 기다림: 남은 시간 9:41(분:초, 줄어듦). 초대 취소는 기획 확인 필요(명세에 없음, 추천 = 넣기)', '둘 다 들어오면 "둘 다 왔어요!" 1.5초 뒤 판으로 자동 이동', '만료·거절은 탓하지 않는 문구 + 다음 행동 버튼', '수락한 사람(준호)도 같은 화면에서 시작한다']],
+  ['board','5. 오목 판 — 두는 법', [[g1,'내 차례'],[g2,'칸을 누르면 (미리보기)'],[g3,'확대해서 보기'],[g4,'상대 차례']], ['판 344×344(좌우 8), 줄 간격 약 23px. <b>누르면 바로 두지 않는다</b>: 가장 가까운 교차점에 반투명 돌 + 가로·세로 안내선(포인트 색) → 다른 곳을 누르면 옮겨지고, "여기에 둘게요"로 확정', '확대(돋보기 버튼): 고른 곳 중심 9줄만 보이게 약 1.7배(줄 간격 약 38px). 끌어서 옮김. 다시 누르면 전체', '누구 차례: 위 두 사람 칸 중 차례인 쪽 = primary-soft + 테두리 2 + "내 차례예요/차례예요" 글자. 판 위 줄에 아바타 + 문장', '마지막 수 = 포인트 색 고리. 몇 수째는 오른쪽 작게', '상대 차례에는 확정 버튼 비활성 "준호님이 두고 있어요". 미리보기는 못 한다(눌러도 반응 없음)', '판 화면에서는 탭바를 숨긴다. 뒤로 가도 판은 이어진다(홈 카드에서 다시 들어옴)']],
+  ['state','6. 상태 — 자리 비움 · 연결 끊김 · 기권', [[g5,'상대 자리 비움'],[g6,'내 연결 끊김'],[resign,'기권 확인']], ['상대가 앱을 나가 있으면 상대 칸 흐리게 + "자리 비움", 판 아래 안내 상자 ☕ "준호님이 잠시 자리를 비웠어요. 돌아오면 이어서 해요"', '내 차례인데 상대가 자리를 비워도 둘 수 있다(판은 서버에 저장)', '내 연결이 끊기면 안내 상자 + 확정 버튼 "연결하는 중…"(비활성). 다시 연결되면 서버 판으로 맞춘 뒤 사라짐', '기권: 오른쪽 위 "기권" → 확인 창. 첫 포커스 = "계속 둘게요"(실수 방지)']],
+  ['result','7. 결과', [[r1,'이김 (5목)'],[r2,'짐'],[r3,'무승부 (판이 꽉 참)']], ['판은 그대로 보이고, 이긴 다섯(이상) 돌에 포인트 색 고리 + 선, 나머지 돌은 흐리게', '시트: 아이콘 원 / 제목 22 / 한 줄 / 전적 한 줄 / [나가기] [한 판 더]', '"한 판 더" = 흑백을 바꿔 상대에게 새 초대(대기실 답 기다림으로)', '기권·중단 문구는 design.md 5.31 표(그림 생략)']],
+  ['dark','8. 다크 (클린)', [[d1,'오목 판 다크']], ['판·돌 색은 테마 공통(1.7), 다크용 값. 판 줄·흑돌 테두리를 밝게 해 대비 3:1 이상', '안내선·고리·차례 표시는 테마 포인트 색 그대로']],
+];
+document.getElementById('rows').innerHTML = SCREENS.map(([k, t, phones, notes]) => `<section data-s="${k}"><h2>${t}</h2><div class="row">
+${phones.map(([p, cap]) => `<div><p class="cap">${cap}</p><div data-theme="clean" ${k==='dark'?'data-mode="dark"':''}>${p}</div></div>`).join('')}
+<div><p class="cap">규칙</p><ul class="anno">${notes.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+</div></section>`).join('');
+const only = new URLSearchParams(location.search).get('s');
+if (only) document.querySelectorAll('section').forEach(s => { if (s.dataset.s !== only) s.remove(); });
+if (new URLSearchParams(location.search).has('bare')) { document.querySelector('h1').remove(); document.querySelector('.lead').remove(); }
+lucide.createIcons();
+</script>
+</body></html>
