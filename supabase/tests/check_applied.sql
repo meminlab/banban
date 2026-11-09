@@ -16,6 +16,8 @@
 --           (asset_balance_history·event 행이 추가되어 11행. 이력 테이블·event policies 1)
 --           recurring = true (20261109200000 마이그레이션: 정기 내역·회차 테이블, transaction.source 'recurring', 기록·되돌리기 함수 로그인 사용자만, 회차 직접 쓰기 불가)
 --           (recurring_transaction·recurring_occurrence 행이 추가되어 13행. 둘 다 policies 1)
+--           game_omok = true (20261109230000 마이그레이션: 같이 놀기 판·수 테이블 직접 쓰기 불가, 판정 함수 로그인 사용자만, 실시간 발행에 game·game_move)
+--           (game·game_move 행이 추가되어 15행. 둘 다 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -105,11 +107,23 @@ select c.relname                                          as table_name,
         and not has_function_privilege('anon', 'public.record_recurring(uuid,jsonb)', 'execute')
         and has_function_privilege('authenticated', 'public.undo_recurring_record(uuid,jsonb)', 'execute')
         and not has_table_privilege('authenticated', 'public.recurring_occurrence', 'insert')
-        and not has_table_privilege('authenticated', 'public.recurring_occurrence', 'delete')) as recurring
+        and not has_table_privilege('authenticated', 'public.recurring_occurrence', 'delete')) as recurring,
+       (to_regclass('public.game') is not null
+        and to_regclass('public.game_move') is not null
+        and not has_table_privilege('authenticated', 'public.game', 'insert')
+        and not has_table_privilege('authenticated', 'public.game', 'update')
+        and not has_table_privilege('authenticated', 'public.game_move', 'insert')
+        and has_function_privilege('authenticated', 'public.play_move(uuid,integer,integer)', 'execute')
+        and not has_function_privilege('anon', 'public.play_move(uuid,integer,integer)', 'execute')
+        and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
+        and has_function_privilege('authenticated', 'public.cancel_game(uuid)', 'execute')
+        and not has_function_privilege('authenticated', 'public.game_close_stale(uuid)', 'execute')
+        and (select count(*) from pg_publication_tables where pubname = 'supabase_realtime'
+              and schemaname = 'public' and tablename in ('game', 'game_move')) = 2) as game_omok
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)

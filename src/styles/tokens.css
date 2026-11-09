@@ -80,6 +80,13 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
 
+  /* 게임 색 (design.md 1.7, 테마 공통): 오목 판·돌 */
+  --color-game-board: #EFDDB8;
+  --color-game-line: #8C7350;
+  --color-stone-black: #1E1D1F;
+  --color-stone-white: #FFFFFF;
+  --color-stone-edge: #7A6A55;
+
   color-scheme: light dark;
 }
 
@@ -95,6 +102,11 @@
     --color-event-2: #4F5216;
     --color-event-3: #3E3168;
     --color-event-4: #164A40;
+    --color-game-board: #5A4A35;
+    --color-game-line: #B39D79;
+    --color-stone-black: #121113;
+    --color-stone-white: #F4EFE6;
+    --color-stone-edge: #B39D79;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;

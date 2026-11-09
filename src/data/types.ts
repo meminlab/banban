@@ -204,3 +204,41 @@ export type LedgerRpcError =
   | 'INVITE_EXPIRED'
   | 'MEMBER_LIMIT_REACHED'
   | 'NOT_IN_LEDGER';
+
+/** 같이 놀기 (BANB-49). 쓰기는 DB 함수로만(invite_game / respond_game / play_move / resign_game / sweep_games) */
+export type GameKind = 'omok';
+export type GameStatus = 'invited' | 'active' | 'finished' | 'declined' | 'canceled' | 'expired' | 'abandoned';
+export type GameEndReason = 'five' | 'resign' | 'draw' | 'timeout';
+
+export interface Game {
+  id: string;
+  ledger_id: string;
+  kind: GameKind;
+  /** member id — 흑(선공) = 초대받은 사람. "한 판 더"는 흑백을 바꾼다 */
+  black_id: string;
+  white_id: string;
+  status: GameStatus;
+  winner_id: string | null;
+  end_reason: GameEndReason | null;
+  move_count: number;
+  /** 초대한 사람 (member id) */
+  created_by: string;
+  rematch_of: string | null;
+  created_at: string;
+  invite_expires_at: string;
+  started_at: string | null;
+  last_move_at: string | null;
+  finished_at: string | null;
+}
+
+export interface GameMove {
+  game_id: string;
+  ledger_id: string;
+  /** 1 = 첫 수(흑). 홀수 = 흑, 짝수 = 백 */
+  seq: number;
+  /** 0~14, x = 열(왼쪽→오른쪽), y = 행(위→아래) */
+  x: number;
+  y: number;
+  member_id: string;
+  created_at: string;
+}

@@ -22,6 +22,9 @@ import { ThemeSettingsPage } from '../pages/settings/ThemeSettingsPage';
 import { RecurringSettingsPage } from '../pages/settings/RecurringSettingsPage';
 import { LedgerManageDetailPage, LedgerManagePage } from '../pages/settings/LedgerManagePage';
 import { RequireAuth, RequireLedger, RequireNoLedger } from './guards';
+import { GamesLayout } from './games';
+import { PlayHomePage } from '../pages/play/PlayHomePage';
+import { OmokPage } from '../pages/play/OmokPage';
 import { ThemeProvider } from './theme';
 
 export function App() {
@@ -35,33 +38,37 @@ export function App() {
             <Route path="start" element={<StartPage />} />
           </Route>
           <Route element={<RequireLedger />}>
-            <Route element={<AppLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="ledger" element={<LedgerPage />} />
-              <Route path="calendar" element={<CalendarPage />} />
-              <Route path="assets" element={<AssetsPage />} />
+            <Route element={<GamesLayout />}>
+              <Route element={<AppLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="ledger" element={<LedgerPage />} />
+                <Route path="calendar" element={<CalendarPage />} />
+                <Route path="assets" element={<AssetsPage />} />
+              </Route>
+              <Route path="calendar/new" element={<EventFormPage />} />
+              <Route path="calendar/:eventId" element={<EventFormPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="assets/new" element={<AssetFormPage />} />
+              <Route path="assets/archived" element={<ArchivedAssetsPage />} />
+              <Route path="assets/:assetId" element={<AssetFormPage />} />
+              <Route path="ledger/new" element={<TransactionFormPage />} />
+              <Route path="ledger/:transactionId" element={<TransactionFormPage />} />
+              <Route path="settings/name" element={<LedgerNamePage />} />
+              <Route path="settings/my-name" element={<MemberNamePage />} />
+              <Route path="settings/members" element={<MembersPage />} />
+              <Route path="settings/ledgers" element={<LedgerManagePage />} />
+              <Route path="settings/ledgers/:ledgerId" element={<LedgerManageDetailPage />} />
+              <Route path="settings/categories" element={<CategorySettingsPage />} />
+              <Route path="settings/pockets" element={<PocketSettingsPage />} />
+              <Route path="settings/theme" element={<ThemeSettingsPage />} />
+              <Route path="settings/recurring" element={<RecurringSettingsPage />} />
+              <Route path="settings/recurring/new" element={<RecurringFormPage />} />
+              <Route path="settings/recurring/:recurringId" element={<RecurringFormPage />} />
+              <Route path="ledgers/new" element={<LedgerAddPage mode="create" />} />
+              <Route path="ledgers/join" element={<LedgerAddPage mode="join" />} />
+              <Route path="play" element={<PlayHomePage />} />
+              <Route path="play/omok/:gameId" element={<OmokPage />} />
             </Route>
-            <Route path="calendar/new" element={<EventFormPage />} />
-            <Route path="calendar/:eventId" element={<EventFormPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="assets/new" element={<AssetFormPage />} />
-            <Route path="assets/archived" element={<ArchivedAssetsPage />} />
-            <Route path="assets/:assetId" element={<AssetFormPage />} />
-            <Route path="ledger/new" element={<TransactionFormPage />} />
-            <Route path="ledger/:transactionId" element={<TransactionFormPage />} />
-            <Route path="settings/name" element={<LedgerNamePage />} />
-            <Route path="settings/my-name" element={<MemberNamePage />} />
-            <Route path="settings/members" element={<MembersPage />} />
-            <Route path="settings/ledgers" element={<LedgerManagePage />} />
-            <Route path="settings/ledgers/:ledgerId" element={<LedgerManageDetailPage />} />
-            <Route path="settings/categories" element={<CategorySettingsPage />} />
-            <Route path="settings/pockets" element={<PocketSettingsPage />} />
-            <Route path="settings/theme" element={<ThemeSettingsPage />} />
-            <Route path="settings/recurring" element={<RecurringSettingsPage />} />
-            <Route path="settings/recurring/new" element={<RecurringFormPage />} />
-            <Route path="settings/recurring/:recurringId" element={<RecurringFormPage />} />
-            <Route path="ledgers/new" element={<LedgerAddPage mode="create" />} />
-            <Route path="ledgers/join" element={<LedgerAddPage mode="join" />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

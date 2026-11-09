@@ -19,3 +19,5 @@ alter default privileges in schema public grant all on tables to anon, authentic
 alter default privileges in schema public grant all on sequences to anon, authenticated;
 alter default privileges in schema public grant execute on functions to anon, authenticated;
 \endif
+-- Supabase 실시간 발행 (실제 프로젝트에는 기본으로 있다)
+create publication supabase_realtime;
