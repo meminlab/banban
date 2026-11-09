@@ -67,9 +67,9 @@ select test.expect_count('select * from public.ledger', 1);
 select test.expect_count('select * from public.member where role = ''owner''', 1);
 select test.expect_count('select * from public.pocket', 4);
 select test.expect_count('select * from public.pocket where scope = ''personal'' and name = ''개인용돈''', 1);
--- 대분류 15+6+6 = 27, 소분류 = 식비4 주거3 통신3 교통4 생활2 쇼핑2 건강3 문화3 + 단일 19 = 43
-select test.expect_count('select * from public.category where parent_id is null', 27);
-select test.expect_count('select * from public.category where parent_id is not null', 43);
+-- 기본 대분류 12+4+4 = 20, 소분류 = 대분류마다 같은 이름 1개 = 20 (BANB-36)
+select test.expect_count('select * from public.category where parent_id is null', 20);
+select test.expect_count('select * from public.category where parent_id is not null', 20);
 select test.expect_count('select * from public.ledger where member_limit = 4', 1);  -- 기본 상한 4명 (BANB-16)
 -- (1인 1가계부 규칙은 BANB-17에서 제거 → 여러 가계부·1인 5개 상한은 30_multi_ledger_test.sql)
 -- member_limit은 클라이언트가 못 바꾼다
@@ -134,7 +134,7 @@ select public.join_ledger((select valid from codes), 'B');
 select test.expect_count('select * from public.member', 2);
 -- B는 A의 데이터가 보인다
 select test.expect_count('select * from public.ledger where name = ''반반네''', 1);
-select test.expect_count('select * from public.category', 70);
+select test.expect_count('select * from public.category', 40);
 -- B는 자기 이름만 바꿀 수 있고, 역할·다른 사람은 못 바꾼다
 select test.expect_affected($$update public.member set display_name = '비' where user_id = auth.uid()$$, 1);
 select test.expect_affected($$update public.member set display_name = '해킹' where user_id <> auth.uid()$$, 0);
@@ -160,8 +160,12 @@ reset role;
 
 -- ── 7. 내역 규칙 (B가 입력)
 reset role;
+-- 기본값은 같은 이름 소분류뿐이라(BANB-36) 아래 규칙 확인용 소분류 2개를 식비 아래에 둔다
+insert into public.category (ledger_id, type, parent_id, name, sort_order)
+select ledger_id, 'expense', id, n, o from public.category, (values ('외식', 1), ('배달', 2)) v(n, o)
+ where type = 'expense' and name = '식비' and parent_id is null and ledger_id = (select val from test.ctx where key = 'ledger');
 insert into test.ctx select 'expense_child', id from public.category where type = 'expense' and name = '외식' and ledger_id = (select val from test.ctx where key = 'ledger');
-insert into test.ctx select 'expense_parent', id from public.category where type = 'expense' and name = '식비' and ledger_id = (select val from test.ctx where key = 'ledger');
+insert into test.ctx select 'expense_parent', id from public.category where type = 'expense' and name = '식비' and parent_id is null and ledger_id = (select val from test.ctx where key = 'ledger');
 insert into test.ctx select 'income_child', id from public.category where type = 'income' and parent_id is not null and name = '급여' and ledger_id = (select val from test.ctx where key = 'ledger');
 insert into test.ctx select 'pocket', id from public.pocket where name = '공동소비' and ledger_id = (select val from test.ctx where key = 'ledger');
 insert into test.ctx select 'member_a', id from public.member where display_name = 'A' and ledger_id = (select val from test.ctx where key = 'ledger');
@@ -257,8 +261,8 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 -- 자기 자신을 부모로 지정 불가
 select test.expect_error($$update public.category set parent_id = id where id = (select exp_parent from test.v)$$, 'CATEGORY_SELF_PARENT');
--- 소분류가 있는 대분류(식비)는 다른 대분류(주거) 아래로 갈 수 없음
-select test.expect_error($$update public.category set parent_id = (select id from public.category where name = '주거' and parent_id is null)
+-- 소분류가 있는 대분류(식비)는 다른 대분류(주거·관리비) 아래로 갈 수 없음
+select test.expect_error($$update public.category set parent_id = (select id from public.category where name = '주거·관리비' and parent_id is null)
   where id = (select exp_parent from test.v)$$, 'CATEGORY_DEPTH_EXCEEDED');
 -- 소분류를 소분류 아래로 옮길 수 없음
 select test.expect_error($$update public.category set parent_id = (select exp_child from test.v)
@@ -270,7 +274,7 @@ select test.expect_error($$insert into public.category (ledger_id, type, parent_
 select test.expect_error($$update public.category set type = 'income' where id = (select exp_parent from test.v)$$, 'foreign key');
 -- 정상: 소분류 추가, 소분류를 다른 대분류로 이동, 자식 없는 대분류를 소분류로
 insert into public.category (ledger_id, type, parent_id, name) select ledger, 'expense', exp_parent, '야식' from test.v;
-select test.expect_affected($$update public.category set parent_id = (select id from public.category where name = '주거' and parent_id is null)
+select test.expect_affected($$update public.category set parent_id = (select id from public.category where name = '주거·관리비' and parent_id is null)
   where name = '야식'$$, 1);
 insert into public.category (ledger_id, type, name) select ledger, 'expense', '임시대분류' from test.v;
 select test.expect_affected($$update public.category set parent_id = (select exp_parent from test.v) where name = '임시대분류'$$, 1);

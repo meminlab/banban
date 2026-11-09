@@ -133,14 +133,14 @@ describe('설정 메뉴', () => {
 });
 
 describe('카테고리 관리', () => {
-  it('유형 탭별로 대분류 > 소분류를 순서대로 보여 준다', async () => {
+  it('유형 탭별로 대분류 > 소분류를 순서대로 보여 준다 (같은 이름 소분류는 따로 보이지 않음, BANB-36)', async () => {
     const user = userEvent.setup();
     const { container } = renderAt('/settings/categories');
     expect(await screen.findByRole('tab', { name: '지출', selected: true })).toBeInTheDocument();
-    expect(rowNames(container)).toEqual(['식비', '장보기', '외식', '보험', '보험']);
+    expect(rowNames(container)).toEqual(['식비', '장보기', '외식', '보험']);
 
     await user.click(screen.getByRole('tab', { name: '수입' }));
-    expect(rowNames(container)).toEqual(['급여', '급여']);
+    expect(rowNames(container)).toEqual(['급여']);
     await user.click(screen.getByRole('tab', { name: '저축' }));
     expect(screen.getByText(/아직 저축 카테고리가 없어요/)).toBeInTheDocument();
   });
@@ -181,7 +181,7 @@ describe('카테고리 관리', () => {
     await user.click(within(dialog).getByRole('button', { name: '추가하기' }));
     expect(catalog.addParentCategory).toHaveBeenCalledWith({ ledgerId: 'L', type: 'expense', name: '술', icon: null, sortOrder: 3 });
     await screen.findByText('추가했어요');
-    expect(rowNames(container).slice(-2)).toEqual(['술', '술']);
+    expect(rowNames(container).slice(-1)).toEqual(['술']);
   });
 
   it.each([
@@ -246,14 +246,18 @@ describe('카테고리 관리', () => {
     expect(catalog.updateCategory).toHaveBeenCalledTimes(2);
   });
 
-  it('이름만 바꾸면 소분류는 건드리지 않는다', async () => {
+  it('대분류 이름만 바꾸면 같은 이름 소분류도 이름만 함께 바뀐다 (BANB-36)', async () => {
     const user = userEvent.setup();
     renderAt('/settings/categories');
     await user.click((await screen.findAllByRole('button', { name: /^보험/ }))[0]);
     const dialog = screen.getByRole('dialog', { name: '대분류 수정' });
     await user.type(within(dialog).getByLabelText('이름'), '료');
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
-    expect(catalog.updateCategory).toHaveBeenCalledTimes(1);
+    expect(catalog.updateCategory).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(catalog.updateCategory).mock.calls.map((c) => c[1])).toEqual([
+      expect.objectContaining({ name: '보험료' }),
+      { name: '보험료' },
+    ]);
   });
 
   it('순서를 바꿀 수 있고, 맨 위에서는 위로 버튼이 꺼진다', async () => {

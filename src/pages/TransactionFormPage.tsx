@@ -18,13 +18,13 @@ import {
   deleteTransaction,
   getTransaction,
   getTransactionFormOptions,
-  listRecentCategoryIds,
+  listCategoryUses,
   updateTransaction,
   type TransactionFormOptions,
 } from '../data/transaction';
 import type { Category, Transaction, TransactionType } from '../data/types';
 import { nextSortOrder } from '../domain/catalog';
-import { buildPickerModel, type ParentChoice } from '../domain/categoryPicker';
+import { buildPickerModel, frequentRange, type CategoryUse, type ParentChoice } from '../domain/categoryPicker';
 import {
   FIELD_ORDER,
   MEMO_MAX,
@@ -171,19 +171,20 @@ function TransactionForm({
   const [catSheet, setCatSheet] = useState<null | 'pick' | 'add'>(null);
   const [catBusy, setCatBusy] = useState(false);
   const [catError, setCatError] = useState<string | null>(null);
-  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [uses, setUses] = useState<CategoryUse[]>([]);
 
   useEffect(() => {
     let alive = true;
-    // "최근 쓴 것"은 없어도 고를 수 있으므로 실패하면 조용히 숨긴다
-    listRecentCategoryIds(ledgerId, myMemberId).then(
-      (ids) => alive && setRecentIds(ids),
+    // "자주 쓰는 것" 순위는 없어도 기본 순서로 고를 수 있으므로 실패하면 조용히 기본 순서로 둔다
+    const { from, to } = frequentRange(todayKST());
+    listCategoryUses(ledgerId, from, to).then(
+      (rows) => alive && setUses(rows),
       () => undefined,
     );
     return () => {
       alive = false;
     };
-  }, [ledgerId, myMemberId]);
+  }, [ledgerId]);
 
   // 처음 값이 숨김/나감 항목이어도 수정 화면에서 그대로 보이게 유지
   const keep = original ?? undefined;
@@ -191,7 +192,7 @@ function TransactionForm({
     () => categoryGroups(categories, draft.type, keep?.type === draft.type ? keep.category_id : null),
     [categories, draft.type, keep],
   );
-  const pickerModel = useMemo(() => buildPickerModel(groups, recentIds), [groups, recentIds]);
+  const pickerModel = useMemo(() => buildPickerModel(groups, categories, uses), [groups, categories, uses]);
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const selectedCategory = categoryById.get(draft.categoryId);
   const selectedParent = selectedCategory?.parent_id ? categoryById.get(selectedCategory.parent_id) : undefined;
@@ -513,7 +514,6 @@ function TransactionForm({
         <Sheet title={`${TYPE_LABEL[draft.type]} 카테고리`} onClose={closeCategorySheet}>
           <CategoryPicker
             model={pickerModel}
-            parentById={categoryById}
             selectedId={draft.categoryId}
             onSelect={(c) => {
               set('categoryId', c.id);

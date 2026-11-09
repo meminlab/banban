@@ -9,6 +9,7 @@ import {
   selectablePockets,
   sortByOrder,
   iconFollowers,
+  nameFollowers,
 } from './catalog';
 
 function cat(id: string, parent: string | null, sort: number, extra: Partial<Category> = {}): Category {
@@ -165,5 +166,22 @@ describe('iconFollowers (대분류 아이콘을 바꿀 때 같이 바꿀 소분�
   });
   it('소분류를 고치면 따라 바뀌는 것은 없다', () => {
     expect(iconFollowers([parent, same], same)).toEqual([]);
+  });
+});
+
+describe('nameFollowers (대분류 이름을 바꿀 때 같이 바꿀 같은 이름 소분류, BANB-36)', () => {
+  const parent = cat('식비', null, 1);
+  const self = cat('식비-c', '식비', 0, { name: '식비' });
+  const out = cat('외식', '식비', 1);
+  const all = [parent, self, out];
+
+  it('같은 이름 소분류만 함께', () => {
+    expect(nameFollowers(all, parent, '밥값').map((c) => c.id)).toEqual(['식비-c']);
+  });
+  it('새 이름과 같은 소분류가 이미 있으면 바꾸지 않는다', () => {
+    expect(nameFollowers(all, parent, '외식')).toEqual([]);
+  });
+  it('소분류 이름을 바꿀 때는 없음', () => {
+    expect(nameFollowers(all, out, '배달')).toEqual([]);
   });
 });

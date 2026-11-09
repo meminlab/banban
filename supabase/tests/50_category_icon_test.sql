@@ -53,27 +53,27 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000005a1';
 insert into test.ctx values ('l1', public.create_ledger('아이콘 L1', 'A'));
 
--- ── 1. 새 가계부 기본 카테고리 70개(대분류 27 + 소분류 43) 모두 아이콘이 있다
-select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and parent_id is null and icon is not null$$, 27);
-select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and parent_id is not null and icon is not null$$, 43);
--- 매핑 표본 (design.md 4.1)
+-- ── 1. 새 가계부 기본 카테고리 40개(대분류 20 + 같은 이름 소분류 20, BANB-36) 모두 아이콘이 있다
+select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and parent_id is null and icon is not null$$, 20);
+select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and parent_id is not null and icon is not null$$, 20);
+-- 매핑 표본
 select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and parent_id is null and name = '식비' and icon = 'utensils-crossed'$$, 1);
 select test.expect_count($$select c.* from public.category c join public.category p on p.id = c.parent_id
-  where c.ledger_id = test.id('l1') and p.name = '교통' and c.name = '택시' and c.icon = 'car-taxi-front'$$, 1);
+  where c.ledger_id = test.id('l1') and p.name = '교통·차량' and c.name = '교통·차량' and c.icon = 'car'$$, 1);
 select test.expect_count($$select c.* from public.category c join public.category p on p.id = c.parent_id
-  where c.ledger_id = test.id('l1') and c.type = 'saving' and p.name = '청약' and c.name = '청약' and c.icon = 'building-complex'$$, 1);
+  where c.ledger_id = test.id('l1') and c.type = 'saving' and p.name = '적금·예금' and c.icon = 'piggy-bank'$$, 1);
 select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and name = '기타' and icon = 'ellipsis'$$, 6);
--- 대분류·소분류 아이콘 종류 수 (겹치는 것 빼고 48종: 대분류 25 + 소분류 24 − smartphone)
-select test.expect_count($$select distinct icon from public.category where ledger_id = test.id('l1')$$, 48);
+-- 아이콘 종류 수: 20개 중 "기타" 3개가 같은 ellipsis → 18종
+select test.expect_count($$select distinct icon from public.category where ledger_id = test.id('l1')$$, 18);
 
 -- ── 2. 멤버는 아이콘을 바꾸고 지울 수 있다, 새로 만드는 카테고리는 아이콘 없이도 된다
-select test.expect_affected($$update public.category set icon = 'dog' where ledger_id = test.id('l1') and name = '반려동물' and parent_id is not null$$, 1);
-select test.expect_affected($$update public.category set icon = null where ledger_id = test.id('l1') and name = '육아' and parent_id is not null$$, 1);
+select test.expect_affected($$update public.category set icon = 'dog' where ledger_id = test.id('l1') and name = '교육·육아' and parent_id is not null$$, 1);
+select test.expect_affected($$update public.category set icon = null where ledger_id = test.id('l1') and name = '용돈' and parent_id is not null$$, 1);
 insert into public.category (ledger_id, type, parent_id, name, sort_order)
 values (test.id('l1'), 'expense', null, '직접 만든 대분류', 99);
 insert into public.category (ledger_id, type, parent_id, name, sort_order, icon)
-select test.id('l1'), 'expense', id, '강아지 미용', 1, 'scissors' from public.category
- where ledger_id = test.id('l1') and parent_id is null and name = '반려동물';
+select test.id('l1'), 'expense', id, '외식', 1, 'utensils' from public.category
+ where ledger_id = test.id('l1') and parent_id is null and name = '식비';
 select test.expect_count($$select * from public.category where ledger_id = test.id('l1') and name = '직접 만든 대분류' and icon is null$$, 1);
 
 -- ── 3. 형식 검사: kebab-case 소문자·숫자, 40자 이하만

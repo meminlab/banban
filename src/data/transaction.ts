@@ -1,4 +1,5 @@
 /** 내역(transaction) 조회·추가·수정·삭제와 입력 화면 선택지 조회 */
+import type { CategoryUse } from '../domain/categoryPicker';
 import { monthRange, type YearMonth } from '../domain/month';
 import type { TransactionValues } from '../domain/transactionForm';
 import { getSupabase } from './supabase';
@@ -44,24 +45,29 @@ export async function getTransaction(id: string): Promise<Transaction | null> {
   return data as Transaction | null;
 }
 
-/**
- * 이 멤버가 최근 입력한 내역의 카테고리 id (입력한 순서, 겹칠 수 있음). 카테고리 선택 시트의 "최근 쓴 것".
- * 최근 50건만 본다(종류별 4개를 고르기에 충분).
- */
-export async function listRecentCategoryIds(ledgerId: string, memberId: string): Promise<string[]> {
-  const { data, error } = await getSupabase()
-    .from('transaction')
-    .select('category_id')
-    .eq('ledger_id', ledgerId)
-    .eq('created_by', memberId)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return (data as { category_id: string }[]).map((r) => r.category_id);
-}
-
 /** Supabase(PostgREST)는 한 번에 최대 1,000행만 돌려주므로 나눠서 다 읽는다 */
 const PAGE_SIZE = 1000;
+
+/**
+ * 카테고리 선택 시트의 "자주 쓰는 것" 순위용: 이 가계부(모든 멤버) 내역의 카테고리·날짜·입력 시각.
+ * from ~ to (둘 다 포함, YYYY-MM-DD). to = 오늘이라 미래 날짜는 빠진다. 1,000행이 넘으면 나눠 읽는다.
+ */
+export async function listCategoryUses(ledgerId: string, from: string, to: string): Promise<CategoryUse[]> {
+  const rows: CategoryUse[] = [];
+  for (let start = 0; ; start += PAGE_SIZE) {
+    const { data, error } = await getSupabase()
+      .from('transaction')
+      .select('category_id, occurred_on, created_at')
+      .eq('ledger_id', ledgerId)
+      .gte('occurred_on', from)
+      .lte('occurred_on', to)
+      .order('id')
+      .range(start, start + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...(data as CategoryUse[]));
+    if (data.length < PAGE_SIZE) return rows;
+  }
+}
 
 /** 그 달(KST 날짜 기준) 내역 전부. 가계부 탭 달력·목록 */
 export async function listMonthTransactions(ledgerId: string, month: YearMonth): Promise<Transaction[]> {
