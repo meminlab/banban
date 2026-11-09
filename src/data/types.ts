@@ -207,7 +207,7 @@ export type LedgerRpcError =
 
 /** 같이 놀기 (BANB-49). 쓰기는 DB 함수로만(invite_game / respond_game / play_move / resign_game / sweep_games) */
 export type GameKind = 'omok';
-export type GameStatus = 'invited' | 'active' | 'finished' | 'declined' | 'expired' | 'abandoned';
+export type GameStatus = 'invited' | 'active' | 'finished' | 'declined' | 'canceled' | 'expired' | 'abandoned';
 export type GameEndReason = 'five' | 'resign' | 'draw' | 'timeout';
 
 export interface Game {

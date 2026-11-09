@@ -1,8 +1,9 @@
 -- BANB-49 같이 놀기 1차: 오목 실시간 대전 (game + game_move + 서버 판정 함수)
 --   1) game: 가계부 안 두 멤버의 판. 흑 = 초대받은 사람(초대한 사람이 백), "한 판 더"는 흑백을 바꾼다
---      상태 invited(초대, 10분) → active(대국) → finished(five/resign/draw) / declined / expired / abandoned(24시간 수 없음, timeout)
+--      상태 invited(초대, 10분) → active(대국) → finished(five/resign/draw) / declined(거절) / canceled(초대한 사람이 취소)
+--      / expired(10분 지남) / abandoned(24시간 수 없음, timeout)
 --   2) game_move: 판의 수(순번·x·y·둔 사람). (판, 칸)은 한 번만
---   3) 쓰기는 함수로만: invite_game / respond_game / play_move / resign_game / sweep_games
+--   3) 쓰기는 함수로만: invite_game / respond_game / cancel_game / play_move / resign_game / sweep_games
 --      차례·빈칸·판 상태·멤버 확인과 5목(6목 이상 장목 포함)·무승부 판정은 서버가 한다. 화면이 보낸 값은 칸 좌표만 쓴다
 --      한 사람은 가계부 안에서 진행 중인 판(invited·active) 1개까지 (가계부 단위 잠금으로 동시 요청도 막는다)
 --      초대 만료·24시간 중단은 쓰기·sweep_games 때 서버 시각으로 닫는다(예약 작업 없음)
@@ -20,7 +21,7 @@ create table public.game (
   black_id           uuid not null,          -- member id (선공)
   white_id           uuid not null,          -- member id
   status             text not null default 'invited'
-                       check (status in ('invited', 'active', 'finished', 'declined', 'expired', 'abandoned')),
+                       check (status in ('invited', 'active', 'finished', 'declined', 'canceled', 'expired', 'abandoned')),
   winner_id          uuid,                   -- finished(five·resign)일 때만
   end_reason         text check (end_reason in ('five', 'resign', 'draw', 'timeout')),
   move_count         smallint not null default 0 check (move_count between 0 and 225),
@@ -44,7 +45,7 @@ create table public.game (
     or (status = 'active' and started_at is not null and finished_at is null and winner_id is null and end_reason is null)
     or (status = 'finished' and started_at is not null and finished_at is not null
         and ((end_reason in ('five', 'resign') and winner_id is not null) or (end_reason = 'draw' and winner_id is null)))
-    or (status in ('declined', 'expired') and started_at is null and finished_at is not null
+    or (status in ('declined', 'canceled', 'expired') and started_at is null and finished_at is not null
         and winner_id is null and end_reason is null and move_count = 0)
     or (status = 'abandoned' and started_at is not null and finished_at is not null
         and winner_id is null and end_reason = 'timeout'),
@@ -261,6 +262,40 @@ end;
 $$;
 
 /*
+ * 초대 취소: 초대한 사람만, 아직 답이 없는 초대만. 이미 수락·거절·만료됐으면 지금 상태(applied = false)
+ */
+create or replace function public.cancel_game(p_game_id uuid) returns jsonb
+language plpgsql security definer
+set search_path = ''
+as $$
+declare
+  v_g public.game;
+  v_me uuid;
+begin
+  select * into v_g from public.game g where g.id = p_game_id;
+  if not found then
+    raise exception 'GAME_NOT_FOUND' using errcode = 'P0002';
+  end if;
+  v_me := public.current_member_id(v_g.ledger_id);
+  if v_me is null then
+    raise exception 'GAME_NOT_FOUND' using errcode = 'P0002';
+  end if;
+  if v_me <> v_g.created_by then
+    raise exception 'GAME_NOT_INVITER' using errcode = '42501';
+  end if;
+
+  perform public.game_lock_ledger(v_g.ledger_id);
+  perform public.game_close_stale(v_g.ledger_id);
+  select * into v_g from public.game g where g.id = p_game_id;
+  if v_g.status <> 'invited' then
+    return public.game_result(v_g, false);
+  end if;
+  update public.game g set status = 'canceled', finished_at = now() where g.id = v_g.id returning * into v_g;
+  return public.game_result(v_g, true);
+end;
+$$;
+
+/*
  * 한 수 두기. (p_x, p_y) = 0~14. 서버가 차례·빈칸·판 상태·멤버를 확인하고 5목·무승부를 판정한다.
  * 24시간 수가 없던 판이면 abandoned 로 닫고 결과를 돌려준다(applied = false).
  * 오류: GAME_NOT_FOUND / GAME_NOT_PLAYER / GAME_NOT_ACTIVE / GAME_NOT_YOUR_TURN / GAME_BAD_CELL / GAME_CELL_TAKEN
@@ -407,11 +442,13 @@ revoke execute on function public.game_lock_ledger(uuid) from public, anon, auth
 revoke execute on function public.game_result(public.game, boolean) from public, anon, authenticated;
 revoke execute on function public.invite_game(uuid, uuid, text, uuid) from public, anon;
 revoke execute on function public.respond_game(uuid, boolean) from public, anon;
+revoke execute on function public.cancel_game(uuid) from public, anon;
 revoke execute on function public.play_move(uuid, integer, integer) from public, anon;
 revoke execute on function public.resign_game(uuid) from public, anon;
 revoke execute on function public.sweep_games(uuid) from public, anon;
 grant execute on function public.invite_game(uuid, uuid, text, uuid) to authenticated;
 grant execute on function public.respond_game(uuid, boolean) to authenticated;
+grant execute on function public.cancel_game(uuid) to authenticated;
 grant execute on function public.play_move(uuid, integer, integer) to authenticated;
 grant execute on function public.resign_game(uuid) to authenticated;
 grant execute on function public.sweep_games(uuid) to authenticated;

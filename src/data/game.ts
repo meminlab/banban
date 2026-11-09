@@ -20,6 +20,7 @@ export type GameErrorCode =
   | 'GAME_OPPONENT_BUSY'
   | 'GAME_BAD_REMATCH'
   | 'GAME_NOT_INVITEE'
+  | 'GAME_NOT_INVITER'
   | 'GAME_NOT_PLAYER'
   | 'GAME_NOT_ACTIVE'
   | 'GAME_NOT_YOUR_TURN'
@@ -34,6 +35,7 @@ const CODES: GameErrorCode[] = [
   'GAME_OPPONENT_BUSY',
   'GAME_BAD_REMATCH',
   'GAME_NOT_INVITEE',
+  'GAME_NOT_INVITER',
   'GAME_NOT_PLAYER',
   'GAME_NOT_ACTIVE',
   'GAME_NOT_YOUR_TURN',
@@ -125,6 +127,11 @@ export function respondGame(gameId: string, accept: boolean): Promise<GameResult
   return rpc<GameResult>('respond_game', { p_game_id: gameId, p_accept: accept });
 }
 
+/** 초대 취소 (초대한 사람, 답하기 전). 이미 답했거나 만료됐으면 applied = false */
+export function cancelGame(gameId: string): Promise<GameResult> {
+  return rpc<GameResult>('cancel_game', { p_game_id: gameId });
+}
+
 /** 한 수 두기 (x = 열, y = 행, 0~14) */
 export function playMove(gameId: string, x: number, y: number): Promise<GameResult> {
   return rpc<GameResult>('play_move', { p_game_id: gameId, p_x: x, p_y: y });
@@ -141,12 +148,21 @@ export function sweepGames(ledgerId: string): Promise<number> {
 
 type Unsubscribe = () => void;
 
-function watchStatus(channel: RealtimeChannel, onResync: () => void, onTrack?: () => void) {
+function watchStatus(
+  channel: RealtimeChannel,
+  onResync: () => void,
+  onTrack?: () => void,
+  onConnected?: (connected: boolean) => void,
+) {
   channel.subscribe((status) => {
     // 처음 연결·다시 연결 모두 SUBSCRIBED → 그동안 놓친 변화를 서버 값으로 다시 맞춘다
     if (status === 'SUBSCRIBED') {
+      onConnected?.(true);
       onTrack?.();
       onResync();
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      // supabase-js 가 알아서 다시 붙는다. 그동안 "연결하는 중" 표시
+      onConnected?.(false);
     }
   });
 }
@@ -173,12 +189,15 @@ interface RoomHandlers {
   onGame: (game: Game) => void;
   onPresence: (memberIds: string[]) => void;
   onResync: () => void;
+  /** 실시간 연결 상태 (끊기면 false, 다시 붙으면 true) */
+  onConnected?: (connected: boolean) => void;
 }
 
 interface Room {
   channel: RealtimeChannel;
   listeners: Set<RoomHandlers>;
   presence: string[];
+  connected: boolean | null;
   closeTimer: ReturnType<typeof setTimeout> | null;
 }
 
@@ -201,11 +220,12 @@ export function subscribeGameRoom(gameId: string, myMemberId: string, handlers: 
     room.closeTimer = null;
     room.listeners.add(handlers);
     handlers.onPresence(room.presence);
+    if (room.connected !== null) handlers.onConnected?.(room.connected);
     handlers.onResync();
   } else {
     const sb = getSupabase();
     const channel = sb.channel(`game:${gameId}`, { config: { presence: { key: myMemberId } } });
-    const created: Room = { channel, listeners: new Set([handlers]), presence: [], closeTimer: null };
+    const created: Room = { channel, listeners: new Set([handlers]), presence: [], connected: null, closeTimer: null };
     room = created;
     rooms.set(key, created);
     channel
@@ -223,6 +243,12 @@ export function subscribeGameRoom(gameId: string, myMemberId: string, handlers: 
       channel,
       () => created.listeners.forEach((l) => l.onResync()),
       () => void channel.track({ at: Date.now() }),
+      (connected) => {
+        // 끊김이 실제로 확인된 뒤에만 알린다 (처음 연결 전에는 "연결하는 중"을 띄우지 않는다)
+        if (created.connected === connected) return;
+        created.connected = connected;
+        created.listeners.forEach((l) => l.onConnected?.(connected));
+      },
     );
   }
   const current = room;

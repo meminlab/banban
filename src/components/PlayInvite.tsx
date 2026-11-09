@@ -1,38 +1,46 @@
-import { ChevronRight, Gamepad2 } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronRight, Gamepad2, X } from 'lucide-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../app/games';
+import { useLedgerId } from '../app/guards';
 import { omokPath, PLAY_PATH } from '../app/routes';
-import { GameError, respondGame } from '../data/game';
+import { GameError, inviteGame, listFinishedGames, respondGame } from '../data/game';
 import type { Game } from '../data/types';
 import {
-  formatRemaining,
-  gameHeadline,
+  formatHeadToHead,
+  headToHead,
   inviteMessage,
   inviteRemainingMs,
+  minutesLeftText,
   myOpenGame,
+  opponentOf,
+  turnMemberId,
+  turnText,
   type MyOpenGame,
 } from '../domain/omok';
+import { Dialog } from './Dialog';
+import { GameAvatar } from './GameAvatar';
 
-/** 서버 거부·네트워크 오류 문구 */
+/** 서버 거부·네트워크 오류 문구 (design.md 5.31) */
 export function playErrorMessage(e: unknown, nameOf?: (id: string) => string, opponentId?: string): string {
+  const opp = opponentId && nameOf ? `${nameOf(opponentId)}님` : '상대';
   if (e instanceof GameError) {
     switch (e.code) {
       case 'GAME_ALREADY_OPEN':
-        return '이미 진행 중인 판이 있어요';
+        return '두던 판을 끝내면 새로 둘 수 있어요';
       case 'GAME_OPPONENT_BUSY':
-        return `${opponentId && nameOf ? `${nameOf(opponentId)}님은` : '상대가'} 다른 판을 하고 있어요`;
+        return `${opp}은 다른 판을 두는 중이에요`;
       case 'GAME_BAD_OPPONENT':
         return '같이 놀 수 없는 멤버예요';
       case 'GAME_NOT_YOUR_TURN':
-        return '아직 내 차례가 아니에요';
+        return `지금은 ${opp} 차례예요`;
       case 'GAME_CELL_TAKEN':
-        return '이미 돌이 있는 칸이에요';
+        return '이미 돌이 있는 자리예요';
       case 'GAME_NOT_ACTIVE':
         return '이미 끝난 판이에요';
       case 'GAME_NOT_FOUND':
       case 'NOT_IN_LEDGER':
-        return '판을 찾을 수 없어요';
+        return '이 판은 볼 수 없어요';
       default:
         return '요청을 처리하지 못했어요';
     }
@@ -40,12 +48,37 @@ export function playErrorMessage(e: unknown, nameOf?: (id: string) => string, op
   return '연결이 불안정해요. 잠시 후 다시 시도해 주세요';
 }
 
-/** 초대 수락·거절. 수락하면 판 화면으로 간다. 만료됐으면 알려 준다 */
+/* 배너 "나중에"·홈 줄 X 로 숨긴 초대 (앱을 켜 둔 동안만 기억. 초대 자체는 남는다) */
+const hidden = { banner: new Set<string>(), row: new Set<string>() };
+const listeners = new Set<() => void>();
+let version = 0;
+function hide(kind: 'banner' | 'row', gameId: string) {
+  hidden[kind].add(gameId);
+  version += 1;
+  listeners.forEach((l) => l());
+}
+function useHiddenVersion() {
+  return useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    () => version,
+  );
+}
+
+/**
+ * 초대 수락·거절. 수락하면 판 화면(대기실 "둘 다 왔어요")으로 간다.
+ * 그사이 10분이 지났으면 확인 창 "초대가 만료됐어요" → [닫기] [○○님 초대하기] (design.md 5.28)
+ */
 export function useRespond(onDone?: () => void) {
   const navigate = useNavigate();
+  const ledgerId = useLedgerId();
+  const nameOf = useMemberName();
   const { upsert, refresh } = useGames();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expired, setExpired] = useState<Game | null>(null);
 
   async function respond(game: Game, accept: boolean) {
     if (busy) return;
@@ -54,8 +87,8 @@ export function useRespond(onDone?: () => void) {
     try {
       const r = await respondGame(game.id, accept);
       upsert({ ...game, status: r.status });
-      if (r.status === 'active') navigate(omokPath(game.id));
-      else if (r.status === 'expired') setError('초대가 만료됐어요');
+      if (r.status === 'active') navigate(omokPath(game.id), { state: { justAccepted: true } });
+      else if (r.status === 'expired') setExpired(game);
       else if (!r.applied) refresh();
       onDone?.();
     } catch (e) {
@@ -65,7 +98,41 @@ export function useRespond(onDone?: () => void) {
       setBusy(false);
     }
   }
-  return { respond, busy, error };
+
+  async function inviteBack(game: Game) {
+    setBusy(true);
+    try {
+      const id = await inviteGame(ledgerId, game.created_by);
+      refresh();
+      navigate(omokPath(id));
+    } catch (e) {
+      setError(playErrorMessage(e, nameOf, game.created_by));
+    } finally {
+      setExpired(null);
+      setBusy(false);
+    }
+  }
+
+  const expiredDialog = expired && (
+    <Dialog
+      title="초대가 만료됐어요"
+      onCancel={() => setExpired(null)}
+      actions={
+        <>
+          <button type="button" className="button button--secondary" onClick={() => setExpired(null)}>
+            닫기
+          </button>
+          <button type="button" className="button button--primary" disabled={busy} onClick={() => inviteBack(expired)}>
+            {nameOf(expired.created_by)}님 초대하기
+          </button>
+        </>
+      }
+    >
+      <p>{nameOf(expired.created_by)}님 초대가 10분이 지나 사라졌어요. 이번엔 내가 불러 볼까요?</p>
+    </Dialog>
+  );
+
+  return { respond, busy, error, expiredDialog };
 }
 
 function useMyOpenGame(): MyOpenGame | null {
@@ -74,86 +141,182 @@ function useMyOpenGame(): MyOpenGame | null {
   return me ? myOpenGame(open, me, now) : null;
 }
 
-/** 수락·거절 버튼 줄 */
-function RespondButtons({ game }: { game: Game }) {
-  const { respond, busy, error } = useRespond();
+/** 거절·수락 버튼 줄 (홈 카드·결과 시트) */
+export function RespondButtons({ game, onDone }: { game: Game; onDone?: () => void }) {
+  const { respond, busy, error, expiredDialog } = useRespond(onDone);
   return (
     <>
-      <div className="play-invite__actions">
-        <button type="button" className="button button--secondary button--small" disabled={busy} onClick={() => respond(game, false)}>
+      <div className="play-actions">
+        <button type="button" className="button button--secondary" disabled={busy} onClick={() => respond(game, false)}>
           다음에 할게요
         </button>
-        <button type="button" className="button button--primary button--small" disabled={busy} onClick={() => respond(game, true)}>
-          한 판 해요
+        <button type="button" className="button button--primary" disabled={busy} onClick={() => respond(game, true)}>
+          좋아요
         </button>
       </div>
       {error && (
-        <p className="play-invite__error" role="alert">
+        <p className="play-error" role="alert">
           {error}
         </p>
       )}
+      {expiredDialog}
     </>
   );
 }
 
 /**
- * 앱 안 초대 배너 (탭 화면 위). 나를 초대한 판이 있을 때만. 홈에서는 같이 놀기 카드가 같은 내용을 보여 줘서 숨긴다
+ * 앱 안 초대 배너 (design.md 5.28): 받은 초대가 살아 있는 동안 지금 화면 위에 뜬다.
+ * [나중에] = 배너만 닫기(초대는 남음) / [같이 놀기] = 수락 → 대기실. 거절은 홈 카드에서만(실수 방지).
+ * 홈에서는 맨 위 한 줄 + 카드가 대신 보여 줘서 숨긴다(hidden)
  */
-export function PlayInviteBanner({ hidden }: { hidden?: boolean }) {
+export function PlayInviteBanner({ hidden: hide_ }: { hidden?: boolean }) {
   const mine = useMyOpenGame();
+  const { members } = useGames();
   const nameOf = useMemberName();
-  if (hidden || mine?.kind !== 'invited-me') return null;
+  const { respond, busy, error, expiredDialog } = useRespond();
+  useHiddenVersion();
+  if (expiredDialog) return expiredDialog;
+  if (hide_ || mine?.kind !== 'invited-me' || hidden.banner.has(mine.game.id)) return null;
+  const g = mine.game;
   return (
-    <section className="play-invite" aria-live="polite" aria-label="오목 초대">
-      <p className="play-invite__text">
-        <Gamepad2 size={20} aria-hidden="true" className="play-invite__icon" />
-        {inviteMessage(nameOf(mine.game.created_by))}
-      </p>
-      <RespondButtons game={mine.game} />
+    <section className="play-banner" role="alert" aria-label="오목 초대">
+      <div className="play-banner__head">
+        <GameAvatar memberId={g.created_by} members={members} size={32} />
+        <div className="play-banner__text">
+          <p className="play-banner__title">{inviteMessage(nameOf(g.created_by))}</p>
+          <p className="play-banner__sub">10분 안에 답해 주세요</p>
+        </div>
+      </div>
+      <div className="play-actions">
+        <button type="button" className="button button--secondary" onClick={() => hide('banner', g.id)}>
+          나중에
+        </button>
+        <button type="button" className="button button--primary" disabled={busy} onClick={() => respond(g, true)}>
+          같이 놀기
+        </button>
+      </div>
+      {error && (
+        <p className="play-error" role="alert">
+          {error}
+        </p>
+      )}
     </section>
   );
 }
 
+export const PLAY_CARD_ID = 'play-card';
+
 /**
- * 홈 "같이 놀기" 카드: 초대 받음(수락/거절) / 기다리는 중(남은 시간) / 대국 중(누구 차례) / 평소(오목 한 판 할까요?)
+ * 홈 맨 위 한 줄 (design.md 5.28): 받은 초대가 살아 있는 동안. 누르면 홈 카드로 스크롤, X 는 이 줄만 숨김
+ */
+export function PlayInviteRow() {
+  const mine = useMyOpenGame();
+  const nameOf = useMemberName();
+  useHiddenVersion();
+  if (mine?.kind !== 'invited-me' || hidden.row.has(mine.game.id)) return null;
+  const g = mine.game;
+  return (
+    <div className="month-check recurring-row play-row">
+      <button
+        type="button"
+        className="month-check__body recurring-row__body"
+        onClick={() => document.getElementById(PLAY_CARD_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+      >
+        <Gamepad2 size={20} strokeWidth={2} aria-hidden="true" className="play-row__icon" />
+        <span className="recurring-row__text">{inviteMessage(nameOf(g.created_by))}</span>
+        <ChevronRight size={20} strokeWidth={2} aria-hidden="true" />
+      </button>
+      <button type="button" className="icon-button" aria-label="이 알림 숨기기" onClick={() => hide('row', g.id)}>
+        <X size={20} strokeWidth={2} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+/** 카드 라벨 줄: Gamepad2 "같이 놀기" + (새로 배지 | ChevronRight) */
+function CardLabel({ isNew }: { isNew?: boolean }) {
+  return (
+    <span className="play-card__label">
+      <Gamepad2 size={18} strokeWidth={2} aria-hidden="true" />
+      같이 놀기
+      {isNew ? <span className="badge badge--primary">새로</span> : <ChevronRight size={20} aria-hidden="true" className="play-card__arrow" />}
+    </span>
+  );
+}
+
+/**
+ * 홈 맨 아래 "같이 놀기" 카드 (design.md 5.28): 기본 / 초대 보냄 / 초대 받음 / 대국 중(내 차례·상대 차례).
+ * 카드 3줄(라벨 / 문장 / 한 줄). 멤버가 나 혼자면 숨김.
  */
 export function PlayHomeCard() {
-  const { me, ready } = useGames();
+  const ledgerId = useLedgerId();
+  const { me, members, open, ready } = useGames();
   const mine = useMyOpenGame();
   const nameOf = useMemberName();
   const now = useNow(1000);
+  const [finished, setFinished] = useState<Game[] | null>(null);
+
+  // 판이 끝나 진행 중 목록이 바뀌면 전적을 다시 받는다
+  const openKey = open.map((g) => `${g.id}:${g.status}`).join(',');
+  useEffect(() => {
+    let alive = true;
+    listFinishedGames(ledgerId).then(
+      (games) => alive && setFinished(games),
+      () => alive && setFinished(null),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [ledgerId, openKey]);
+
   if (!ready || !me) return null;
+  const others = members.filter((m) => m.left_at === null && m.id !== me);
+  if (others.length === 0) return null;
 
   if (mine?.kind === 'invited-me') {
     return (
-      <section className="play-card" aria-label="같이 놀기" data-testid="play-card">
+      <section className="play-card" id={PLAY_CARD_ID} aria-label="같이 놀기" data-testid="play-card">
+        <CardLabel isNew />
         <p className="play-card__title">{inviteMessage(nameOf(mine.game.created_by))}</p>
         <RespondButtons game={mine.game} />
       </section>
     );
   }
+
   if (mine) {
-    const line =
+    const g = mine.game;
+    const opp = nameOf(opponentOf(g, me));
+    const title = mine.kind === 'waiting' ? `${opp}님 답을 기다리고 있어요` : turnText(g, me, nameOf);
+    const sub =
       mine.kind === 'waiting'
-        ? `${gameHeadline(mine.game, me, now, nameOf)} · ${formatRemaining(inviteRemainingMs(mine.game, now))}`
-        : `오목 두는 중 · ${gameHeadline(mine.game, me, now, nameOf)}`;
+        ? `오목 · ${minutesLeftText(inviteRemainingMs(g, now))}`
+        : `${opp}님과 오목 두는 중 · ${g.move_count}수`;
     return (
-      <Link to={omokPath(mine.game.id)} className="play-card play-card--link" data-testid="play-card">
-        <span className="play-card__body">
-          <span className="play-card__label">같이 놀기</span>
-          <span className="play-card__title">{line}</span>
-        </span>
-        <ChevronRight size={20} aria-hidden="true" />
+      <Link to={omokPath(g.id)} className="play-card play-card--link" id={PLAY_CARD_ID} data-testid="play-card">
+        <CardLabel />
+        <span className={`play-card__title${mine.kind === 'playing' && turnMemberId(g) === me ? ' is-my-turn' : ''}`}>{title}</span>
+        <span className="play-card__sub">{sub}</span>
       </Link>
     );
   }
+
+  // 기본: 상대 1명이면 이름, 여럿이면 "오목 한 판 어때요?" + 가장 최근 상대 전적
+  const recent = finished?.find((g) => g.black_id === me || g.white_id === me);
+  const recordWith = others.length === 1 ? others[0].id : recent ? opponentOf(recent, me) : null;
+  const record = recordWith && finished ? headToHead(finished, me, recordWith) : null;
   return (
-    <Link to={PLAY_PATH} className="play-card play-card--link" data-testid="play-card">
-      <span className="play-card__body">
-        <span className="play-card__label">같이 놀기</span>
-        <span className="play-card__title">오목 한 판 할까요?</span>
+    <Link to={PLAY_PATH} className="play-card play-card--link" id={PLAY_CARD_ID} data-testid="play-card">
+      <CardLabel />
+      <span className="play-card__title">{others.length === 1 ? `${others[0].display_name}님과 오목 한 판 어때요?` : '오목 한 판 어때요?'}</span>
+      <span className="play-card__sub">
+        {record && record.win + record.loss + record.draw > 0 ? (
+          <>
+            전적 <b>{formatHeadToHead(record)}</b>
+          </>
+        ) : (
+          '아직 둔 판이 없어요'
+        )}
       </span>
-      <ChevronRight size={20} aria-hidden="true" />
     </Link>
   );
 }

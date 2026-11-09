@@ -171,29 +171,98 @@ const nim = (name: string) => `${name}님`;
 /** 초대 알림 문구 */
 export const inviteMessage = (inviterName: string) => `${nim(inviterName)}이 오목 한 판 하자고 해요`;
 
-/** 대국 화면 위 한 줄 (차례·결과) */
-export function gameHeadline(game: Game, me: string, now: Date, nameOf: (memberId: string) => string): string {
-  const status = effectiveStatus(game, now);
-  const opp = opponentOf(game, me);
+/** 초대 남은 시간 (분 단위, 홈 카드): "9분 남았어요" / 1분 미만 "곧 사라져요" */
+export function minutesLeftText(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  return m < 1 ? '곧 사라져요' : `${m}분 남았어요`;
+}
+
+/** 지금 차례 문구 (차례 줄·홈 카드) */
+export function turnText(game: Game, me: string, nameOf: (memberId: string) => string): string {
+  return turnMemberId(game) === me ? '내 차례예요' : `${nim(nameOf(opponentOf(game, me)))} 차례예요`;
+}
+
+/** 대기실 (design.md 5.28) — invited / declined / canceled / expired 일 때 */
+export type RoomCopy = { title: string; desc: string };
+export function roomCopy(status: GameStatus, game: Game, me: string, nameOf: (memberId: string) => string): RoomCopy {
+  const opp = nim(nameOf(opponentOf(game, me)));
+  const iInvited = game.created_by === me;
   switch (status) {
-    case 'invited':
-      return game.created_by === me ? `${nim(nameOf(opp))}을 기다리고 있어요` : inviteMessage(nameOf(game.created_by));
-    case 'active':
-      return turnMemberId(game) === me ? '내 차례예요' : `${nim(nameOf(opp))} 차례예요`;
-    case 'declined':
-      return game.created_by === me ? `${nim(nameOf(opp))}이 다음에 하자고 해요` : '초대를 거절했어요';
     case 'expired':
-      return '초대가 만료됐어요';
-    case 'abandoned':
-      return `${ABANDON_HOURS}시간 동안 수가 없어 판을 멈췄어요`;
-    case 'finished':
-      if (game.end_reason === 'draw') return '판이 다 찼어요. 비겼어요';
-      if (game.winner_id === me) {
-        return game.end_reason === 'resign' ? `${nim(nameOf(opp))}이 기권했어요. 이겼어요` : '다섯 개를 이었어요! 이겼어요';
-      }
-      return game.end_reason === 'resign' ? '기권했어요. 한 판 더 할까요?' : '아쉽게 졌어요. 한 판 더 할까요?';
+      return { title: '초대가 만료됐어요', desc: '10분 동안 답이 없었어요. 다음에 다시 불러 볼까요?' };
+    case 'declined':
+      return iInvited
+        ? { title: `${opp}이 다음에 하재요`, desc: '나중에 다시 초대해 보세요' }
+        : { title: '다음에 하기로 했어요', desc: `${opp}에게 나중에 다시 하자고 해 보세요` };
+    case 'canceled':
+      return iInvited
+        ? { title: '초대를 취소했어요', desc: '언제든 다시 초대할 수 있어요' }
+        : { title: `${opp}이 초대를 취소했어요`, desc: '다음에 같이 해요' };
+    default:
+      return iInvited
+        ? { title: `${opp} 답을 기다리고 있어요`, desc: `${opp} 휴대폰에 초대를 보냈어요` }
+        : { title: inviteMessage(nameOf(game.created_by)), desc: '10분 안에 답해 주세요' };
   }
 }
 
-/** 칸 읽기용 이름: "8행 8열" (1부터) */
+export type ResultIcon = 'trophy' | 'smile' | 'flag' | 'handshake' | 'clock';
+export interface ResultCopy {
+  icon: ResultIcon;
+  title: string;
+  line: string;
+  /** 이김 (아이콘 원을 포인트 색으로) */
+  win: boolean;
+  /** 전적 줄을 보일까 (중단된 판은 전적에 안 들어감) */
+  counted: boolean;
+}
+
+/** 결과 시트 문구 (design.md 5.31) — finished / abandoned */
+export function resultCopy(game: Game, me: string, nameOf: (memberId: string) => string): ResultCopy {
+  const opp = nim(nameOf(opponentOf(game, me)));
+  if (game.status === 'abandoned') {
+    return {
+      icon: 'clock',
+      title: '판을 닫았어요',
+      line: `${ABANDON_HOURS}시간 동안 아무도 두지 않았어요. 새로 한 판 할까요?`,
+      win: false,
+      counted: false,
+    };
+  }
+  if (game.end_reason === 'draw') return { icon: 'handshake', title: '비겼어요', line: '판이 꽉 찼어요. 막상막하네요', win: false, counted: true };
+  const won = game.winner_id === me;
+  if (game.end_reason === 'resign') {
+    return won
+      ? { icon: 'trophy', title: '이겼어요!', line: `${opp}이 기권했어요`, win: true, counted: true }
+      : { icon: 'flag', title: '기권했어요', line: '한 판 더 할까요?', win: false, counted: true };
+  }
+  return won
+    ? { icon: 'trophy', title: '이겼어요!', line: '다섯 개를 이었어요', win: true, counted: true }
+    : { icon: 'smile', title: '아쉽게 졌어요', line: '한 판 더 할까요?', win: false, counted: true };
+}
+
+/** 대국 화면 한 줄 (홈 카드·같이 놀기 화면의 "두던 판") */
+export function gameHeadline(game: Game, me: string, now: Date, nameOf: (memberId: string) => string): string {
+  const status = effectiveStatus(game, now);
+  if (status === 'active') return turnText(game, me, nameOf);
+  if (status === 'finished' || status === 'abandoned') return resultCopy({ ...game, status }, me, nameOf).title;
+  return roomCopy(status, game, me, nameOf).title;
+}
+
+/** 이름 첫 글자 (아바타) */
+export const initialOf = (name: string) => Array.from(name.trim())[0] ?? '?';
+
+/** 확대 창 크기 (9줄) */
+export const ZOOM_LINES = 9;
+/** 확대 창 왼쪽 위 (x, y): 중심 칸이 가운데 오게, 판 밖으로 나가지 않게 */
+export function zoomOrigin(center: [number, number]): [number, number] {
+  const clamp = (v: number) => Math.min(BOARD_SIZE - ZOOM_LINES, Math.max(0, v - Math.floor(ZOOM_LINES / 2)));
+  return [clamp(center[0]), clamp(center[1])];
+}
+/** 확대 창을 dx, dy 칸만큼 옮긴다 (판 밖으로 안 나감) */
+export function moveZoom(origin: [number, number], dx: number, dy: number): [number, number] {
+  const clamp = (v: number) => Math.min(BOARD_SIZE - ZOOM_LINES, Math.max(0, v));
+  return [clamp(origin[0] + dx), clamp(origin[1] + dy)];
+}
+
+/** 칸 읽기용 이름: "8행 8열" (1부터, 행 = 위에서부터) */
 export const cellLabel = (x: number, y: number) => `${y + 1}행 ${x + 1}열`;

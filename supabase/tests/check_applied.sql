@@ -116,6 +116,7 @@ select c.relname                                          as table_name,
         and has_function_privilege('authenticated', 'public.play_move(uuid,integer,integer)', 'execute')
         and not has_function_privilege('anon', 'public.play_move(uuid,integer,integer)', 'execute')
         and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
+        and has_function_privilege('authenticated', 'public.cancel_game(uuid)', 'execute')
         and not has_function_privilege('authenticated', 'public.game_close_stale(uuid)', 'execute')
         and (select count(*) from pg_publication_tables where pubname = 'supabase_realtime'
               and schemaname = 'public' and tablename in ('game', 'game_move')) = 2) as game_omok

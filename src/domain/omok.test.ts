@@ -8,6 +8,12 @@ import {
   formatRemaining,
   gameHeadline,
   headToHead,
+  initialOf,
+  minutesLeftText,
+  moveZoom,
+  resultCopy,
+  roomCopy,
+  zoomOrigin,
   inviteRemainingMs,
   isBusy,
   mergeMoves,
@@ -167,25 +173,53 @@ describe('myOpenGame / isBusy', () => {
   });
 });
 
-describe('gameHeadline', () => {
+describe('문구 (design.md 5.28·5.31)', () => {
   const names: Record<string, string> = { [A]: '민지', [B]: '준호' };
   const nameOf = (id: string) => names[id] ?? '?';
   it('차례', () => {
     expect(gameHeadline(game({ move_count: 0 }), B, NOW, nameOf)).toBe('내 차례예요');
     expect(gameHeadline(game({ move_count: 0 }), A, NOW, nameOf)).toBe('준호님 차례예요');
   });
-  it('초대', () => {
+  it('대기실: 답 기다림·받음·만료·거절·취소', () => {
     const g = game({ status: 'invited', started_at: null });
-    expect(gameHeadline(g, B, NOW, nameOf)).toBe('민지님이 오목 한 판 하자고 해요');
-    expect(gameHeadline(g, A, NOW, nameOf)).toBe('준호님을 기다리고 있어요');
+    expect(roomCopy('invited', g, A, nameOf).title).toBe('준호님 답을 기다리고 있어요');
+    expect(roomCopy('invited', g, B, nameOf).title).toBe('민지님이 오목 한 판 하자고 해요');
+    expect(roomCopy('expired', g, A, nameOf)).toEqual({ title: '초대가 만료됐어요', desc: '10분 동안 답이 없었어요. 다음에 다시 불러 볼까요?' });
+    expect(roomCopy('declined', g, A, nameOf)).toEqual({ title: '준호님이 다음에 하재요', desc: '나중에 다시 초대해 보세요' });
+    expect(roomCopy('canceled', g, B, nameOf).title).toBe('민지님이 초대를 취소했어요');
   });
-  it('결과', () => {
+  it('결과 시트 표', () => {
     const won = game({ status: 'finished', winner_id: B, end_reason: 'five' });
-    expect(gameHeadline(won, B, NOW, nameOf)).toBe('다섯 개를 이었어요! 이겼어요');
-    expect(gameHeadline(won, A, NOW, nameOf)).toBe('아쉽게 졌어요. 한 판 더 할까요?');
+    expect(resultCopy(won, B, nameOf)).toMatchObject({ icon: 'trophy', title: '이겼어요!', line: '다섯 개를 이었어요', win: true });
+    expect(resultCopy(won, A, nameOf)).toMatchObject({ icon: 'smile', title: '아쉽게 졌어요', line: '한 판 더 할까요?', win: false });
     const resigned = game({ status: 'finished', winner_id: B, end_reason: 'resign' });
-    expect(gameHeadline(resigned, B, NOW, nameOf)).toBe('민지님이 기권했어요. 이겼어요');
-    expect(gameHeadline(game({ status: 'finished', end_reason: 'draw' }), A, NOW, nameOf)).toBe('판이 다 찼어요. 비겼어요');
-    expect(gameHeadline(game({ started_at: iso(-25 * HOUR) }), A, NOW, nameOf)).toBe('24시간 동안 수가 없어 판을 멈췄어요');
+    expect(resultCopy(resigned, B, nameOf)).toMatchObject({ icon: 'trophy', line: '민지님이 기권했어요' });
+    expect(resultCopy(resigned, A, nameOf)).toMatchObject({ icon: 'flag', title: '기권했어요' });
+    expect(resultCopy(game({ status: 'finished', end_reason: 'draw' }), A, nameOf)).toMatchObject({
+      icon: 'handshake',
+      title: '비겼어요',
+      line: '판이 꽉 찼어요. 막상막하네요',
+    });
+    expect(resultCopy(game({ status: 'abandoned', end_reason: 'timeout' }), A, nameOf)).toMatchObject({
+      icon: 'clock',
+      title: '판을 닫았어요',
+      counted: false,
+    });
+    expect(gameHeadline(game({ started_at: iso(-25 * HOUR) }), A, NOW, nameOf)).toBe('판을 닫았어요');
+  });
+  it('홈 카드 남은 시간 (분 단위)', () => {
+    expect(minutesLeftText(9 * MIN + 41_000)).toBe('9분 남았어요');
+    expect(minutesLeftText(59_000)).toBe('곧 사라져요');
+  });
+});
+
+describe('확대 창 (9줄)', () => {
+  it('가운데 맞춤, 판 밖으로 안 나감', () => {
+    expect(zoomOrigin([7, 7])).toEqual([3, 3]);
+    expect(zoomOrigin([0, 14])).toEqual([0, 6]);
+    expect(moveZoom([3, 3], -5, 9)).toEqual([0, 6]);
+  });
+  it('이니셜', () => {
+    expect(initialOf(' 준호')).toBe('준');
   });
 });

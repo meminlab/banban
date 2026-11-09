@@ -94,6 +94,8 @@ select test.expect_count($$select 1 where has_function_privilege('authenticated'
   and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
   and not has_function_privilege('anon', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
   and has_function_privilege('authenticated', 'public.respond_game(uuid,boolean)', 'execute')
+  and has_function_privilege('authenticated', 'public.cancel_game(uuid)', 'execute')
+  and not has_function_privilege('anon', 'public.cancel_game(uuid)', 'execute')
   and has_function_privilege('authenticated', 'public.resign_game(uuid)', 'execute')
   and has_function_privilege('authenticated', 'public.sweep_games(uuid)', 'execute')
   and not has_function_privilege('authenticated', 'public.game_close_stale(uuid)', 'execute')
@@ -221,6 +223,27 @@ select test.expect_error($$select public.resign_game(test.v('g4'))$$, 'GAME_NOT_
 select test.as_user('a');
 select test.expect_eq('resign', public.resign_game(test.v('g4'))->>'end_reason', 'resign');
 select test.expect_count($$select 1 from public.game where id = test.v('g4') and status = 'finished' and winner_id = test.v('m_씨')$$, 1);
+
+-- ── 6-1. 초대 취소: 초대한 사람만, 답하기 전만. 취소하면 바로 다시 초대할 수 있다
+insert into test.ctx values ('gc', public.invite_game(test.v('l1'), test.v('m_비'))::text);
+select test.as_user('b');
+select test.expect_error($$select public.cancel_game(test.v('gc'))$$, 'GAME_NOT_INVITER');
+select test.as_user('x');
+select test.expect_error($$select public.cancel_game(test.v('gc'))$$, 'GAME_NOT_FOUND');
+select test.as_user('a');
+select test.expect_eq('cancel', public.cancel_game(test.v('gc'))->>'status', 'canceled');
+select test.expect_count($$select 1 from public.game where id = test.v('gc') and status = 'canceled' and finished_at is not null$$, 1);
+select test.expect_eq('cancel again', public.cancel_game(test.v('gc'))->>'applied', 'false');
+select test.as_user('b');
+select test.expect_eq('accept canceled', public.respond_game(test.v('gc'), true)->>'status', 'canceled');
+-- 수락된 판은 취소 안 됨
+select test.as_user('a');
+insert into test.ctx values ('gc2', public.invite_game(test.v('l1'), test.v('m_비'))::text);
+select test.as_user('b');
+select public.respond_game(test.v('gc2'), true);
+select test.as_user('a');
+select test.expect_eq('cancel active', public.cancel_game(test.v('gc2'))->>'applied', 'false');
+select public.resign_game(test.v('gc2'));
 
 -- ── 7. 초대 10분 만료: A → B 초대를 11분 전으로 → 수락하면 expired (applied false), 상태 저장됨
 insert into test.ctx values ('g5', public.invite_game(test.v('l1'), test.v('m_비'))::text);
