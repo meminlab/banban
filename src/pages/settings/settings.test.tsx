@@ -121,14 +121,42 @@ const rowNames = (container: HTMLElement) =>
   Array.from(container.querySelectorAll('.manage-row__name')).map((e) => e.textContent);
 
 describe('설정 메뉴', () => {
-  it('카테고리 관리·주머니 관리로 들어갈 수 있다', async () => {
+  it('묶음 제목·개수 없이 줄 이름만 보이고, 계정 줄은 메일 + 로그아웃 (design.md 5.23)', async () => {
+    renderAt('/settings');
+    const links = await screen.findAllByRole('link');
+    expect(links.map((a) => a.querySelector('.menu-list__label')?.textContent)).toEqual([
+      '가계부 이름',
+      '멤버·초대',
+      '카테고리',
+      '주머니',
+      '화면 테마',
+    ]);
+    expect(await screen.findByRole('link', { name: /가계부 이름/ })).toHaveTextContent('우리집');
+    expect(screen.queryByRole('heading', { level: 2 })).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d+(개|명)/)).not.toBeInTheDocument();
+    expect(screen.queryByText('구글 계정')).not.toBeInTheDocument();
+    const account = screen.getByRole('region', { name: '계정' });
+    expect(within(account).getByText('a@example.com')).toBeInTheDocument();
+    expect(within(account).getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
+  });
+
+  it('각 줄을 누르면 지금과 같은 화면으로 간다', async () => {
     const user = userEvent.setup();
     renderAt('/settings');
-    await user.click(await screen.findByRole('link', { name: /카테고리 관리/ }));
+    await user.click(await screen.findByRole('link', { name: /카테고리/ }));
     expect(await screen.findByRole('heading', { level: 1, name: '카테고리 관리' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '뒤로' }));
-    await user.click(await screen.findByRole('link', { name: /주머니 관리/ }));
+    await user.click(await screen.findByRole('link', { name: /주머니/ }));
     expect(await screen.findByRole('heading', { level: 1, name: '주머니 관리' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '뒤로' }));
+    await user.click(await screen.findByRole('link', { name: /화면 테마/ }));
+    expect(await screen.findByRole('heading', { level: 1, name: '화면 테마' })).toBeInTheDocument();
+  });
+
+  it('가계부 이름·멤버·초대 줄은 지금과 같은 주소로 간다', async () => {
+    renderAt('/settings');
+    expect(await screen.findByRole('link', { name: /가계부 이름/ })).toHaveAttribute('href', '/settings/name');
+    expect(screen.getByRole('link', { name: /멤버·초대/ })).toHaveAttribute('href', '/settings/members');
   });
 });
 
