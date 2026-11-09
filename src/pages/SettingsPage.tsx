@@ -1,13 +1,22 @@
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { ChevronRight, Palette, Pencil, Tag, Users, Wallet, type LucideIcon } from 'lucide-react';
-import { CATEGORY_SETTINGS_PATH, LEDGER_NAME_PATH, MEMBERS_PATH, POCKET_SETTINGS_PATH, THEME_SETTINGS_PATH } from '../app/routes';
+import { ChevronRight, Palette, Pencil, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
+import {
+  CATEGORY_SETTINGS_PATH,
+  LEDGER_NAME_PATH,
+  MEMBERS_PATH,
+  MY_NAME_PATH,
+  POCKET_SETTINGS_PATH,
+  THEME_SETTINGS_PATH,
+} from '../app/routes';
 import { useTheme } from '../app/theme';
 import { THEME_LABEL } from '../domain/theme';
-import { useLoad } from '../app/useLoad';
+import { useLoad, type LoadState } from '../app/useLoad';
 import { useMyProfile } from '../app/useProfile';
 import { getLedger } from '../data/ledger';
+import { getMyMemberName } from '../data/member';
+import { useCurrentUser } from '../app/auth';
 import { useSignOut } from '../app/useSignOut';
 import { Icon } from '../components/Icon';
 
@@ -34,6 +43,12 @@ function MenuRow({ to, icon: Svg, label, value }: { to: string; icon: LucideIcon
   );
 }
 
+/** 메뉴 행 값: 불러온 값 / 불러오는 중 / 실패 */
+function menuValue(status: LoadState<unknown>['status'], value: string | null): string {
+  if (value != null) return value;
+  return status === 'loading' ? '불러오는 중…' : '불러오지 못했어요';
+}
+
 /**
  * 설정 (design.md 5.23 v1.4): 묶음 제목 없이 여백으로만 3묶음을 나눈다.
  * ① 지금 보는 가계부 ② 내 설정 ③ 계정(메일 + 글자 버튼 "로그아웃")
@@ -46,6 +61,9 @@ export function SettingsPage() {
   const ledger = useLoad(() => getLedger(ledgerId), [ledgerId]);
   const { theme } = useTheme();
   const ledgerName = ledger.state.status === 'ready' ? ledger.state.data.name : null;
+  const user = useCurrentUser();
+  const myName = useLoad(() => getMyMemberName(ledgerId, user.id), [ledgerId, user.id]);
+  const myNameValue = myName.state.status === 'ready' ? myName.state.data : null;
 
   return (
     <div className="shell shell--settings">
@@ -63,7 +81,13 @@ export function SettingsPage() {
               to={LEDGER_NAME_PATH}
               icon={Pencil}
               label="가계부 이름"
-              value={ledgerName ?? (ledger.state.status === 'error' ? '불러오지 못했어요' : '불러오는 중…')}
+              value={menuValue(ledger.state.status, ledgerName)}
+            />
+            <MenuRow
+              to={MY_NAME_PATH}
+              icon={User}
+              label="내 이름"
+              value={menuValue(myName.state.status, myNameValue)}
             />
             <MenuRow to={MEMBERS_PATH} icon={Users} label="멤버·초대" />
             <MenuRow to={CATEGORY_SETTINGS_PATH} icon={Tag} label="카테고리" />
