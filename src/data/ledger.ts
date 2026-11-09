@@ -7,7 +7,7 @@ import type { Invite, Ledger, Member } from './types';
 export async function listMyLedgers(userId: string): Promise<MyLedger[]> {
   const { data, error } = await getSupabase()
     .from('ledger')
-    .select('id, name, member(user_id, joined_at, left_at)');
+    .select('id, name, created_by, created_at, member(user_id, joined_at, left_at)');
   if (error) throw error;
   return toMyLedgers((data ?? []) as LedgerWithMembers[], userId);
 }

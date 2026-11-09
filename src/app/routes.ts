@@ -100,6 +100,10 @@ export type RecurringFlash = { kind: 'saved' } | { kind: 'deleted' } | { kind: '
 export const LEDGER_NAME_PATH = '/settings/name';
 /** 설정 > 내 이름 (지금 가계부에서 쓰는 내 이름) */
 export const MY_NAME_PATH = '/settings/my-name';
+/** 설정 > 가계부 관리 (design.md 5.18): 내 가계부 전체 목록 */
+export const LEDGER_MANAGE_PATH = '/settings/ledgers';
+/** 설정 > 가계부 관리 > 가계부 상세 (전환·나가기) */
+export const ledgerManageDetailPath = (id: string) => `${LEDGER_MANAGE_PATH}/${id}`;
 /** 설정 > 멤버·초대 */
 export const MEMBERS_PATH = '/settings/members';
 /** 초대 링크: /join/<코드> (lib/ledgerRules JOIN_PATH_PREFIX 와 같음) */
