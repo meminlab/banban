@@ -1245,7 +1245,12 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .recurring-row__body > svg:first-child { flex: none; color: var(--color-text-sub); }
 .recurring-row__text { flex: 1; min-width: 0; }
 /* 달력 칩: 바탕 surface + 안쪽 테두리, 가운데 금액 */
-.recurring-chip { justify-content: center; background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-border-strong); font-variant-numeric: tabular-nums; }
+.recurring-chip {
+  justify-content: center; gap: 1px; padding: 0 2px; letter-spacing: -0.02em;
+  background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+/* 360px 칸(≈51px)에 "✓ −8.9만"이 들어가게: 체크 아이콘 8px, 금액은 말줄임보다 글자 간격을 먼저 줄인다 */
+.recurring-chip svg { width: 8px; height: 8px; }
 .recurring-chip--income { color: var(--color-primary-strong); }
 /* 날짜 시트 정기 내역 행 */
 .day-sheet__recurring { display: flex; flex-direction: column; }
@@ -1258,6 +1263,7 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .suggest__list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .suggest__row { display: flex; align-items: center; gap: 8px; min-height: 64px; border-bottom: 1px solid var(--color-border); }
 .suggest__check { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 10px 0; cursor: pointer; }
+.suggest__check .tx-row__sub { white-space: normal; } /* "10월 25일 · 15일 지났어요 · 준호"가 잘리지 않게 2줄까지 */
 .suggest__check input { flex: none; width: 22px; height: 22px; margin: 0; accent-color: var(--color-primary); }
 .suggest__check:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 2px; border-radius: 8px; }
 .suggest__amount {
