@@ -10,6 +10,8 @@ export type TabIcon = (typeof TABS)[number]['icon'];
 export const SETTINGS_PATH = '/settings';
 export const CATEGORY_SETTINGS_PATH = '/settings/categories';
 export const POCKET_SETTINGS_PATH = '/settings/pockets';
+/** 설정 > 화면 테마 (사람별) */
+export const THEME_SETTINGS_PATH = '/settings/theme';
 /** 로그인 화면. 구글 로그인 후 돌아오는 주소이기도 하다 (data/auth.ts AUTH_CALLBACK_PATH) */
 export const LOGIN_PATH = '/login';
 /** 참여한 가계부가 없을 때: 가계부 만들기 / 초대코드 입력 */

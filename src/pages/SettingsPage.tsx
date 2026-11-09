@@ -1,6 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { CATEGORY_SETTINGS_PATH, LEDGER_NAME_PATH, MEMBERS_PATH, POCKET_SETTINGS_PATH } from '../app/routes';
+import { Palette } from 'lucide-react';
+import { CATEGORY_SETTINGS_PATH, LEDGER_NAME_PATH, MEMBERS_PATH, POCKET_SETTINGS_PATH, THEME_SETTINGS_PATH } from '../app/routes';
+import { useTheme } from '../app/theme';
+import { THEME_LABEL } from '../domain/theme';
 import { useLoad } from '../app/useLoad';
 import { useMyProfile } from '../app/useProfile';
 import { getLedger } from '../data/ledger';
@@ -21,6 +24,7 @@ export function SettingsPage() {
   const logout = useSignOut();
   const ledgerId = useLedgerId();
   const ledger = useLoad(() => getLedger(ledgerId), [ledgerId]);
+  const { theme } = useTheme();
   const ledgerName = ledger.state.status === 'ready' ? ledger.state.data.name : null;
 
   return (
@@ -65,6 +69,21 @@ export function SettingsPage() {
             <li>
               <Link to={POCKET_SETTINGS_PATH} className="menu-list__item">
                 <span>주머니 관리</span>
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <nav aria-label="내 설정">
+          <h2 className="section-title">내 설정</h2>
+          <ul className="menu-list">
+            <li>
+              <Link to={THEME_SETTINGS_PATH} className="menu-list__item">
+                <span className="menu-list__label">
+                  <Palette size={20} strokeWidth={2} aria-hidden="true" focusable="false" />
+                  화면 테마
+                </span>
+                <span className="menu-list__value">{THEME_LABEL[theme]}</span>
               </Link>
             </li>
           </ul>
