@@ -201,7 +201,7 @@ describe('가계부 탭: 필터', () => {
     expect(screen.getByText('필터 결과 2건 · 지출 82,000')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '필터 (4개 적용 중)' }).querySelector('.filter-button__dot')).not.toBeNull();
 
-    await user.click(screen.getByRole('button', { name: '지우기' }));
+    await user.click(screen.getByRole('button', { name: '초기화' }));
     expect(listItems()).toHaveLength(4);
     expect(screen.queryByText(/필터 결과/)).not.toBeInTheDocument();
   });
@@ -216,6 +216,15 @@ describe('가계부 탭: 필터', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('checkbox', { name: '수입' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '0건 보기' }));
     expect(screen.getByText('조건에 맞는 내역이 없어요')).toBeInTheDocument();
+    // Q1 종류가 한 종류(수입)만이면 그 종류의 합, Q2 0건이어도 줄을 보인다
+    expect(screen.getByText('필터 결과 0건 · 수입 0')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '초기화' })).toBeInTheDocument();
+  });
+
+  it('Q1 수입만 고르면 결과 줄은 수입 합', async () => {
+    renderAt('/ledger?type=income');
+    await screen.findByRole('heading', { name: '11월 5일 (목)' });
+    expect(screen.getByText('필터 결과 1건 · 수입 3,000,000')).toBeInTheDocument();
   });
 });
 

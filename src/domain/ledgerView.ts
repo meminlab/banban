@@ -198,12 +198,17 @@ export function sumExpense(items: readonly Pick<Transaction, 'type' | 'amount'>[
   return items.reduce((sum, t) => (t.type === 'expense' ? sum + t.amount : sum), 0);
 }
 
-/** 필터 결과 한 줄 "필터 결과 N건 · 지출 …": 지금 보이는(필터를 통과한) 내역 기준 */
-export function filterResultSummary(items: readonly Pick<Transaction, 'type' | 'amount'>[]): {
-  count: number;
-  expense: number;
-} {
-  return { count: items.length, expense: sumExpense(items) };
+/**
+ * 필터 결과 한 줄 "필터 결과 N건 · 지출 …": 지금 보이는(필터를 통과한) 내역 기준 (BANB-37 Q1)
+ * 종류 필터가 한 종류만이면 그 종류의 합, 종류 필터가 없거나 두 종류 이상이면 지출 합
+ */
+export function filterResultSummary(
+  items: readonly Pick<Transaction, 'type' | 'amount'>[],
+  types: readonly TransactionType[] = [],
+): { count: number; type: TransactionType; amount: number } {
+  const type: TransactionType = types.length === 1 ? types[0] : 'expense';
+  const amount = items.reduce((sum, t) => (t.type === type ? sum + t.amount : sum), 0);
+  return { count: items.length, type, amount };
 }
 
 export const UNKNOWN_CATEGORY = '알 수 없음';

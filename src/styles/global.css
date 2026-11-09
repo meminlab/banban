@@ -599,9 +599,11 @@ button { font: inherit; }
 /* 필터 아이콘 버튼: 필터가 걸리면 primary 점 6px (design.md 5.23) */
 .filter-button { position: relative; }
 .filter-button__dot { position: absolute; top: 10px; right: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 2px var(--color-bg); }
-/* 필터 결과 한 줄 "필터 결과 12건 · 지출 182,000" (13 text-sub) + 지우기 */
+/* 필터 결과 한 줄 "필터 결과 12건 · 지출 182,000" (13 text-sub) + 초기화 */
 .filter-status { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -8px 0 0; color: var(--color-text-sub); font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
-.filter-status .button--link { margin-right: -12px; font-size: 0.875rem; font-weight: 600; text-decoration: none; }
+/* 초기화 글자 버튼: 44 영역, 15/600 text (BANB-37 Q3) */
+.filter-status__reset { min-height: 44px; margin-right: -12px; padding: 0 12px; border: 0; background: transparent; color: var(--color-text); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; }
+.filter-status__reset:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
 .button--link { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--color-primary); font: inherit; text-decoration: underline; cursor: pointer; }
 .filter-group { min-width: 0; }
 .filter-actions { position: sticky; bottom: 0; padding-top: 12px; background: var(--color-surface); }

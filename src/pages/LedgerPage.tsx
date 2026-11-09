@@ -154,9 +154,9 @@ export function LedgerPage() {
       </MonthNav>
       {filterCount > 0 && (
         <p className="filter-status">
-          <span>{data ? filterResultText(filtered) : `필터 ${filterCount}개 적용 중`}</span>
-          <button type="button" className="button--link" onClick={() => setQuery({ filter: EMPTY_FILTER })}>
-            지우기
+          <span>{data ? filterResultText(filtered, filter.types) : `필터 ${filterCount}개 적용 중`}</span>
+          <button type="button" className="filter-status__reset" onClick={() => setQuery({ filter: EMPTY_FILTER })}>
+            초기화
           </button>
         </p>
       )}
@@ -224,10 +224,10 @@ function NoMatch({ onReset }: { onReset: () => void }) {
   );
 }
 
-/** "필터 결과 12건 · 지출 182,000" (design.md 5.23) — 지금 보이는 필터 결과 목록과 같은 값 */
-function filterResultText(items: Transaction[]): string {
-  const { count, expense } = filterResultSummary(items);
-  return `필터 결과 ${count}건 · 지출 ${formatNumber(expense)}`;
+/** "필터 결과 12건 · 지출 182,000" (design.md 5.23, BANB-37 Q1) — 지금 보이는 필터 결과 목록과 같은 값 */
+function filterResultText(items: Transaction[], types: TransactionType[]): string {
+  const { count, type, amount } = filterResultSummary(items, types);
+  return `필터 결과 ${count}건 · ${TYPE_LABEL[type]} ${formatNumber(amount)}`;
 }
 
 // ── 내역 한 줄

@@ -309,13 +309,32 @@ describe('합계·내역 행 글자 (design.md 5.3·5.23 v1.4)', () => {
     ];
     expect(sumExpense(items)).toBe(205_000);
     expect(sumExpense([])).toBe(0);
-    expect(filterResultSummary(items)).toEqual({ count: 4, expense: 205_000 });
+    expect(filterResultSummary(items)).toEqual({ count: 4, type: 'expense', amount: 205_000 });
   });
 
   it('필터 결과 한 줄은 필터 결과 목록과 같은 값', () => {
     const shown = filterTransactions(TXS, f({ spenders: ['mB'] }), CATEGORIES);
-    expect(filterResultSummary(shown)).toEqual({ count: shown.length, expense: sumExpense(shown) });
-    expect(filterResultSummary(shown)).toEqual({ count: 3, expense: 2000 });
+    expect(filterResultSummary(shown)).toEqual({ count: shown.length, type: 'expense', amount: sumExpense(shown) });
+    expect(filterResultSummary(shown)).toEqual({ count: 3, type: 'expense', amount: 2000 });
+  });
+
+  it('Q1 종류 필터가 한 종류만이면 그 종류의 합, 없거나 두 종류 이상이면 지출 합', () => {
+    const items = [
+      tx('a', { amount: 12_000 }),
+      tx('c', { type: 'income', amount: 3_850_000 }),
+      tx('c2', { type: 'income', amount: 350_000 }),
+      tx('d', { type: 'saving', amount: 500_000 }),
+    ];
+    expect(filterResultSummary(items, ['income'])).toEqual({ count: 4, type: 'income', amount: 4_200_000 });
+    expect(filterResultSummary(items, ['saving'])).toEqual({ count: 4, type: 'saving', amount: 500_000 });
+    expect(filterResultSummary(items, ['expense'])).toEqual({ count: 4, type: 'expense', amount: 12_000 });
+    expect(filterResultSummary(items, ['income', 'saving'])).toEqual({ count: 4, type: 'expense', amount: 12_000 });
+    expect(filterResultSummary(items, [])).toEqual({ count: 4, type: 'expense', amount: 12_000 });
+  });
+
+  it('Q2 0건이면 "0건 · 지출 0"', () => {
+    expect(filterResultSummary([], ['income'])).toEqual({ count: 0, type: 'income', amount: 0 });
+    expect(filterResultSummary([])).toEqual({ count: 0, type: 'expense', amount: 0 });
   });
 
   const byId = new Map(CATEGORIES.map((c) => [c.id, c]));
