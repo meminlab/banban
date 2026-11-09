@@ -8,6 +8,7 @@ import { MonthNav } from '../components/MonthNav';
 import { TxRow, useTxLabels } from '../components/TxRow';
 import { WonText } from '../components/WonText';
 import { RecurringSuggestSheet, useRecordDone } from '../components/RecurringSuggestSheet';
+import { PlayHomeCard } from '../components/PlayInvite';
 import { listOccurrences, listRecurring } from '../data/recurring';
 import { occurrenceStatusMap, pendingSuggestions, suggestRange, type RecurringDue } from '../domain/recurring';
 import { listAssets, listBalanceHistory } from '../data/asset';
@@ -110,6 +111,7 @@ export function HomePage() {
     <div className="home">
       <TogetherCard ledgerId={ledgerId} />
       <RecurringSuggestRow ledgerId={ledgerId} />
+      <PlayHomeCard />
 
       <MonthNav month={month} onMove={(d) => setMonth((m) => addMonths(m, d))} />
 

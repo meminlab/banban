@@ -116,7 +116,7 @@ button { font: inherit; }
 .tabbar__add:focus-visible { outline-offset: 2px; }
 
 /* 탭 화면 카드 공통 — 강조 표현 토큰(design.md 1.5)만 쓴다. 클린: 화면 끝까지·모서리 0·그림자 없음 */
-.shell--tabs :is(.summary-card, .asset-card, .assets .month-check, .together-card, .home-nw, .home .who-spent, .home .where-spent, .home .recent, .ledger .day-group) {
+.shell--tabs :is(.summary-card, .asset-card, .assets .month-check, .together-card, .play-card, .play-invite, .home-nw, .home .who-spent, .home .where-spent, .home .recent, .ledger .day-group) {
   margin-inline: calc(var(--card-gutter) - var(--content-pad));
   border: var(--card-border);
   border-radius: var(--card-radius);
@@ -1352,3 +1352,81 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .ledger-manage__detail-actions .form-error { margin: 0; }
 /* 전환 시트 아래 "가계부 관리" 텍스트 버튼 */
 .ledger-list__manage { display: inline-flex; align-items: center; justify-content: center; gap: 6px; align-self: center; color: var(--color-text-sub); font-size: 0.9375rem; font-weight: 600; }
+
+/* ─────────────────────────────────────────────
+   같이 놀기 — 오목 (BANB-49). 디자인 시안(BANB-48) 전 임시 스타일: 기존 토큰·카드 모양만 쓴다
+   ───────────────────────────────────────────── */
+.play-card { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 16px 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+.play-card:not(.play-card--link) { flex-direction: column; align-items: stretch; }
+.play-card--link > svg { flex: none; color: var(--color-text-sub); }
+a.play-card:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.play-card__body { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
+.play-card__label { font-size: 0.8125rem; color: var(--color-text-sub); }
+.play-card__title { margin: 0; font-size: 1rem; font-weight: 700; line-height: 1.45; font-variant-numeric: tabular-nums; }
+/* 초대 배너 (탭 화면 위·판 화면 위) */
+.play-invite { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; padding: 16px; border: 1px solid var(--color-primary); border-radius: 16px; background: var(--color-surface); }
+.play-invite__text { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 700; line-height: 1.45; }
+.play-invite__icon { flex: none; color: var(--color-primary); }
+.play-invite__actions { display: flex; gap: 8px; }
+.play-invite__actions .button { flex: 1; }
+.play-invite__error, .play-error { margin: 0; color: var(--color-danger); font-size: 0.9375rem; }
+.play-hint { margin: 0; color: var(--color-text-sub); font-size: 0.875rem; text-align: center; }
+/* 같이 놀기 홈 */
+.play-section { display: flex; flex-direction: column; gap: 8px; }
+.play-section__title { margin: 0; font-size: 0.9375rem; color: var(--color-text-sub); }
+.play-game { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; border: 2px solid var(--color-primary); border-radius: 16px; background: var(--color-surface); }
+.play-game__stones { display: flex; gap: 2px; }
+.play-game__stones .omok-stone { position: static; width: 20px; height: 20px; }
+.play-game__body { display: flex; flex-direction: column; gap: 2px; }
+.play-game__name { font-weight: 700; }
+.play-game__desc { font-size: 0.875rem; color: var(--color-text-sub); }
+.play-opponents { display: flex; flex-direction: column; gap: 8px; }
+.play-opponent { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 8px 16px; border: 1px solid var(--color-border-strong); border-radius: 16px; background: var(--color-surface); cursor: pointer; }
+.play-opponent input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.play-opponent.is-selected { border: 2px solid var(--color-primary); padding: 7px 15px; }
+.play-opponent:has(input:focus-visible) { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.play-opponent__name { font-weight: 700; }
+.play-opponent__sub { font-size: 0.875rem; color: var(--color-text-sub); font-variant-numeric: tabular-nums; }
+.play-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; color: var(--color-text-sub); }
+.play-empty p { margin: 0; }
+.play-empty .button { display: inline-flex; align-items: center; text-decoration: none; }
+/* 판 화면 */
+.omok { gap: 12px; }
+.omok__headline { margin: 0; font-size: 1.125rem; font-weight: 700; text-align: center; line-height: 1.45; }
+.omok__headline.is-my-turn { color: var(--color-primary-strong); }
+.omok__actions { display: flex; gap: 8px; }
+.omok__actions .button { flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: var(--touch-lg); text-decoration: none; }
+.omok__actions .button--text { flex: 0 0 auto; }
+.omok-players { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.omok-player { display: flex; flex: 1; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); }
+.omok-player.is-turn { border: 2px solid var(--color-primary); padding: 7px 11px; }
+.omok-player .omok-stone { position: static; flex: none; width: 18px; height: 18px; }
+.omok-player__name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.omok-player__role { font-size: 0.8125rem; color: var(--color-text-sub); }
+.omok-waiting { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; text-align: center; }
+.omok-waiting p { margin: 0; color: var(--color-text-sub); }
+.omok-waiting .omok__actions { align-self: stretch; }
+.omok-waiting__time { color: var(--color-text); font-variant-numeric: tabular-nums; }
+/* 판: 나뭇결 대신 단색. 흑백 돌 대비를 위해 테마·다크와 상관없이 같은 색 */
+.omok-board {
+  --omok-board: #E8D5AE; --omok-line: #7A6240; --omok-black: #1E1E22; --omok-white: #FBFBF8;
+  position: relative; display: grid; grid-template-columns: repeat(15, 1fr); grid-template-rows: repeat(15, 1fr);
+  width: 100%; max-width: 480px; aspect-ratio: 1; margin-inline: auto; border-radius: 8px; background: var(--omok-board);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.omok-board__lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.omok-board__lines line { stroke: var(--omok-line); stroke-width: 0.04; }
+.omok-board__lines circle { fill: var(--omok-line); }
+.omok-cell { position: relative; display: block; min-width: 0; min-height: 0; padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.omok-cell[aria-disabled="true"] { cursor: default; }
+.omok-cell:focus-visible { outline: 2px solid var(--color-focus, var(--color-primary)); outline-offset: -2px; z-index: 1; }
+/* 고른 칸의 가로·세로 안내선 */
+.omok-cell.is-guide::before { content: ''; position: absolute; inset: 0; background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
+.omok-cell.is-selected { box-shadow: inset 0 0 0 2px var(--color-primary); border-radius: 4px; z-index: 1; }
+.omok-stone { position: absolute; inset: 8%; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.omok-stone--black { background: var(--omok-black, #1E1E22); }
+.omok-stone--white { background: var(--omok-white, #FBFBF8); box-shadow: inset 0 0 0 1px #8C8C8C; }
+.omok-stone.is-pending { opacity: 0.55; }
+.omok-stone.is-win { box-shadow: 0 0 0 2px var(--color-primary); }
+.omok-stone--white.is-win { box-shadow: inset 0 0 0 1px #8C8C8C, 0 0 0 2px var(--color-primary); }
+.omok-stone__last { width: 30%; height: 30%; border-radius: 50%; background: #E5484D; }

@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { CALENDAR_PATH, EVENT_NEW_PATH, SETTINGS_PATH, TABS, TRANSACTION_NEW_PATH, type TransactionFormState } from '../app/routes';
 import { Icon } from './Icon';
 import { LedgerSwitcher } from './LedgerSwitcher';
+import { PlayInviteBanner } from './PlayInvite';
 import { TxFlashToast } from './TxFlashToast';
 
 type Tab = (typeof TABS)[number];
@@ -52,6 +53,8 @@ export function AppLayout() {
       </header>
 
       <main className="content">
+        {/* 같이 놀기 초대 (홈은 같이 놀기 카드가 대신 보여 준다) */}
+        <PlayInviteBanner hidden={pathname === '/'} />
         <Outlet key={reloadKey} context={{ reload } satisfies TabOutletContext} />
       </main>
       <TxFlashToast onUndone={reload} />
