@@ -18,6 +18,8 @@
 --           (recurring_transaction·recurring_occurrence 행이 추가되어 13행. 둘 다 policies 1)
 --           game_omok = true (20261109230000 마이그레이션: 같이 놀기 판·수 테이블 직접 쓰기 불가, 판정 함수 로그인 사용자만, 실시간 발행에 game·game_move)
 --           (game·game_move 행이 추가되어 15행. 둘 다 policies 1)
+--           game_renju = true (20261110000000 마이그레이션: game.rule 기본 renju_lite·빈 값 없음, 시간 초과·무승부 함수 로그인 사용자만, 33 판정 함수 실행 불가)
+--             RL-05 옛 판 확인: select rule, status, count(*) from public.game group by 1, 2; → 마이그레이션 전 판은 모두 free
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -124,7 +126,16 @@ select c.relname                                          as table_name,
         and not has_table_privilege('authenticated', 'public.game_stack_best', 'insert')
         and not has_table_privilege('authenticated', 'public.game_stack_best', 'update')
         and has_function_privilege('authenticated', 'public.record_stack_score(uuid,bigint,integer)', 'execute')
-        and not has_function_privilege('anon', 'public.record_stack_score(uuid,bigint,integer)', 'execute')) as game_stack
+        and not has_function_privilege('anon', 'public.record_stack_score(uuid,bigint,integer)', 'execute')) as game_stack,
+       (exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'game'
+                  and column_name = 'rule' and column_default like '%renju_lite%')
+        and not exists (select 1 from public.game where rule is null)
+        and has_function_privilege('authenticated', 'public.claim_turn_timeout(uuid)', 'execute')
+        and has_function_privilege('authenticated', 'public.offer_draw(uuid)', 'execute')
+        and has_function_privilege('authenticated', 'public.respond_draw(uuid,boolean)', 'execute')
+        and not has_function_privilege('anon', 'public.claim_turn_timeout(uuid)', 'execute')
+        and not has_function_privilege('authenticated', 'public.omok_is_double_three(int[],int[],int,int)', 'execute')
+        and not has_table_privilege('authenticated', 'public.game', 'update')) as game_renju
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'

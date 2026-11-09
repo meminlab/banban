@@ -5,6 +5,10 @@
 -- 사용자: A·B·C (같은 가계부 L1), X (다른 가계부 LX)
 begin;
 
+-- BANB-53 이후 새 판의 기본 룰은 renju_lite(33 금지·30초). 이 파일은 BANB-49 규칙(= 옛 판 free: 시간 제한 없음·24시간 중단·33 허용)
+-- 회귀 테스트라 이 트랜잭션 안에서만 새 판 기본값을 free 로 둔다. renju_lite 는 99_game_renju_test.sql
+alter table public.game alter column rule set default 'free';
+
 create schema test;
 grant usage on schema test to anon, authenticated;
 

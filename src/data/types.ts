@@ -208,7 +208,10 @@ export type LedgerRpcError =
 /** 같이 놀기 (BANB-49). 쓰기는 DB 함수로만(invite_game / respond_game / play_move / resign_game / sweep_games) */
 export type GameKind = 'omok';
 export type GameStatus = 'invited' | 'active' | 'finished' | 'declined' | 'canceled' | 'expired' | 'abandoned';
-export type GameEndReason = 'five' | 'resign' | 'draw' | 'timeout';
+/** five·resign·turn_timeout = 승자 있음 / draw(판이 참)·draw_agreed(무승부 합의) = 무 / timeout = 24시간 중단(free 판) */
+export type GameEndReason = 'five' | 'resign' | 'draw' | 'timeout' | 'turn_timeout' | 'draw_agreed';
+/** 판의 룰 (BANB-53): free = 옛 판(시간 제한 없음·24시간 중단·33 허용) / renju_lite = 33 금지 + 한 수 30초. 서버만 정한다 */
+export type GameRule = 'free' | 'renju_lite';
 
 export interface Game {
   id: string;
@@ -229,6 +232,13 @@ export interface Game {
   started_at: string | null;
   last_move_at: string | null;
   finished_at: string | null;
+  rule: GameRule;
+  /** renju_lite 대국 중: 지금 차례의 마감 (서버 시각). free 판은 null */
+  turn_deadline: string | null;
+  /** 답을 기다리는 무승부 제안을 한 사람 (member id) */
+  draw_offer_by: string | null;
+  /** 마지막 무승부 제안 때의 move_count (다시 제안은 move_count 가 이보다 클 때) */
+  draw_offer_count: number | null;
 }
 
 export interface GameMove {
