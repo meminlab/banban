@@ -22,9 +22,9 @@ export const THEME_DESCRIPTION: Record<ThemeName, string> = {
 /** <meta name="theme-color"> = 헤더 surface (1.4). 라이트는 세 테마 공통, 다크는 테마마다 */
 export const LIGHT_THEME_COLOR = '#FFFFFF';
 export const DARK_THEME_COLOR: Record<ThemeName, string> = {
-  clean: '#1B1E22',
-  berry: '#1D1E21',
-  cozy: '#221C1A',
+  clean: '#161E1B',
+  berry: '#1F1A22',
+  cozy: '#261C18',
 };
 
 export function isThemeName(v: unknown): v is ThemeName {

@@ -234,12 +234,14 @@ button { font: inherit; }
 .home__status { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 0; color: var(--color-text-sub); text-align: center; }
 .home__status p { margin: 0; line-height: 1.5; }
 .home__empty { margin: 12px 0 0; color: var(--color-text-sub); }
+/* 요약 카드 바탕·라벨은 테마 토큰(design.md 1.1 hero-bg/hero-label). 위 공통 카드 규칙(:is 안 .home .breakdown 때문에 0,3,0)의 surface를 덮도록 같은 무게로 쓴다 (BANB-34) */
+.shell--tabs .home .summary-card { background: var(--color-hero-bg); }
 
 .summary-card { padding: 16px; border: 1px solid var(--color-border); border-radius: 16px; }
 /* 2칸씩. 금액이 칸보다 길면 그 항목만 한 줄 전체로 내려간다 (금액 자체는 줄바꿈 안 함, BANB-10 D-1) */
 .summary-card__grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 12px; }
 .summary-item { flex: 1 1 calc(50% - 6px); min-width: max-content; }
-.summary-item dt { color: var(--color-text-sub); font-size: 0.875rem; }
+.summary-item dt { color: var(--color-hero-label); font-size: 0.875rem; }
 .summary-item dd { margin: 4px 0 0; font-size: 1.0625rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .summary-item dd.is-negative { color: var(--color-negative); }
 

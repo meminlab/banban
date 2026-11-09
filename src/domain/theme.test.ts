@@ -15,7 +15,7 @@ describe('테마 값', () => {
   });
 
   it('다크 theme-color = 테마별 헤더 surface (design.md 1.4)', () => {
-    expect(DARK_THEME_COLOR).toEqual({ clean: '#1B1E22', berry: '#1D1E21', cozy: '#221C1A' });
+    expect(DARK_THEME_COLOR).toEqual({ clean: '#161E1B', berry: '#1F1A22', cozy: '#261C18' });
   });
 
   it('없거나 모르는 값은 clean (대소문자·공백 변형도 모르는 값)', () => {
