@@ -1,4 +1,4 @@
-import { Archive, CalendarCheck, ChevronRight, Clock, Plus, X } from 'lucide-react';
+import { Archive, ChevronRight, Clock, Plus, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
@@ -22,6 +22,7 @@ import { formatWon } from '../domain/money';
 import { currentYearMonth } from '../domain/month';
 import {
   composition,
+  compositionSummary,
   currentNetWorth,
   filterByOwner,
   isActive,
@@ -55,7 +56,7 @@ function readDismissed(key: string): boolean {
   }
 }
 
-/** 자산 탭: 보기 전환 · 월초 안내 · 순자산 · 월별 추이 · 자산 구성 · 자산/부채 목록 · 보관한 자산 (design.md 5.22) */
+/** 자산 탭: 보기 전환 · 월초 안내 · 순자산 · 추이 · 자산 구성 · 자산/부채 목록 · 보관한 자산 (design.md 5.22, 단순화 5.23) */
 export function AssetsPage() {
   const ledgerId = useLedgerId();
   const location = useLocation();
@@ -209,11 +210,8 @@ export function AssetsPage() {
             className="month-check__body"
             onClick={() => listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
           >
-            <CalendarCheck size={20} aria-hidden="true" />
-            <span>
-              <span className="month-check__title">이번 달 잔액 확인하기</span>
-              <span className="month-check__desc">{monthNo}월에 아직 잔액을 고치지 않았어요</span>
-            </span>
+            {monthNo}월 잔액 확인하기
+            <ChevronRight size={18} aria-hidden="true" />
           </button>
           <button type="button" className="icon-button" aria-label="이번 달 잔액 확인 안내 닫기" onClick={dismissPrompt}>
             <X size={20} aria-hidden="true" />
@@ -246,8 +244,7 @@ export function AssetsPage() {
             history={history}
             ym={ym}
           />
-          {/* 보기(합친/칩)가 바뀌면 선택한 달을 이번 달로 되돌린다 */}
-          <NetWorthTrend key={`${mode}:${view ?? 'shared'}`} points={netWorthTrend(viewAssets, history)} />
+          <NetWorthTrend points={netWorthTrend(viewAssets, history)} />
           <CompositionCard assets={active} />
           <div ref={listRef} className="asset-lists">
             <div className="section-head">
@@ -312,72 +309,53 @@ function NetWorthCard({
         <span className="sr-only">{`${nw.net < 0 ? '마이너스 ' : ''}${formatWon(Math.abs(nw.net))}원`}</span>
       </p>
       <Delta value={delta} label="지난달 말보다" />
-      <dl className="net-worth__totals">
-        <div>
-          <dt>총자산</dt>
-          <dd className="money">{formatWon(nw.assets)}원</dd>
-        </div>
-        <div>
-          <dt>총부채</dt>
-          <dd className="money">{formatWon(nw.liabilities)}원</dd>
-        </div>
-      </dl>
     </section>
   );
 }
 
+/** 자산 구성: 제목 + 가장 큰 종류 % / 쌓인 막대 1개 / 한 줄 "A · B · C · D 외 N" (design.md 5.23-5) */
 function CompositionCard({ assets }: { assets: readonly Asset[] }) {
   const c = composition(assets);
+  const sum = compositionSummary(c);
   return (
     <section className="asset-card composition" aria-labelledby="composition-title">
       <div className="card-head">
         <h2 id="composition-title" className="card-head__title">
           자산 구성
         </h2>
-        <span className="card-head__sub">총자산 기준</span>
+        {sum?.top && (
+          <span className="card-head__sub composition__top">
+            {assetKindLabel(sum.top.kind)} {sum.top.percent}%
+          </span>
+        )}
       </div>
-      {c.assets.length === 0 ? (
+      {sum === null ? (
         <p className="hint">총자산이 0원이라 비율을 표시하지 않아요</p>
       ) : (
-        <ul className="composition__list">
-          {c.assets.map((r) => (
-            <li key={r.kind} className="composition__row">
-              <span className="composition__icon" aria-hidden="true">
-                <AssetKindIcon kind={r.kind} size={18} />
-              </span>
-              <span className="composition__name">{assetKindLabel(r.kind)}</span>
-              <span className="composition__amount money">{formatWon(r.amount)}원</span>
-              {r.percent !== null && <span className="composition__pct">{r.percent}%</span>}
-              {r.percent !== null && (
-                <span className="composition__bar" aria-hidden="true">
-                  <span style={{ width: `${Math.max(1, r.percent)}%` }} />
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      {c.liabilities.length > 0 && (
         <>
-          <div className="card-head composition__debt-head">
-            <h3 className="card-head__title card-head__title--small">부채</h3>
-            <span className="card-head__sub">종류별 합계</span>
+          <div className="composition__bar" role="img" aria-label={sum.ariaLabel}>
+            {c.assets.map((r, i) =>
+              r.amount > 0 ? (
+                <span
+                  key={r.kind}
+                  className="composition__seg"
+                  style={{ flexGrow: r.amount, background: compositionShade(i) }}
+                />
+              ) : null,
+            )}
           </div>
-          <ul className="composition__list">
-            {c.liabilities.map((r) => (
-              <li key={r.kind} className="composition__row composition__row--debt">
-                <span className="composition__icon" aria-hidden="true">
-                  <AssetKindIcon kind={r.kind} size={18} />
-                </span>
-                <span className="composition__name">{assetKindLabel(r.kind)}</span>
-                <span className="composition__amount money">{formatWon(r.amount)}원</span>
-              </li>
-            ))}
-          </ul>
+          <p className="composition__line">{sum.line}</p>
         </>
       )}
     </section>
   );
+}
+
+/** 쌓인 막대 조각 색: 종류 순서대로 primary 명도 단계 (design.md 5.23-5) */
+const SHADE_STEPS = [100, 80, 62, 45, 32, 22, 15, 10, 7];
+function compositionShade(i: number): string {
+  const p = SHADE_STEPS[Math.min(i, SHADE_STEPS.length - 1)];
+  return p === 100 ? 'var(--color-chart-bar)' : `color-mix(in srgb, var(--color-chart-bar) ${p}%, var(--color-surface))`;
 }
 
 function AssetGroupList({ title, items, members }: { title: string; items: readonly Asset[]; members: readonly Member[] }) {
@@ -409,13 +387,11 @@ function AssetGroupList({ title, items, members }: { title: string; items: reado
                 </span>
                 <span className="asset-item__side">
                   <span className="asset-item__amount money">{formatWon(a.balance)}원</span>
-                  {ago.stale ? (
+                  {ago.stale && (
                     <span className="asset-item__ago asset-item__ago--stale">
                       <Clock size={12} aria-hidden="true" />
                       {ago.text}
                     </span>
-                  ) : (
-                    <span className="asset-item__ago">{ago.text}</span>
                   )}
                 </span>
               </Link>

@@ -1,6 +1,7 @@
 import type { Asset, AssetBalanceHistory, AssetKind } from '../data/types';
 import {
   composition,
+  compositionSummary,
   currentNetWorth,
   filterByOwner,
   homeNetWorth,
@@ -184,6 +185,63 @@ describe('자산 구성 (AS-14·15)', () => {
     expect(c.totalAssets).toBe(0);
     expect(c.assets).toEqual([]);
     expect(c.liabilities[0].percent).toBeNull();
+  });
+});
+
+describe('자산 구성 요약 (5.23-5, Q4)', () => {
+  const row = (kind: AssetKind, amount: number, percent: number | null) => ({ kind, amount, count: 1, percent });
+  const comp = (rows: ReturnType<typeof row>[]) => ({
+    totalAssets: rows.reduce((s, r) => s + r.amount, 0),
+    totalLiabilities: 0,
+    assets: rows,
+    liabilities: [],
+  });
+
+  it('가장 큰 종류 + 4개까지 한 줄 + 외 N, aria-label에 % 전부', () => {
+    const s = compositionSummary(
+      comp([
+        row('real_estate', 760, 76),
+        row('deposit', 60, 6),
+        row('investment', 60, 6),
+        row('vehicle', 40, 4),
+        row('checking', 40, 4),
+        row('pension', 30, 3),
+        row('cash', 10, 1),
+      ]),
+    )!;
+    expect(s.top?.kind).toBe('real_estate');
+    expect(s.line).toBe('부동산 · 예금 · 투자 · 자동차 외 3');
+    expect(s.ariaLabel).toBe('자산 구성: 부동산 76%, 예금 6%, 투자 6%, 자동차 4%, 입출금 4%, 연금 3%, 현금 1%');
+  });
+
+  it('종류가 4개 이하이면 "외" 없음, 1개면 100%', () => {
+    const four = compositionSummary(
+      comp([row('real_estate', 4, 40), row('deposit', 3, 30), row('investment', 2, 20), row('cash', 1, 10)]),
+    )!;
+    expect(four.line).toBe('부동산 · 예금 · 투자 · 현금');
+    const one = compositionSummary(comp([row('cash', 5, 100)]))!;
+    expect(one.line).toBe('현금');
+    expect(one.top?.percent).toBe(100);
+  });
+
+  it('5개면 "외 1" (전체 − 표시)', () => {
+    const s = compositionSummary(
+      comp([row('real_estate', 5, 50), row('deposit', 2, 20), row('investment', 1, 10), row('cash', 1, 10), row('pension', 1, 10)]),
+    )!;
+    expect(s.line).toBe('부동산 · 예금 · 투자 · 현금 외 1');
+  });
+
+  it('비율은 composition() 값 그대로 (1:1:1 → 33.3%)', () => {
+    const t = '2026-11-01T09:00:00';
+    const c = composition([mk('s1', 'cash', null, [[t, 1]]), mk('s2', 'deposit', null, [[t, 1]]), mk('s3', 'pension', null, [[t, 1]])]);
+    const s = compositionSummary(c)!;
+    expect(s.top?.percent).toBe(33.3);
+    expect(s.ariaLabel).toBe('자산 구성: 현금 33.3%, 예금 33.3%, 연금 33.3%');
+  });
+
+  it('총자산 0이면 요약 없음', () => {
+    expect(compositionSummary(composition([]))).toBeNull();
+    expect(compositionSummary(comp([row('cash', 0, null)]))).toBeNull();
   });
 });
 

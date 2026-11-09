@@ -9,6 +9,7 @@
  * - 합계는 JS number(정수). 9,999,999,999원 × 90만 개까지 정확(2^53)하므로 넘침 없음
  */
 import type { Asset, AssetBalanceHistory, AssetKind } from '../data/types';
+import { assetKindLabel } from './asset';
 import { addMonths, currentYearMonth, type YearMonth } from './month';
 
 export const LIABILITY_KINDS: readonly AssetKind[] = ['loan', 'card_payable', 'other_liability'];
@@ -166,6 +167,28 @@ export function composition(assets: readonly Asset[]): Composition {
       }))
       .sort((x, y) => y.amount - x.amount);
   return { totalAssets: total.assets, totalLiabilities: total.liabilities, assets: rows(false), liabilities: rows(true) };
+}
+
+/** 자산 구성 카드 한 줄에 이름을 보일 종류 수 (명세 보강 Q4: 화면 폭과 상관없이 고정) */
+export const COMPOSITION_SHOWN = 4;
+
+export interface CompositionSummary {
+  /** 가장 큰 종류 (비율 있는 첫 행). 총자산 0이면 null */
+  top: CompositionRow | null;
+  /** 한 줄: "부동산 · 예금 · 투자 · 자동차 외 3" (종류가 max 이하이면 "외" 없음) */
+  line: string;
+  /** 쌓인 막대 aria-label: 종류별 % 전부 */
+  ariaLabel: string;
+}
+
+/** 자산 구성 카드 요약 (design.md 5.23-5). 비율은 composition() 값 그대로 쓴다 */
+export function compositionSummary(c: Composition, max: number = COMPOSITION_SHOWN): CompositionSummary | null {
+  if (c.totalAssets === 0 || c.assets.length === 0) return null;
+  const names = c.assets.map((r) => assetKindLabel(r.kind));
+  const rest = names.length - Math.min(max, names.length);
+  const line = names.slice(0, max).join(' · ') + (rest > 0 ? ` 외 ${rest}` : '');
+  const ariaLabel = `자산 구성: ${c.assets.map((r, i) => `${names[i]} ${r.percent}%`).join(', ')}`;
+  return { top: c.assets[0], line, ariaLabel };
 }
 
 // ── 월초 안내 (명세 보강 Q12: 가계부 전체에서 이번 달 잔액 기록이 0건일 때)

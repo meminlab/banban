@@ -1,64 +1,38 @@
-import { useRef, useState, type KeyboardEvent } from 'react';
 import { formatWonKorean } from '../domain/money';
 import { trendRatio, trendScale, trendSegments, type TrendPoint } from '../domain/netWorth';
-import { WonText } from './WonText';
 
 /**
- * 자산 탭 "월별 추이" — 최근 6개월 월말 순자산 선 그래프 (design.md 5.19)
+ * 자산 탭 "6개월 추이" — 최근 6개월 월말 순자산 선 그래프 (design.md 5.19, 단순화 5.23-4)
  * 그래프 라이브러리 없이 SVG(선) + HTML(점·월 라벨)로 그린다. 선은 가로로 늘어나도 굵기가 그대로(non-scaling-stroke),
- * 점·라벨은 HTML이라 폭이 바뀌어도 동그랗고 겹치지 않는다(월 라벨 칸 = 폭 1/6).
+ * 점은 마지막 달 하나, x축은 처음·끝 달만. 달 고르기·선택한 달 값 줄은 없다(5.23).
  */
 
 const monthNo = (ym: string) => Number(ym.slice(5));
 
 export function NetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
-  const last = points.length - 1;
   const present = points.flatMap((p, i) => (p.net === null ? [] : [i]));
-  const [sel, setSel] = useState(() => present[present.length - 1] ?? last);
-  const labelsRef = useRef<HTMLDivElement>(null);
   const scale = trendScale(points.map((p) => p.net));
   if (!scale || present.length === 0) return null;
 
   const n = points.length;
-  const x = (i: number) => ((i + 0.5) / n) * 100; // %
+  const x = (i: number) => (n === 1 ? 50 : (i / (n - 1)) * 100); // % — 처음·끝 달이 양 끝
   const y = (v: number) => trendRatio(v, scale) * 100; // % (플롯 영역 안)
-  const selected = points[sel];
-  const selNet = selected.net ?? 0;
-  const first = points[present[0]];
-  const lastPt = points[present[present.length - 1]];
+  const last = points.length - 1;
+  const firstIdx = present[0];
+  const lastIdx = present[present.length - 1];
+  const first = points[firstIdx];
+  const lastPt = points[lastIdx];
   const summary =
     present.length === 1
       ? `최근 6개월 순자산, ${monthNo(first.ym)}월 ${formatWonKorean(first.net!)}`
       : `최근 6개월 순자산, ${monthNo(first.ym)}월 ${formatWonKorean(first.net!)}부터 ${monthNo(lastPt.ym)}월 ${formatWonKorean(lastPt.net!)}까지`;
-
-  function move(e: KeyboardEvent<HTMLButtonElement>) {
-    const at = present.indexOf(sel);
-    let next: number | undefined;
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = present[at - 1];
-    else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = present[at + 1];
-    else if (e.key === 'Home') next = present[0];
-    else if (e.key === 'End') next = present[present.length - 1];
-    else return;
-    e.preventDefault();
-    if (next === undefined) return;
-    setSel(next);
-    labelsRef.current?.querySelector<HTMLButtonElement>(`[data-index="${next}"]`)?.focus();
-  }
+  const axis = present.length === 1 ? [lastIdx] : [firstIdx, lastIdx];
 
   return (
     <section className="asset-card trend" aria-labelledby="trend-title">
-      <div className="card-head">
-        <h2 id="trend-title" className="card-head__title">
-          월별 추이
-        </h2>
-        <span className="card-head__sub">월말 순자산</span>
-      </div>
-      <p className="trend__cap" aria-live="polite">
-        <span className="trend__cap-label">
-          {monthNo(selected.ym)}월{sel === last ? ' (지금)' : ' 말'}
-        </span>
-        <span className={`trend__cap-value money${selNet < 0 ? ' is-negative' : ''}`}><WonText amount={selNet} /></span>
-      </p>
+      <h2 id="trend-title" className="card-head__title">
+        6개월 추이
+      </h2>
 
       <div className="trend__plot" role="img" aria-label={summary}>
         <div className="trend__area">
@@ -67,7 +41,6 @@ export function NetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
               <span>0</span>
             </div>
           )}
-          <div className="trend__guide" style={{ left: `${x(sel)}%`, top: `${y(selNet)}%` }} />
           <svg className="trend__svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
             {trendSegments(points).map((seg) => (
               <polyline
@@ -78,36 +51,17 @@ export function NetWorthTrend({ points }: { points: readonly TrendPoint[] }) {
               />
             ))}
           </svg>
-          {present.map((i) => (
-            <span
-              key={i}
-              className={`trend__dot${i === sel ? ' is-selected' : ''}`}
-              style={{ left: `${x(i)}%`, top: `${y(points[i].net!)}%` }}
-            />
-          ))}
+          <span className="trend__dot" style={{ left: `${x(lastIdx)}%`, top: `${y(lastPt.net!)}%` }} />
         </div>
       </div>
 
-      <div ref={labelsRef} className="trend__months" role="radiogroup" aria-label="달 선택">
-        {points.map((p, i) =>
-          p.net === null ? (
-            <span key={p.ym} className="trend__month" aria-hidden="true" />
-          ) : (
-            <button
-              key={p.ym}
-              type="button"
-              role="radio"
-              aria-checked={i === sel}
-              tabIndex={i === sel ? 0 : -1}
-              data-index={i}
-              className={`trend__month${i === sel ? ' is-selected' : ''}`}
-              onClick={() => setSel(i)}
-              onKeyDown={move}
-            >
-              {monthNo(p.ym)}월
-            </button>
-          ),
-        )}
+      <div className="trend__months" aria-hidden="true">
+        {axis.map((i) => (
+          // 양 끝 라벨이 카드 밖으로 나가지 않게: 왼쪽 끝은 왼쪽 맞춤, 오른쪽 끝은 오른쪽 맞춤
+          <span key={i} className="trend__month" style={{ left: `${x(i)}%`, transform: `translateX(-${x(i)}%)` }}>
+            {monthNo(points[i].ym)}월
+          </span>
+        ))}
       </div>
 
       {present.length === 1 && <p className="trend__note">다음 달부터 추이가 보여요</p>}

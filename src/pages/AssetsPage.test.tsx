@@ -124,7 +124,7 @@ it('자산이 없으면 빈 화면과 "자산 추가" 버튼, 월초 안내는 �
   renderAt();
   expect(await screen.findByText('아직 등록한 자산이 없어요')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: '자산 추가' })).toHaveAttribute('href', '/assets/new');
-  expect(screen.queryByText('이번 달 잔액 확인하기')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '11월 잔액 확인하기' })).not.toBeInTheDocument();
 });
 
 it('불러오기 실패 시 안내하고 다시 시도할 수 있다', async () => {
@@ -143,8 +143,12 @@ it('부채는 빼서 순자산, 자산·부채 구역이 나뉜다 (AS-02·03)',
   renderAt();
   expect(await screen.findByText('A통장')).toBeInTheDocument();
   expect(netWorth()).toBe('103,700,000원');
-  expect(within(card('순자산')).getByText('302,700,000원')).toBeInTheDocument();
-  expect(within(card('순자산')).getByText('199,000,000원')).toBeInTheDocument();
+  // 순자산 카드는 "순자산 / 금액 / 증감" 3줄 — 총자산·총부채는 목록 구역 머리 합계로 (5.23-3)
+  expect(within(card('순자산')).queryByText('302,700,000원')).not.toBeInTheDocument();
+  expect(within(card('순자산')).queryByText('총자산')).not.toBeInTheDocument();
+  expect(within(card('순자산')).queryByText('총부채')).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: /자산 2개/ }).querySelector('.card-head__total')).toHaveTextContent('302,700,000원');
+  expect(screen.getByRole('region', { name: /부채 1개/ }).querySelector('.card-head__total')).toHaveTextContent('199,000,000원');
   // 부채 목록은 기호 없이 양수 (5.20)
   const debt = screen.getByRole('region', { name: /부채 1개/ });
   expect(within(debt).getByRole('link', { name: /주담대/ })).toHaveTextContent('199,000,000원');
@@ -190,7 +194,7 @@ it('전월 대비: 늘면 ▲, 줄면 ▼, 같으면 변동 없음, 지난달 �
   expect(delta()).toHaveTextContent('지난달 말보다 –');
 });
 
-it('자산 구성: 종류별 금액·비율, 부채는 종류별 합계 (AS-14)', async () => {
+it('자산 구성: 가장 큰 종류 % / 쌓인 막대 1개 / 한 줄, 부채 합계 행 없음 (AS-14, 5.23-5)', async () => {
   seed('1', 'ma', 2_700_000, 'A통장');
   seed('2', 'mb', 6_000_000, 'B적금', 'installment_saving');
   seed('3', null, 300_000_000, '우리집', 'real_estate');
@@ -198,16 +202,27 @@ it('자산 구성: 종류별 금액·비율, 부채는 종류별 합계 (AS-14)'
   seed('5', 'ma', 1_000_000, 'A카드', 'card_payable');
   renderAt();
   await screen.findByText('A통장');
-  const rows = within(card('자산 구성'))
-    .getAllByRole('listitem')
-    .map((li) => li.textContent);
-  expect(rows).toEqual([
-    '부동산300,000,000원97.2%',
-    '적금6,000,000원1.9%',
-    '입출금2,700,000원0.9%',
-    '대출199,000,000원',
-    '카드값1,000,000원',
-  ]);
+  const c = card('자산 구성');
+  expect(within(c).getByText('부동산 97.2%')).toBeInTheDocument();
+  expect(within(c).getByRole('img')).toHaveAccessibleName('자산 구성: 부동산 97.2%, 적금 1.9%, 입출금 0.9%');
+  expect(c.querySelectorAll('.composition__seg')).toHaveLength(3);
+  expect(within(c).getByText('부동산 · 적금 · 입출금')).toBeInTheDocument();
+  // 종류별 금액·부채 합계 행 없음 (금액은 목록에서)
+  expect(within(c).queryByRole('listitem')).not.toBeInTheDocument();
+  expect(within(c).queryByText(/원$/)).not.toBeInTheDocument();
+  expect(within(c).queryByText('대출')).not.toBeInTheDocument();
+});
+
+it('자산 구성: 종류가 4개를 넘으면 "외 N" (Q4)', async () => {
+  seed('1', null, 50, '집', 'real_estate');
+  seed('2', null, 20, '예금', 'deposit');
+  seed('3', null, 10, '투자', 'investment');
+  seed('4', null, 10, '차', 'vehicle');
+  seed('5', null, 5, '현금', 'cash');
+  seed('6', null, 5, '연금', 'pension');
+  renderAt();
+  await screen.findByText('집');
+  expect(within(card('자산 구성')).getByText('부동산 · 예금 · 투자 · 자동차 외 2')).toBeInTheDocument();
 });
 
 it('사람별: 칩마다 그 소유자 기준, 사람별 합 + 공동 = 합친 (PV-01~05)', async () => {
@@ -247,26 +262,29 @@ it('사람별: 나간 멤버가 소유한 자산이 있으면 "이름 (나감)" 
   expect(screen.queryByRole('link', { name: '자산 추가' })).not.toBeInTheDocument();
 });
 
-it('30일 넘게 안 고친 항목만 "n일 전 수정" 강조 (AS-19)', async () => {
+it('30일 넘게 안 고친 항목만 "n일 전 수정" 배지, 나머지는 표시 없음 (AS-19, 5.23-6)', async () => {
   seed('1', null, 1, '30일', 'cash', '2026-10-07T03:00:00Z');
   seed('2', null, 2, '31일', 'cash', '2026-10-06T03:00:00Z');
+  seed('3', null, 3, '오늘', 'cash', '2026-11-06T01:00:00Z');
   renderAt();
-  expect(await screen.findByText('30일 전 수정')).not.toHaveClass('asset-item__ago--stale');
-  expect(screen.getByText('31일 전 수정')).toHaveClass('asset-item__ago--stale');
+  expect(await screen.findByText('31일 전 수정')).toHaveClass('asset-item__ago--stale');
+  expect(screen.queryByText('30일 전 수정')).not.toBeInTheDocument();
+  expect(screen.queryByText('오늘 수정')).not.toBeInTheDocument();
 });
 
 it('월초 안내: 이번 달 잔액 기록이 없을 때만, 닫으면 이 기기에서 그 달엔 다시 안 뜬다 (AS-20, Q12)', async () => {
   seed('1', null, 1, '통장', 'checking', '2026-10-20T00:00:00Z');
   const user = userEvent.setup();
   const { unmount } = renderAt();
-  expect(await screen.findByText('이번 달 잔액 확인하기')).toBeInTheDocument();
-  expect(screen.getByText('11월에 아직 잔액을 고치지 않았어요')).toBeInTheDocument();
+  // 한 줄 "11월 잔액 확인하기 ›" + 닫기, 아이콘·보조 문구 없음 (5.23-2)
+  expect(await screen.findByRole('button', { name: '11월 잔액 확인하기' })).toBeInTheDocument();
+  expect(screen.queryByText('11월에 아직 잔액을 고치지 않았어요')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: '이번 달 잔액 확인 안내 닫기' }));
-  expect(screen.queryByText('이번 달 잔액 확인하기')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '11월 잔액 확인하기' })).not.toBeInTheDocument();
   unmount();
   renderAt();
   await screen.findByText('통장');
-  expect(screen.queryByText('이번 달 잔액 확인하기')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '11월 잔액 확인하기' })).not.toBeInTheDocument();
 });
 
 it('자산을 추가하면 목록과 순자산이 바뀐다 (기본 소유자 = 본인, 천 단위 쉼표)', async () => {
@@ -406,79 +424,63 @@ it('수정 화면 소유자: 나간 멤버는 새 자산 선택지에 없다', a
   expect(screen.queryByRole('radio', { name: /준호/ })).not.toBeInTheDocument();
 });
 
-describe('월별 추이 (BANB-26)', () => {
-  const trend = () => card('월별 추이');
-  const cap = () => trend().querySelector('.trend__cap') as HTMLElement;
+describe('추이 (BANB-26, 5.23-4)', () => {
+  const trend = () => card('6개월 추이');
+  const months = () => [...trend().querySelectorAll('.trend__month')].map((m) => m.textContent);
   /** 이력 한 행 더 (잔액 변경) */
   const change = (id: string, balance: number, at: string) => {
     db.history.push({ id: ++db.seq, asset_id: id, ledger_id: 'L', balance, changed_by: 'ma', changed_at: at });
     db.assets.find((a) => a.id === id)!.balance = balance;
   };
 
-  it('이력이 있는 달만 점·월 라벨, 이번 달은 현재 값, 달을 누르면 그 달 월말 값 (TR-01·03)', async () => {
+  it('점은 마지막 달 하나, x축은 처음·끝 달만, 캡션·달 고르기 없음 (TR-01·03)', async () => {
     seed('1', 'ma', 3_000_000, 'A통장', 'checking', '2026-09-15T00:00:00Z');
     change('1', 2_000_000, '2026-10-10T00:00:00Z');
     change('1', 2_700_000, '2026-11-05T00:00:00Z');
     seed('6', 'mb', 20_000_000, 'B차', 'vehicle', '2026-09-15T00:00:00Z');
     db.assets.find((a) => a.id === '6')!.archived_at = '2026-11-05T15:00:01Z'; // 11-06 KST 보관
-    const user = userEvent.setup();
     renderAt();
     await screen.findByText('A통장');
 
-    const months = within(trend()).getByRole('radiogroup', { name: '달 선택' });
-    expect(within(months).getAllByRole('radio').map((b) => b.textContent)).toEqual(['9월', '10월', '11월']);
-    expect(within(months).getByRole('radio', { name: '11월' })).toHaveAttribute('aria-checked', 'true');
-    expect(cap()).toHaveTextContent('11월 (지금)2,700,000원');
-    expect(trend().querySelectorAll('.trend__dot')).toHaveLength(3);
+    expect(trend().querySelectorAll('.trend__dot')).toHaveLength(1);
+    expect(months()).toEqual(['9월', '11월']);
+    expect(within(trend()).queryByText('월말 순자산')).not.toBeInTheDocument();
+    expect(within(trend()).queryByRole('radiogroup')).not.toBeInTheDocument();
     expect(within(trend()).getByRole('img')).toHaveAccessibleName('최근 6개월 순자산, 9월 2,300만 원부터 11월 270만 원까지');
-
-    await user.click(within(months).getByRole('radio', { name: '10월' }));
-    expect(cap()).toHaveTextContent('10월 말22,000,000원'); // 보관한 B차는 10월에 포함
-
-    // 화살표 키로 이동
-    await user.keyboard('{ArrowLeft}');
-    expect(cap()).toHaveTextContent('9월 말23,000,000원');
-    expect(within(months).getByRole('radio', { name: '9월' })).toHaveFocus();
-    await user.keyboard('{ArrowLeft}'); // 이력 시작 전 달로는 안 간다
-    expect(cap()).toHaveTextContent('9월 말');
+    // 달별 값은 화면낭독 표로 (보관한 B차는 10월에 포함)
+    expect(within(trend()).getByRole('table')).toHaveTextContent('10월 말2,200만 원');
   });
 
-  it('사람별 칩을 바꾸면 추이도 그 사람 것, 이번 달 선택으로 돌아간다 (TR-04)', async () => {
+  it('사람별 칩을 바꾸면 추이도 그 사람 것 (TR-04)', async () => {
     seed('1', 'ma', 3_000_000, 'A통장', 'checking', '2026-09-15T00:00:00Z');
     change('1', 2_700_000, '2026-11-05T00:00:00Z');
     seed('3', null, 100_000_000, '우리집', 'real_estate', '2026-10-15T00:00:00Z');
     const user = userEvent.setup();
     renderAt();
     await screen.findByText('A통장');
-    await user.click(within(trend()).getByRole('radio', { name: '9월' }));
-    expect(cap()).toHaveTextContent('9월 말3,000,000원');
-
+    expect(months()).toEqual(['9월', '11월']);
     await user.click(screen.getByRole('radio', { name: '사람별' }));
-    expect(cap()).toHaveTextContent('11월 (지금)2,700,000원');
     await user.click(screen.getByRole('radio', { name: '공동' }));
-    const months = within(trend()).getAllByRole('radio').map((b) => b.textContent);
-    expect(months).toEqual(['10월', '11월']);
-    expect(cap()).toHaveTextContent('11월 (지금)100,000,000원');
+    expect(months()).toEqual(['10월', '11월']);
+    expect(within(trend()).getByRole('img')).toHaveAccessibleName('최근 6개월 순자산, 10월 1억 원부터 11월 1억 원까지');
   });
 
-  it('이력이 이번 달뿐이면 점 1개 + 안내 (TR-06)', async () => {
+  it('이력이 이번 달뿐이면 점 1개·라벨 1개 + 안내 (TR-06)', async () => {
     seed('1', 'ma', 50_000, '새 통장', 'cash', '2026-11-03T00:00:00Z');
     renderAt();
     await screen.findByText('새 통장');
     expect(trend().querySelectorAll('.trend__dot')).toHaveLength(1);
+    expect(months()).toEqual(['11월']);
     expect(within(trend()).getByText('다음 달부터 추이가 보여요')).toBeInTheDocument();
   });
 
-  it('순자산이 0을 가로지르면 0 기준선, 음수 달은 "−" + 빨간색 (TR-07)', async () => {
+  it('순자산이 0을 가로지르면 0 기준선 (TR-07)', async () => {
     seed('1', null, 5_000_000, '대출', 'loan', '2026-09-15T00:00:00Z');
     seed('2', 'ma', 8_000_000, '통장', 'checking', '2026-11-02T00:00:00Z');
-    const user = userEvent.setup();
     renderAt();
     await screen.findByText('통장');
     expect(trend().querySelector('.trend__zero')).toBeInTheDocument();
-    await user.click(within(trend()).getByRole('radio', { name: '9월' }));
-    const value = cap().querySelector('.trend__cap-value') as HTMLElement;
-    expect(value).toHaveTextContent('−5,000,000원');
-    expect(value).toHaveClass('is-negative');
+    expect(within(trend()).getByRole('table')).toHaveTextContent('9월 말마이너스 500만 원');
   });
 });
+

@@ -120,6 +120,10 @@ describe('updatedAgo / daysSinceKST', () => {
     expect(updatedAgo('2026-10-07T03:00:00Z', now)).toEqual({ text: '30일 전 수정', stale: false });
     expect(updatedAgo('2026-10-06T03:00:00Z', now)).toEqual({ text: '31일 전 수정', stale: true });
   });
+  it('30일 경계는 KST 자정 기준: 10-07 00:00 = 30일(배지 없음), 10-06 23:59 = 31일(배지)', () => {
+    expect(updatedAgo('2026-10-06T15:00:00Z', now)).toEqual({ text: '30일 전 수정', stale: false }); // KST 10-07 00:00
+    expect(updatedAgo('2026-10-06T14:59:00Z', now)).toEqual({ text: '31일 전 수정', stale: true }); // KST 10-06 23:59
+  });
 });
 
 describe('formatDateKST', () => {
