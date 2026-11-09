@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반반 UI 단순화 제안 — 전/후 (BANB-35)</title>
+<!-- 미리보기 전용 CDN. 앱은 npm pretendard / lucide-react 로 번들한다 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<style>
+/* 클린 라이트 토큰 (design.md v1.2 그대로, 새 토큰 없음) */
+[data-theme="clean"]{--color-bg:#F2F4F6;--color-surface:#FFFFFF;--color-surface-sunken:#F2F4F6;--color-border:#E5E8EB;--color-border-strong:#878E98;--color-text:#191C21;--color-text-sub:#5F6670;--color-text-weak:#69707A;--color-primary:#007F55;--color-primary-pressed:#006A47;--color-primary-strong:#006B47;--color-primary-soft:#E6F4EE;--color-on-primary:#FFFFFF;--color-member-1:#007F55;--color-member-2:#5DBB92;--color-member-3:#6B727C;--color-member-4:#B8BEC6;--card-gutter:0px;--card-radius:0px;--control-radius:12px;}
+* { box-sizing:border-box; }
+body { margin:0; padding:28px; background:#D9DBDF; font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif; word-break:keep-all; color:#1D1F23; }
+h1 { font-size:24px; margin:0 0 4px; } .lead { margin:0 0 8px; font-size:15px; color:#4A4F57; max-width:1100px; line-height:22px; }
+h2 { font-size:17px; margin:28px 0 10px; }
+.row { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+.cap { font-size:13px; font-weight:600; color:#4A4F57; margin:0 0 8px 4px; }
+.before img { width:360px; height:760px; border-radius:28px; box-shadow:0 10px 36px rgb(0 0 0 / .18); display:block; }
+.anno { font-size:13px; color:#33373D; width:360px; margin:0; padding-left:18px; line-height:20px; }
+.phone { width:360px; height:760px; position:relative; overflow:hidden; border-radius:28px; box-shadow:0 10px 36px rgb(0 0 0 / .18); background:var(--color-bg); color:var(--color-text); }
+.money { font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:-0.01em; }
+.u { font-size:.75em; font-weight:600; margin-left:1px; }
+.acc { color:var(--color-primary-strong); }
+svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
+.ib { width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); flex:none; }
+.hdr { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 12px; z-index:2; }
+.lsw { display:flex; align-items:center; gap:6px; height:40px; padding:0 10px 0 14px; border-radius:999px; background:var(--color-surface-sunken); font-weight:700; font-size:16px; }
+.lsw svg { width:18px; height:18px; color:var(--color-text-sub); }
+.scroll { position:absolute; top:56px; left:0; right:0; bottom:64px; overflow:hidden; }
+.stack { padding:0 0 24px; display:flex; flex-direction:column; gap:12px; }
+.card { margin:0 var(--card-gutter); background:var(--color-surface); border-radius:var(--card-radius); padding:20px; }
+.mrow { height:48px; display:flex; align-items:center; justify-content:center; gap:2px; font-weight:700; font-size:17px; }
+.mrow .ib { color:var(--color-text); }
+.mrow.tools { justify-content:space-between; padding:0 4px 0 8px; }
+.mrow.tools .mid { display:flex; align-items:center; }
+.mrow.tools .rt { display:flex; }
+.k { font-size:15px; font-weight:500; color:var(--color-text-sub); display:flex; align-items:center; }
+.k .go { margin-left:auto; color:var(--color-text-weak); display:flex; }
+.hero { font-size:36px; line-height:44px; font-weight:700; letter-spacing:-0.02em; margin-top:4px; }
+.big { font-size:28px; line-height:36px; font-weight:700; letter-spacing:-0.02em; margin-top:4px; }
+.sub { font-size:14px; color:var(--color-text-sub); margin-top:6px; line-height:20px; }
+.sub b { font-weight:700; color:var(--color-text); }
+.sub b.acc { color:var(--color-primary-strong); }
+.ct { font-weight:700; font-size:17px; display:flex; justify-content:space-between; align-items:baseline; }
+.ct small { font-size:14px; font-weight:600; color:var(--color-text-sub); }
+.split { display:flex; height:10px; gap:3px; margin:14px 0 10px; }
+.split i { border-radius:99px; display:block; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:99px; margin-right:6px; vertical-align:1px; }
+.tabbar { position:absolute; left:0; right:0; bottom:0; height:64px; background:var(--color-surface); border-top:1px solid var(--color-border); display:flex; align-items:center; padding:0 8px; z-index:2; }
+.tab { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; color:var(--color-text-sub); }
+.tab .pill { width:56px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.tab.on { color:var(--color-text); font-weight:700; } .tab.on .pill { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.plus { width:52px; height:52px; border-radius:18px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; margin:0 6px; }
+/* 가계부 목록 */
+.day { padding:6px 20px 4px; background:var(--color-surface); }
+.dh { display:flex; justify-content:space-between; font-size:13px; font-weight:600; color:var(--color-text-weak); padding:10px 0 2px; }
+.tx { display:flex; align-items:center; gap:12px; height:60px; }
+.tx .ic { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; flex:none; }
+.tx .t { flex:1; min-width:0; }
+.tx .t b { display:block; font-size:15px; font-weight:600; line-height:20px; }
+.tx .t span { display:block; font-size:13px; color:var(--color-text-sub); line-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tx .m { font-size:16px; font-weight:700; }
+/* 입력 */
+.eh { height:56px; display:flex; align-items:center; gap:8px; padding:0 12px 0 8px; }
+.seg { display:grid; grid-template-columns:repeat(3,1fr); background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:4px; height:40px; flex:1; }
+.seg span { display:flex; align-items:center; justify-content:center; border-radius:9px; font-weight:600; font-size:15px; color:var(--color-text-sub); }
+.seg span.on { background:var(--color-surface); color:var(--color-text); box-shadow:0 1px 2px rgb(0 0 0 / .08); }
+.amt { padding:40px 24px 0; font-size:44px; line-height:52px; font-weight:700; letter-spacing:-0.02em; display:flex; align-items:baseline; }
+.amt .u { font-size:28px; }
+.caret { display:inline-block; width:2px; height:40px; background:var(--color-primary); margin-left:4px; align-self:center; }
+.pills { display:flex; flex-wrap:wrap; gap:8px; padding:40px 20px 0; }
+.pl { height:40px; padding:0 14px 0 10px; border-radius:999px; border:1px solid var(--color-border); background:var(--color-surface); display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:600; }
+.pl svg { width:18px; height:18px; color:var(--color-text-sub); }
+.pl.ghost { color:var(--color-text-sub); font-weight:500; border-style:dashed; border-color:var(--color-border-strong); }
+.pad { position:absolute; left:0; right:0; bottom:84px; display:grid; grid-template-columns:repeat(3,1fr); padding:0 16px; }
+.pad span { height:52px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:600; border-radius:12px; }
+.save { position:absolute; left:16px; right:16px; bottom:16px; height:52px; border-radius:var(--control-radius); background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; }
+/* 자산 */
+.seg2 { display:grid; grid-template-columns:1fr 1fr; background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:4px; height:40px; }
+.seg2 span { display:flex; align-items:center; justify-content:center; border-radius:9px; font-weight:600; font-size:15px; color:var(--color-text-sub); }
+.seg2 span.on { background:var(--color-surface); color:var(--color-text); box-shadow:0 1px 2px rgb(0 0 0 / .08); }
+.check { display:flex; align-items:center; height:44px; padding:0 4px 0 20px; background:var(--color-surface); font-size:15px; font-weight:600; }
+.check .go { display:flex; color:var(--color-text-weak); margin-left:2px; }
+.check .x { margin-left:auto; }
+.stackbar { display:flex; height:10px; border-radius:99px; overflow:hidden; gap:2px; margin:14px 0 10px; }
+.arow { display:flex; align-items:center; gap:12px; height:60px; }
+.arow .ic { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; flex:none; }
+.arow .t { flex:1; } .arow .t b { display:block; font-size:15px; font-weight:600; } .arow .t span { font-size:13px; color:var(--color-text-sub); }
+.arow .m { font-size:16px; font-weight:700; }
+/* 설정 */
+.sh { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; padding:0 8px; gap:4px; } .sh b { font-size:18px; }
+.grp { background:var(--color-surface); }
+.sr { display:flex; align-items:center; gap:14px; height:56px; padding:0 12px 0 20px; font-size:16px; }
+.sr svg.lead { color:var(--color-text-sub); }
+.sr .v { color:var(--color-text-sub); font-size:15px; max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sr > span:first-of-type { flex:1; }
+.sr > svg:last-child { color:var(--color-text-weak); width:18px; height:18px; }
+.acct { display:flex; align-items:center; height:56px; padding:0 8px 0 20px; font-size:15px; color:var(--color-text-sub); }
+.acct .lo { margin-left:auto; height:44px; padding:0 12px; display:flex; align-items:center; font-weight:600; color:var(--color-text); }
+</style></head><body>
+<h1>반반 UI 단순화 제안 — 전/후 (BANB-35)</h1>
+<p class="lead">왼쪽 = 지금(운영 반영된 v1.2 시안 캡처), 오른쪽 = 제안. 클린 라이트·360×760만. 제약: 한 화면에 강조 색 1개(테마 primary) · 카드 안 정보 3줄 이내 · 꼭 필요하지 않은 라벨·구분선·보조 문구 제거. 데이터는 시안용 샘플.</p>
+<div id="rows"></div>
+<script>
+const ic = (n, s='') => `<i data-lucide="${n}"${s?` style="${s}"`:''}></i>`;
+const won = (v, sign='') => `<span class="money">${sign}${Math.abs(v).toLocaleString('ko-KR')}<span class="u">원</span></span>`;
+const tabbar = on => `<div class="tabbar">${[['home','house','홈'],['ledger','notebook-pen','가계부'],['+'],['asset','landmark','자산']].map(t => t[0]==='+' ? `<div class="plus">${ic('plus')}</div>` : `<div class="tab ${t[0]===on?'on':''}"><span class="pill">${ic(t[1])}</span>${t[2]}</div>`).join('')}</div>`;
+const hdr = () => `<div class="hdr"><div class="lsw">우리집 가계부 ${ic('chevrons-up-down')}</div><div class="ib">${ic('settings')}</div></div>`;
+const month = (tools='') => `<div class="mrow ${tools?'tools':''}">${tools?'<span style="width:88px"></span>':''}<span class="mid" style="display:flex;align-items:center"><span class="ib">${ic('chevron-left')}</span>11월<span class="ib">${ic('chevron-right')}</span></span>${tools}</div>`;
+
+/* 홈 */
+const home = `<div class="phone">${hdr()}<div class="scroll"><div class="stack">${month()}
+<div class="card"><div class="k">우리집 순자산<span class="go">${ic('chevron-right')}</span></div><div class="big">${won(206500500)}</div><div class="sub">지난달보다 +3,640,000원</div></div>
+<div class="card"><div class="k">11월 남은 돈</div><div class="hero">${won(784500)}</div><div class="sub">수입 <b class="acc">4,200,000</b> · 지출 <b>2,915,500</b> · 저축 <b>500,000</b></div></div>
+<div class="card"><div class="ct">누가 썼나 <small>2,915,500원</small></div><div class="split"><i style="flex:1640000;background:var(--color-member-1)"></i><i style="flex:1275500;background:var(--color-member-2)"></i></div><div class="sub" style="margin:0"><span class="dot" style="background:var(--color-member-1)"></span>민지 1,640,000 &nbsp; <span class="dot" style="background:var(--color-member-2)"></span>준호 1,275,500</div></div>
+</div></div>${tabbar('home')}</div>`;
+
+/* 가계부 */
+const T = (i, t, s, v, kind) => `<div class="tx"><span class="ic">${ic(i)}</span><span class="t"><b>${t}</b><span>${s}</span></span><span class="m ${kind==='in'?'acc':''}">${kind==='in'?won(v,'+'):kind==='out'?won(v,'−'):won(v)}</span></div>`;
+const ledger = `<div class="phone">${hdr()}<div class="scroll"><div class="stack" style="gap:8px">${month(`<span class="rt"><span class="ib">${ic('calendar')}</span><span class="ib">${ic('list-filter')}</span></span>`)}
+<div class="day"><div class="dh"><span>11월 6일 (금) 오늘</span></div>
+${T('piggy-bank','내집마련 적금','저축 · 민지',500000,'save')}${T('building-2','청약','저축 · 민지',100000,'save')}</div>
+<div class="day"><div class="dh"><span>11월 5일 (목)</span><span>−205,000</span></div>
+${T('banknote','내 월급','급여 · 민지',3850000,'in')}${T('building','관리비','주거 · 민지',193000,'out')}${T('utensils','점심','외식 · 준호',12000,'out')}</div>
+<div class="day"><div class="dh"><span>11월 4일 (수)</span><span>−54,900</span></div>
+${T('shopping-cart','장보기','마트 · 민지',31900,'out')}${T('bike','치킨','배달 · 준호',23000,'out')}</div>
+</div></div>${tabbar('ledger')}</div>`;
+
+/* 입력 */
+const entry = `<div class="phone" style="background:var(--color-surface)"><div class="eh"><span class="ib" style="color:var(--color-text)">${ic('x')}</span><div class="seg"><span class="on">지출</span><span>수입</span><span>저축</span></div></div>
+<div class="amt">${won(12800)}<span class="caret"></span></div>
+<div class="pills"><span class="pl">${ic('utensils')}외식</span><span class="pl">${ic('wallet')}공동소비</span><span class="pl">${ic('user')}민지</span><span class="pl">${ic('calendar')}오늘</span><span class="pl ghost">${ic('plus')}메모</span></div>
+<div class="pad">${['1','2','3','4','5','6','7','8','9','00','0','⌫'].map(k=>`<span>${k==='⌫'?ic('delete','width:26px;height:26px'):k}</span>`).join('')}</div>
+<div class="save">저장</div></div>`;
+
+/* 자산 */
+const A = (i, t, s, v) => `<div class="arow"><span class="ic">${ic(i)}</span><span class="t"><b>${t}</b><span>${s}</span></span><span class="m">${won(v)}</span></div>`;
+const shades = ['#007F55','#2F9A72','#5DBB92','#8ED2B3','#B5E2CD','#D3EEE2','#E6F4EE'];
+const comp = [76,6,6,4,4,3,2];
+const trend = () => { const v=[188,192,193,197,200,206.5], w=320,h=84, mn=184, mx=209; const X=i=>6+i*(w-12)/5, Y=x=>6+(mx-x)*(h-12)/(mx-mn);
+  return `<svg width="${w}" height="${h}" style="display:block;overflow:visible"><polyline fill="none" stroke="var(--color-primary)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${v.map((x,i)=>X(i)+','+Y(x)).join(' ')}"/><circle cx="${X(5)}" cy="${Y(206.5)}" r="5" fill="var(--color-primary)" stroke="#fff" stroke-width="2"/></svg><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-weak);margin-top:6px"><span>6월</span><span>11월</span></div>`; };
+const assets = `<div class="phone">${hdr()}<div class="scroll"><div class="stack">
+<div style="background:var(--color-surface);padding:12px 20px"><div class="seg2"><span class="on">합친</span><span>사람별</span></div></div>
+<div class="check">11월 잔액 확인하기<span class="go">${ic('chevron-right','width:18px;height:18px')}</span><span class="ib x">${ic('x','width:18px;height:18px')}</span></div>
+<div class="card"><div class="k">순자산</div><div class="hero">${won(206500500)}</div><div class="sub">자산 328,330,500 · 부채 121,830,000</div></div>
+<div class="card" style="padding-bottom:12px"><div class="ct">6개월 추이 <small>지난달보다 +3,640,000원</small></div><div style="margin-top:10px">${trend()}</div></div>
+<div class="card" style="padding-bottom:16px"><div class="ct">자산 구성 <small>부동산 76%</small></div><div class="stackbar">${comp.map((p,i)=>`<i style="flex:${p};background:${shades[i]}"></i>`).join('')}</div><div class="sub" style="margin:0">부동산 · 예금 · 투자 · 자동차 외 3</div></div>
+<div class="card" style="padding-top:12px;padding-bottom:0"><div class="ct" style="padding:4px 0">자산 9개</div>${A('wallet','생활비 통장','입출금 · 공동',3240000)}${A('wallet','민지 월급통장','입출금 · 민지',1870500)}</div>
+</div></div>${tabbar('asset')}</div>`;
+
+/* 설정 */
+const R = (i, t, v='') => `<div class="sr">${ic(i)}<span>${t}</span>${v?`<span class="v">${v}</span>`:''}${ic('chevron-right')}</div>`;
+const settings = `<div class="phone"><div class="sh"><span class="ib" style="color:var(--color-text)">${ic('chevron-left')}</span><b>설정</b></div>
+<div style="position:absolute;top:68px;left:0;right:0;display:flex;flex-direction:column;gap:12px">
+<div class="grp">${R('pencil','가계부 이름','우리 가족 공동 생활비 경조사 가계부')}${R('user','내 이름','민지')}${R('users','멤버·초대')}${R('tag','카테고리')}${R('wallet','주머니')}</div>
+<div class="grp">${R('notebook-tabs','가계부 관리')}${R('palette','화면 테마','클린')}</div>
+<div class="grp"><div class="acct">kicmi032@gmail.com<span class="lo">로그아웃</span></div></div>
+</div></div>`;
+
+const SCREENS = [
+  ['home','1. 홈', home, ['헤더 가계부 칩의 멤버 머리글자(민·준) — 멤버는 “누가 썼나”·설정에서 확인', '월 이동 카드 → 카드 없는 한 줄, 올해는 연도 생략(“11월”)', '순자산 카드의 작은 추이 그래프 → 자산 탭 “월별 추이”로', '“남은 돈 = 수입 − 지출 − 저축” 계산식 문구, 수입·지출·저축 3칸 머리말 → 한 줄 요약', '전월 대비 파란색·저축 보라색 → 회색/기본 글자 (강조는 primary 1색)']],
+  ['ledger','2. 가계부', ledger, ['목록|달력 세그먼트·필터 버튼 → 월 줄 오른쪽 아이콘 2개', '이달 지출·수입·저축 3칸 → 홈 “남은 돈” 카드에만 (같은 숫자 중복 제거)', '내역 보조 줄의 주머니 이름, “저축”·“고정” 배지 → 주머니·고정은 수정 화면과 필터에서', '날짜 머리의 “지출 없음” 문구, 날짜별 카드 사이 구분 → 하루 묶음은 여백으로만', '수입 파랑·저축 보라 → 수입만 primary, 저축은 부호 없는 기본 글자']],
+  ['entry','3. 내역 입력', entry, ['“내역 입력” 제목 → 지출/수입/저축 세그먼트가 제목 자리로', '“얼마를 썼나요?” 질문, 한글 금액 읽기 줄(“만 이천팔백 원”)', '+1천·+1만·+5만·+10만 빠른 금액 칩 (키패드 00으로 대체)', '카테고리·주머니·쓴 사람·날짜 4줄 표(라벨+구분선) → 라벨 없는 알약 4개, 누르면 지금과 같은 시트', '“+ 메모 추가” 줄 → 알약 줄 끝의 “+ 메모”']],
+  ['assets','4. 자산', assets, ['월초 안내 상자의 아이콘·보조 문구 → “11월 잔액 확인하기 ›” 한 줄', '순자산 카드의 전월 대비·구분선·총자산/총부채 2칸 → 한 줄 요약', '월별 추이의 “월말 순자산”·“11월 (지금) 금액” 캡션, 점 6개·월 이름 6개 → 선 하나 + 처음·끝 달, 전월 대비는 제목 줄로', '자산 구성 7줄(막대·금액·%)과 부채 합계 → 쌓인 막대 1개 + 상위 종류 한 줄, 금액은 아래 목록에서', '자산 행의 “3일 전 수정” 보조 문구']],
+  ['settings','5. 설정', settings, ['묶음 제목(가계부 / 지금 보는 가계부: 이름 / 내 설정 / 계정) → 묶음은 여백으로만 구분', '개수 표시(2개·2명·43개·4개) — 값이 설정 자체인 이름·테마만 남김', '“이 가계부에서 내 이름”·“카테고리 관리”·“주머니 관리” → “내 이름”·“카테고리”·“주머니”', '계정 줄의 아바타·“구글 계정” 문구·테두리 버튼 → 메일 + 글자 버튼 “로그아웃”', '“가계부 관리”를 맨 위에서 테마 옆으로 (자주 안 씀)']],
+];
+document.getElementById('rows').innerHTML = SCREENS.map(([k, t, f, cut]) => `<section data-s="${k}"><h2>${t}</h2><div class="row">
+<div class="before"><p class="cap">전 (지금)</p><img src="before-${k}.png" alt=""></div>
+<div><p class="cap">후 (제안)</p><div data-theme="clean" class="after">${f}</div></div>
+<div><p class="cap">덜어낸 것</p><ul class="anno">${cut.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+</div></section>`).join('');
+lucide.createIcons();
+</script>
+</body></html>
