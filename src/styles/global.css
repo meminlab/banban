@@ -116,7 +116,7 @@ button { font: inherit; }
 .tabbar__add:focus-visible { outline-offset: 2px; }
 
 /* 탭 화면 카드 공통 — 강조 표현 토큰(design.md 1.5)만 쓴다. 클린: 화면 끝까지·모서리 0·그림자 없음 */
-.shell--tabs :is(.summary-card, .asset-card, .assets .month-check, .home-nw, .home .who-spent, .home .where-spent, .home .recent, .ledger .day-group) {
+.shell--tabs :is(.summary-card, .asset-card, .assets .month-check, .together-card, .home-nw, .home .who-spent, .home .where-spent, .home .recent, .ledger .day-group) {
   margin-inline: calc(var(--card-gutter) - var(--content-pad));
   border: var(--card-border);
   border-radius: var(--card-radius);
@@ -991,6 +991,18 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
 
 
 /* ── 홈 "우리집 순자산" 카드 (BANB-27, design.md 5.19 작은 추이 · 5.22 홈 2번) */
+/* 홈 맨 위 함께한 날 카드 (design.md 5.26): 일반 카드, 포인트 색은 하트와 당일 D-day 뿐 */
+.together-card { display: flex; flex-direction: column; gap: 8px; min-height: 44px; padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
+a.together-card:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+.together-card__days { display: flex; align-items: center; gap: 8px; font-size: 1.125rem; font-weight: 700; line-height: 1.45; letter-spacing: -0.01em; }
+.together-card__days b { font-variant-numeric: tabular-nums; }
+.together-card__heart { flex: none; color: var(--color-primary); fill: var(--color-primary-soft); }
+.together-card__days + .together-card__dday { margin-top: 2px; }
+.together-card__dday { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.9375rem; line-height: 1.45; color: var(--color-text-sub); }
+.together-card__text { min-width: 0; overflow-wrap: anywhere; }
+.together-card__badge { flex: none; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.together-card__badge.is-today { color: var(--color-primary-strong); }
+.together-card + .month-nav { margin-top: -4px; }
 .home-nw { display: flex; flex-direction: column; gap: 6px; min-height: 44px; padding: 20px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-surface); color: var(--color-text); text-decoration: none; }
 a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .home-nw--status { align-items: flex-start; gap: 8px; }
