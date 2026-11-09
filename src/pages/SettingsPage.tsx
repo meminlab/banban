@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { ChevronRight, HeartHandshake, Palette, Pencil, Repeat, Settings2, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { ChevronRight, Gamepad2, HeartHandshake, Palette, Pencil, Repeat, Settings2, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
 import {
   CATEGORY_SETTINGS_PATH,
   LEDGER_MANAGE_PATH,
   LEDGER_NAME_PATH,
   MEMBERS_PATH,
   MY_NAME_PATH,
+  PLAY_PATH,
   POCKET_SETTINGS_PATH,
   RECURRING_SETTINGS_PATH,
   THEME_SETTINGS_PATH,
@@ -216,6 +217,8 @@ export function SettingsPage() {
             <MenuRow to={CATEGORY_SETTINGS_PATH} icon={Tag} label="카테고리" />
             <MenuRow to={POCKET_SETTINGS_PATH} icon={Wallet} label="주머니" />
             <MenuRow to={RECURRING_SETTINGS_PATH} icon={Repeat} label="정기 내역" />
+            {/* BANB-51: 게임 진입점. 같은 가계부 멤버끼리 하는 놀이라 지금 가계부 묶음에 둔다 (홈 카드도 그대로) */}
+            <MenuRow to={PLAY_PATH} icon={Gamepad2} label="미니게임" />
           </ul>
         </nav>
 
