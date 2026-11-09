@@ -1,4 +1,4 @@
-import { Grid3x3, Info, Send } from 'lucide-react';
+import { Coins, Grid3x3, Info, Send } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../../app/games';
@@ -13,7 +13,7 @@ import { inviteGame, listFinishedGames } from '../../data/game';
 import { formatHeadToHead, headToHead, isBusy, myOpenGame, opponentOf, turnText } from '../../domain/omok';
 
 /**
- * 같이 놀기 화면 (BANB-49, design.md 5.28): 두던 판 → 게임(1차 오목) → 상대 고르기(화면 안 라디오, 멤버 2명이면 미리 골라 둠)
+ * 같이 놀기 화면 (BANB-49, design.md 5.28): 두던 판 → 게임(오목 + 반반 쌓기 "곧 만나요", BANB-51) → 상대 고르기(화면 안 라디오, 멤버 2명이면 미리 골라 둠)
  * → 안내 → 전적 → "○○님 초대하기" → 대기실. 진행 중인 판이 있으면 새 초대는 막는다(한 사람 진행 중 판 1개).
  */
 export function PlayHomePage() {
@@ -75,15 +75,27 @@ export function PlayHomePage() {
         )}
 
         <section className="play-panel" aria-label="게임">
-          <div className={`play-game${mine ? ' is-disabled' : ''}`}>
-            <span className="play-game__icon" aria-hidden="true">
-              <Grid3x3 size={24} />
-            </span>
-            <span className="play-game__body">
-              <span className="play-game__name">오목</span>
-              <span className="play-game__desc">{mine ? '두던 판을 끝내면 새로 둘 수 있어요' : '다섯 개를 먼저 이으면 이겨요'}</span>
-            </span>
-          </div>
+          <ul className="play-games">
+            <li className={`play-game${mine ? ' is-disabled' : ''}`}>
+              <span className="play-game__icon" aria-hidden="true">
+                <Grid3x3 size={24} />
+              </span>
+              <span className="play-game__body">
+                <span className="play-game__name">오목</span>
+                <span className="play-game__desc">{mine ? '두던 판을 끝내면 새로 둘 수 있어요' : '다섯 개를 먼저 이으면 이겨요'}</span>
+              </span>
+            </li>
+            {/* BANB-51: 반반 쌓기(BANB-52)는 머지 전까지 "곧 만나요" — 누를 수 없음 */}
+            <li className="play-game is-soon" aria-disabled="true">
+              <span className="play-game__icon" aria-hidden="true">
+                <Coins size={24} />
+              </span>
+              <span className="play-game__body">
+                <span className="play-game__name">반반 쌓기</span>
+                <span className="play-game__desc">곧 만나요</span>
+              </span>
+            </li>
+          </ul>
         </section>
 
         {others.length === 0 && (
