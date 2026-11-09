@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { ChevronRight, HeartHandshake, Palette, Pencil, Repeat, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { ChevronRight, HeartHandshake, Palette, Pencil, Repeat, Settings2, Tag, User, Users, Wallet, type LucideIcon } from 'lucide-react';
 import {
   CATEGORY_SETTINGS_PATH,
+  LEDGER_MANAGE_PATH,
   LEDGER_NAME_PATH,
   MEMBERS_PATH,
   MY_NAME_PATH,
@@ -143,7 +144,7 @@ function menuValue(status: LoadState<unknown>['status'], value: string | null): 
 
 /**
  * 설정 (design.md 5.23 v1.4): 묶음 제목 없이 여백으로만 3묶음을 나눈다.
- * ① 지금 보는 가계부 ② 내 설정 ③ 계정(메일 + 글자 버튼 "로그아웃")
+ * ① 지금 보는 가계부 ② 가계부 관리·내 설정 ③ 계정(메일 + 글자 버튼 "로그아웃")
  */
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -220,6 +221,7 @@ export function SettingsPage() {
 
         <nav aria-label="내 설정">
           <ul className="menu-list">
+            <MenuRow to={LEDGER_MANAGE_PATH} icon={Settings2} label="가계부 관리" />
             <MenuRow to={THEME_SETTINGS_PATH} icon={Palette} label="화면 테마" value={THEME_LABEL[theme]} />
           </ul>
         </nav>

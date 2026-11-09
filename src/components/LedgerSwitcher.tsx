@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronsUpDown } from 'lucide-react';
-import { LEDGER_CREATE_PATH, LEDGER_JOIN_PATH } from '../app/routes';
+import { ChevronsUpDown, Settings2 } from 'lucide-react';
+import { LEDGER_CREATE_PATH, LEDGER_JOIN_PATH, LEDGER_MANAGE_PATH } from '../app/routes';
 import { useCurrentLedger, useLedgers } from '../app/ledgers';
 import { Sheet } from './Sheet';
 
 /**
  * 상단 왼쪽 가계부 전환 알약 버튼 (design.md 5.23·5.18): 가계부 이름 ⇕ (v1.4: 멤버 아바타 없음)
- * → 아래에서 올라오는 가계부 목록 (전환·새로 만들기·초대코드로 참여)
+ * → 아래에서 올라오는 가계부 목록 (전환·새로 만들기·초대코드로 참여·가계부 관리)
  */
 export function LedgerSwitcher() {
   const current = useCurrentLedger();
@@ -76,6 +76,10 @@ function LedgerSheet({ onClose }: { onClose: () => void }) {
         </button>
         <button type="button" className="button button--secondary button--block" onClick={() => go(LEDGER_JOIN_PATH)}>
           초대코드로 참여
+        </button>
+        <button type="button" className="text-button ledger-list__manage" onClick={() => go(LEDGER_MANAGE_PATH)}>
+          <Settings2 size={18} strokeWidth={2} aria-hidden="true" focusable="false" />
+          가계부 관리
         </button>
       </div>
     </Sheet>
