@@ -11,6 +11,7 @@ import { todayKST } from '../domain/transactionForm';
 const fake = vi.hoisted(() => ({
   transactions: [] as unknown[],
   uses: [] as { category_id: string; occurred_on: string; created_at: string }[],
+  recent: [] as { type: string; category_id: string; pocket_id: string | null }[],
   addChild: vi.fn(),
   addParent: vi.fn(),
   create: vi.fn(),
@@ -90,6 +91,7 @@ const B_ENTRY: Transaction = {
 
 vi.mock('../data/transaction', () => ({
   listCategoryUses: async () => fake.uses,
+  listMyRecentEntries: async () => fake.recent,
   getTransactionFormOptions: async () => ({ categories: CATEGORIES, pockets: POCKETS, members: MEMBERS }),
   listMonthTransactions: async () => fake.transactions,
   getTransaction: async (id: string) => fake.transactions.find((t) => (t as Transaction).id === id) ?? null,
@@ -111,6 +113,7 @@ function renderAt(path: string) {
 beforeEach(() => {
   fake.transactions = [B_ENTRY];
   fake.uses = [];
+  fake.recent = [];
   fake.addChild.mockReset();
   fake.addParent.mockReset();
   fake.create.mockReset().mockResolvedValue('new-id');
@@ -118,15 +121,35 @@ beforeEach(() => {
   fake.remove.mockReset().mockResolvedValue(undefined);
 });
 
-const amountInput = () => screen.getByLabelText('금액');
-const categoryField = () => screen.getByLabelText('카테고리');
+const amountOutput = () => screen.getByLabelText(/^금액 [0-9]/);
+const amountText = () => amountOutput().querySelector('.tx-amount__num')?.textContent;
+const reading = () => document.querySelector('.tx-reading');
+/** 알약: aria-label "카테고리: 외식" */
+const pill = (label: string) => screen.getByRole('button', { name: new RegExp(`^${label}: `) });
+const categoryField = () => pill('카테고리');
+const saveButton = () => screen.getByRole('button', { name: '저장' });
 
-/** 카테고리 행 → 선택 시트 → 대분류(→ 소분류)로 고르기 */
+/** 앱 키패드로 금액 누르기 ("00" 은 한 키) */
+async function typeAmount(user: ReturnType<typeof userEvent.setup>, keys: string[]) {
+  const pad = screen.getByRole('group', { name: '금액 키패드' });
+  for (const k of keys) await user.click(within(pad).getByRole('button', { name: k === '⌫' ? '지우기' : k }));
+}
+const digits = (s: string) => [...s];
+
+/** 카테고리 알약 → 선택 시트 → 대분류(→ 소분류)로 고르기 */
 async function pickCategory(user: ReturnType<typeof userEvent.setup>, parent: string, child?: string) {
   await user.click(categoryField());
   const sheet = await screen.findByRole('dialog', { name: /카테고리$/ });
   await user.click(within(sheet).getByRole('radio', { name: new RegExp(`^${parent}`) }));
   if (child) await user.click(within(sheet).getByRole('radio', { name: child }));
+}
+
+/** 칩 시트(주머니·사람)에서 고르기 */
+async function pickChip(user: ReturnType<typeof userEvent.setup>, label: string, name: string) {
+  await user.click(pill(label));
+  const sheet = await screen.findByRole('dialog');
+  await user.click(within(sheet).getByRole('radio', { name }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 }
 
 /** 선택 시트의 칸 이름들 (추가 칸 제외) */
@@ -146,74 +169,127 @@ async function openNewForm() {
   return user;
 }
 
-describe('내역 입력', () => {
-  it('가계부 탭의 입력 버튼 → 입력 화면. 기본값: 지출, 오늘 날짜, 사용한 사람 = 나', async () => {
+describe('내역 입력 — 키패드 + 알약 (5.15 v1.4)', () => {
+  it('헤더는 닫기 + 세그먼트(제목 숨김), 기본값: 지출·0원·오늘·사람 = 나, 첫 포커스는 금액', async () => {
     await openNewForm();
+    expect(screen.getByRole('heading', { level: 1, name: '내역 입력' })).toHaveClass('sr-only');
+    expect(screen.getByRole('button', { name: '닫기' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '지출' })).toBeChecked();
-    expect(screen.getByLabelText('날짜')).toHaveValue(todayKST());
-    expect(screen.getByRole('radio', { name: '에이 (나)' })).toBeChecked();
-    expect(amountInput()).toHaveFocus();
-    expect(amountInput()).toHaveAttribute('inputmode', 'numeric');
+    expect(amountText()).toBe('0');
+    expect(amountOutput()).toHaveClass('is-zero');
+    expect(amountOutput()).toHaveFocus();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument(); // 시스템 자판을 띄우는 입력칸 없음
+    expect(screen.queryByText('얼마를 썼나요?')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^\+/ })).not.toBeInTheDocument(); // 빠른 금액 칩 없음
+    expect(pill('날짜')).toHaveAccessibleName('날짜: 오늘');
+    expect(pill('사람')).toHaveAccessibleName('사람: 에이');
+    expect(pill('카테고리')).toHaveAccessibleName('카테고리: 없음');
+    expect(pill('카테고리')).toHaveClass('tx-pill--empty');
+    expect(pill('메모')).toHaveTextContent('메모');
+    expect(pill('주머니')).toBeInTheDocument();
   });
 
-  it('금액은 천 단위로 표시된다', async () => {
+  it('키패드: 1 → 00 → 00 = 10,000원, ⌫ 한 자리, 길게 누르면 전부 지움', async () => {
     const user = await openNewForm();
-    await user.type(amountInput(), '1234567');
-    expect(amountInput()).toHaveValue('1,234,567');
+    await typeAmount(user, ['1', '00', '00']);
+    expect(amountText()).toBe('10,000');
+    await typeAmount(user, ['⌫']);
+    expect(amountText()).toBe('1,000');
+    const back = screen.getByRole('button', { name: '지우기' });
+    await user.pointer({ keys: '[TouchA>]', target: back });
+    await new Promise((r) => setTimeout(r, 600));
+    await user.pointer({ keys: '[/TouchA]', target: back });
+    expect(amountText()).toBe('0');
   });
 
-  it('필수값이 없으면 저장하지 않고 칸별로 안내한다', async () => {
+  it('최대 10자리: 넘치면 무시하고 "최대 금액이에요"', async () => {
     const user = await openNewForm();
-    await user.click(screen.getByRole('button', { name: '저장' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('입력값을 확인해 주세요');
-    expect(screen.getByText('금액을 입력해 주세요.')).toBeInTheDocument();
-    expect(screen.getByText('카테고리를 골라 주세요.')).toBeInTheDocument();
-    expect(screen.getByText('주머니를 골라 주세요.')).toBeInTheDocument();
-    expect(amountInput()).toHaveAttribute('aria-invalid', 'true');
-    expect(fake.create).not.toHaveBeenCalled();
+    await pickCategory(user, '카페·간식');
+    await pickChip(user, '주머니', '공동소비');
+    await typeAmount(user, digits('99999999999'));
+    expect(amountText()).toBe('9,999,999,999');
+    expect(screen.getByText(/최대 금액이에요/)).toBeInTheDocument();
+    expect(reading()).not.toBeNull();
   });
 
-  it.each([
-    ['0', '금액은 1원 이상이어야 해요.'],
-    ['-500', '금액은 1원 이상의 정수(원 단위)로 입력해 주세요.'],
-    ['12.5', '금액은 1원 이상의 정수(원 단위)로 입력해 주세요.'],
-    ['10000000000', '금액은 9,999,999,999원까지 입력할 수 있어요.'],
-  ])('금액 %s 는 저장되지 않고 안내가 나온다', async (amount, message) => {
+  it('PC 키보드 숫자·Backspace 도 같은 규칙', async () => {
     const user = await openNewForm();
-    await user.type(amountInput(), amount);
+    await user.keyboard('1000000');
+    expect(amountText()).toBe('1,000,000');
+    await user.keyboard('{Backspace}');
+    expect(amountText()).toBe('100,000');
+  });
+
+  it('한글 읽기: 999,999원은 없음, 1,000,000원부터 보임, 지우다 내려가면 바로 숨김. aria-label 에는 항상', async () => {
+    const user = await openNewForm();
+    await pickCategory(user, '카페·간식');
+    await pickChip(user, '주머니', '공동소비');
+    await typeAmount(user, digits('999999'));
+    expect(reading()).toBeNull();
+    expect(amountOutput()).toHaveAccessibleName('금액 999,999원, 99만 원');
+    await typeAmount(user, ['⌫', '⌫', '⌫', '⌫', '⌫', '⌫', '1', '00', '00', '00']);
+    expect(amountText()).toBe('1,000,000');
+    expect(reading()).toHaveTextContent('100만 원');
+    await typeAmount(user, ['⌫']);
+    expect(reading()).toBeNull();
+  });
+
+  it('금액 12,800원: 화면엔 읽기 없음, aria-label 에는 한글 읽기', async () => {
+    const user = await openNewForm();
+    await typeAmount(user, digits('12800'));
+    expect(reading()).toBeNull();
+    expect(amountOutput()).toHaveAccessibleName('금액 12,800원, 1만 원');
+  });
+
+  it('저장: 금액 0·카테고리 없음이면 비활성 + 빠진 항목 한 줄, 이때 읽기 줄은 숨김', async () => {
+    const user = await openNewForm();
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText('금액을 입력하고 카테고리·주머니를 골라 주세요')).toBeInTheDocument();
+    await typeAmount(user, ['2', '00', '00', '00']);
+    expect(screen.getByText('카테고리·주머니를 골라 주세요')).toBeInTheDocument();
+    expect(reading()).toBeNull(); // 2,000,000원이지만 안내가 떠 있다
     await pickCategory(user, '식비', '외식');
-    await user.click(screen.getByRole('radio', { name: '공동소비' }));
-    await user.click(screen.getByRole('button', { name: '저장' }));
-    expect(screen.getByText(message)).toBeInTheDocument();
+    await pickChip(user, '주머니', '공동소비');
+    expect(saveButton()).toBeEnabled();
+    expect(reading()).toHaveTextContent('200만 원');
     expect(fake.create).not.toHaveBeenCalled();
   });
 
-  it('유형을 바꾸면 카테고리 선택지가 바뀌고, 지출이 아니면 주머니·고정지출이 사라진다', async () => {
+  it('유형을 바꾸면 카테고리 선택지가 바뀌고, 지출이 아니면 주머니 알약·고정지출이 사라진다', async () => {
     const user = await openNewForm();
     expect(await sheetOptions(user)).toEqual(['식비', '카페·간식']);
     await pickCategory(user, '식비', '외식');
-    expect(screen.getByRole('group', { name: '주머니' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: '고정지출' })).toBeInTheDocument();
+    await user.click(pill('날짜'));
+    expect(within(await screen.findByRole('dialog', { name: '날짜' })).getByRole('checkbox', { name: /고정지출/ })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '완료' }));
 
     await user.click(screen.getByRole('radio', { name: '수입' }));
     expect(await sheetOptions(user)).toEqual(['급여']);
-    expect(categoryField()).toHaveTextContent('카테고리 선택');
-    expect(screen.queryByRole('group', { name: '주머니' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: '고정지출' })).not.toBeInTheDocument();
+    expect(categoryField()).toHaveAccessibleName('카테고리: 없음');
+    expect(screen.queryByRole('button', { name: /^주머니: / })).not.toBeInTheDocument();
+    await user.click(pill('날짜'));
+    expect(within(await screen.findByRole('dialog', { name: '날짜' })).queryByRole('checkbox')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '완료' }));
 
     await user.click(screen.getByRole('radio', { name: '저축' }));
     expect(await sheetOptions(user)).toEqual(['적금']);
   });
 
-  it('저장하면 입력값으로 내역을 만들고 가계부 탭에서 "저장했어요"를 보여 준다', async () => {
+  it('저장하면 입력값으로 내역을 만들고, 돌아간 탭에서 "저장했어요 · 되돌리기"', async () => {
     const user = await openNewForm();
-    await user.type(amountInput(), '12000');
+    await typeAmount(user, digits('12000'));
     await pickCategory(user, '식비', '장보기');
-    await user.click(screen.getByRole('radio', { name: '개인용돈' }));
-    await user.click(screen.getByRole('radio', { name: '비' }));
-    await user.click(screen.getByRole('checkbox', { name: '고정지출' }));
-    await user.type(screen.getByLabelText(/메모/), '장보기');
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await pickChip(user, '주머니', '개인용돈');
+    await pickChip(user, '사람', '비');
+    await user.click(pill('날짜'));
+    await user.click(screen.getByRole('checkbox', { name: /고정지출/ }));
+    await user.click(screen.getByRole('button', { name: '완료' }));
+    expect(pill('날짜')).toHaveTextContent('오늘 · 고정');
+    await user.click(pill('메모'));
+    await user.type(within(await screen.findByRole('dialog', { name: '메모' })).getByRole('textbox'), '장보기');
+    await user.click(screen.getByRole('button', { name: '완료' }));
+    expect(pill('메모')).toHaveAccessibleName('메모: 장보기');
+    await user.click(saveButton());
 
     expect(fake.create).toHaveBeenCalledWith('L', {
       type: 'expense',
@@ -225,34 +301,58 @@ describe('내역 입력', () => {
       is_fixed: true,
       memo: '장보기',
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('저장했어요');
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: '가계부' })).toBeInTheDocument();
+
+    // 되돌리기 = 방금 만든 내역 삭제
+    await user.click(screen.getByRole('button', { name: '되돌리기' }));
+    expect(fake.remove).toHaveBeenCalledWith('new-id');
+    expect(await screen.findByText('되돌렸어요')).toBeInTheDocument();
   });
 
   it('수입은 주머니 없이, 고정지출 false 로 저장된다', async () => {
     const user = await openNewForm();
     await user.click(screen.getByRole('radio', { name: '수입' }));
-    await user.type(amountInput(), '3000000');
+    await typeAmount(user, ['3', '00', '00', '00']);
     await pickCategory(user, '급여');
-    await user.click(screen.getByRole('button', { name: '저장' }));
-    expect(fake.create).toHaveBeenCalledWith('L', expect.objectContaining({ type: 'income', pocket_id: null, is_fixed: false }));
+    await user.click(saveButton());
+    expect(fake.create).toHaveBeenCalledWith('L', expect.objectContaining({ type: 'income', amount: 3000000, pocket_id: null, is_fixed: false }));
+  });
+
+  it('기본값: 이 사람이 마지막에 쓴 카테고리·주머니 (유형별)', async () => {
+    fake.recent = [
+      { type: 'expense', category_id: 'cafe-self', pocket_id: 'p-mine' },
+      { type: 'income', category_id: 'salary-1', pocket_id: null },
+    ];
+    const user = await openNewForm();
+    expect(categoryField()).toHaveAccessibleName('카테고리: 카페·간식');
+    expect(pill('주머니')).toHaveAccessibleName('주머니: 개인용돈');
+    await user.click(screen.getByRole('radio', { name: '수입' }));
+    expect(categoryField()).toHaveAccessibleName('카테고리: 급여');
+    await user.click(screen.getByRole('radio', { name: '저축' }));
+    expect(categoryField()).toHaveAccessibleName('카테고리: 없음');
+    // 보통은 금액만 누르고 저장
+    await user.click(screen.getByRole('radio', { name: '지출' }));
+    await typeAmount(user, digits('4500'));
+    await user.click(saveButton());
+    expect(fake.create).toHaveBeenCalledWith('L', expect.objectContaining({ amount: 4500, category_id: 'cafe-self', pocket_id: 'p-mine', spender_id: 'm-me' }));
   });
 
   it('저장에 실패하면 입력값이 남아 있고, 다시 시도할 수 있다', async () => {
     fake.create.mockRejectedValueOnce(new Error('network'));
     const user = await openNewForm();
-    await user.type(amountInput(), '5000');
+    await typeAmount(user, digits('5000'));
     await pickCategory(user, '식비', '외식');
-    await user.click(screen.getByRole('radio', { name: '공동소비' }));
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await pickChip(user, '주머니', '공동소비');
+    await user.click(saveButton());
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장하지 못했어요');
-    expect(amountInput()).toHaveValue('5,000');
-    expect(categoryField()).toHaveTextContent('식비 › 외식');
+    expect(amountText()).toBe('5,000');
+    expect(categoryField()).toHaveAccessibleName('카테고리: 외식');
 
     await user.click(screen.getByRole('button', { name: '다시 저장' }));
     expect(fake.create).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('status')).toHaveTextContent('저장했어요');
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument();
   });
 });
 
@@ -267,8 +367,7 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     // 카페·간식: 바로 선택(같은 이름 소분류로 저장)
     await user.click(within(sheet).getByRole('radio', { name: '카페·간식' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(categoryField()).toHaveTextContent('카페·간식');
-    expect(categoryField()).not.toHaveTextContent('›');
+    expect(categoryField()).toHaveAccessibleName('카테고리: 카페·간식');
 
     // 식비: 두 번째 단계 — 식비(대분류 자체) · 외식 · 장보기
     await user.click(categoryField());
@@ -282,11 +381,10 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     await user.click(within(sheet).getByRole('button', { name: '대분류로 돌아가기' }));
     await user.click(within(sheet).getByRole('radio', { name: '식비, 소분류 고르기' }));
     await user.click(within(sheet).getByRole('radio', { name: '식비' }));
-    expect(categoryField()).toHaveTextContent('식비');
-    expect(categoryField()).not.toHaveTextContent('›');
+    expect(categoryField()).toHaveAccessibleName('카테고리: 식비');
 
     await pickCategory(user, '식비', '장보기');
-    expect(categoryField()).toHaveTextContent('식비 › 장보기');
+    expect(categoryField()).toHaveAccessibleName('카테고리: 장보기');
     await user.click(categoryField());
     sheet = await screen.findByRole('dialog', { name: '지출 카테고리' });
     expect(within(sheet).getByRole('radio', { name: /^식비/ })).toHaveAttribute('aria-checked', 'true');
@@ -328,7 +426,7 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
       icon: i.icon,
     }));
     const user = await openNewForm();
-    await user.type(amountInput(), '9000');
+    await typeAmount(user, digits('9000'));
     await user.click(categoryField());
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '추가' }));
     const editor = await screen.findByRole('dialog', { name: '카테고리 추가' });
@@ -349,10 +447,10 @@ describe('카테고리 선택 시트·추가 (BANB-24)', () => {
     await user.click(within(sheet).getByRole('radio', { name: '식비, 소분류 고르기', checked: true }));
     expect(within(sheet).getByRole('radio', { name: '야식' })).toHaveAttribute('aria-checked', 'true');
     await user.click(within(sheet).getByRole('button', { name: '닫기' }));
-    expect(categoryField()).toHaveTextContent('식비 › 야식');
+    expect(categoryField()).toHaveAccessibleName('카테고리: 야식');
 
-    await user.click(screen.getByRole('radio', { name: '공동소비' }));
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await pickChip(user, '주머니', '공동소비');
+    await user.click(saveButton());
     expect(fake.create).toHaveBeenCalledWith('L', expect.objectContaining({ category_id: 'new-1', amount: 9000 }));
   });
 
@@ -410,22 +508,47 @@ describe('내역 수정·삭제', () => {
     return user;
   }
 
-  it('목록에서 다른 멤버가 입력한 내역을 열면 값과 "마지막 수정: 이름, 시각"이 보인다', async () => {
+  it('목록에서 다른 멤버가 입력한 내역을 열면 제목 "내역 수정", 값과 "마지막 수정: 이름, 시각"이 보인다', async () => {
     await openEntry();
-    expect(amountInput()).toHaveValue('32,000');
-    expect(categoryField()).toHaveTextContent('식비 › 외식');
-    expect(screen.getByRole('radio', { name: '공동소비' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: '비' })).toBeChecked();
+    expect(screen.getByRole('heading', { level: 1, name: '내역 수정' })).not.toHaveClass('sr-only');
+    expect(amountText()).toBe('32,000');
+    expect(categoryField()).toHaveAccessibleName('카테고리: 외식');
+    expect(pill('주머니')).toHaveAccessibleName('주머니: 공동소비');
+    expect(pill('사람')).toHaveAccessibleName('사람: 비');
+    expect(pill('날짜')).toHaveAccessibleName('날짜: 11월 3일 (화)');
+    expect(pill('메모')).toHaveAccessibleName('메모: 저녁');
+    expect(screen.getByRole('radio', { name: '지출' })).toBeChecked();
     expect(screen.getByText(/마지막 수정: 비, 2026\. 11\. 3\. 19:00/)).toBeInTheDocument();
+    expect(reading()).toBeNull();
   });
 
-  it('다른 멤버의 내역도 수정할 수 있다', async () => {
+  it('기존 금액이 100만 원 이상이면 열자마자 읽기 줄이 보인다', async () => {
+    fake.transactions = [{ ...B_ENTRY, amount: 1500000 }];
+    await openEntry();
+    expect(reading()).toHaveTextContent('150만 원');
+  });
+
+  it('다른 멤버의 내역도 수정할 수 있고, 되돌리기는 저장 전 값으로 다시 쓴다', async () => {
+    fake.transactions = [{ ...B_ENTRY, amount: 1500000 }];
     const user = await openEntry();
-    await user.clear(amountInput());
-    await user.type(amountInput(), '35000');
-    await user.click(screen.getByRole('button', { name: '저장' }));
-    expect(fake.update).toHaveBeenCalledWith('t1', expect.objectContaining({ amount: 35000, spender_id: 'm-b' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('저장했어요');
+    await user.keyboard('{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}{Backspace}');
+    await typeAmount(user, digits('999999'));
+    expect(reading()).toBeNull();
+    await user.click(saveButton());
+    expect(fake.update).toHaveBeenCalledWith('t1', expect.objectContaining({ amount: 999999, spender_id: 'm-b' }));
+    expect(await screen.findByText('저장했어요')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '되돌리기' }));
+    expect(fake.update).toHaveBeenLastCalledWith('t1', {
+      type: 'expense',
+      amount: 1500000,
+      occurred_on: '2026-11-03',
+      category_id: 'food-out',
+      pocket_id: 'p-shared',
+      spender_id: 'm-b',
+      is_fixed: false,
+      memo: '저녁',
+    });
+    expect(await screen.findByText('되돌렸어요')).toBeInTheDocument();
   });
 
   it('상대가 이미 삭제한 내역을 저장하면 "삭제된 내역입니다" 안내 후 화면을 닫는다 (새로 만들지 않음)', async () => {
@@ -450,7 +573,7 @@ describe('내역 수정·삭제', () => {
     dialog = screen.getByRole('alertdialog', { name: '이 내역을 삭제할까요?' });
     await user.click(within(dialog).getByRole('button', { name: '삭제' }));
     expect(fake.remove).toHaveBeenCalledWith('t1');
-    expect(await screen.findByRole('status')).toHaveTextContent('삭제했어요');
+    expect(await screen.findByText('삭제했어요')).toBeInTheDocument();
   });
 
   it('삭제에 실패하면 안내하고 다시 시도할 수 있다', async () => {

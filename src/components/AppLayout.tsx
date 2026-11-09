@@ -1,7 +1,9 @@
+import { useCallback, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { SETTINGS_PATH, TABS, TRANSACTION_NEW_PATH, type TransactionFormState } from '../app/routes';
 import { Icon } from './Icon';
 import { LedgerSwitcher } from './LedgerSwitcher';
+import { TxFlashToast } from './TxFlashToast';
 
 type Tab = (typeof TABS)[number];
 
@@ -15,6 +17,9 @@ export function AppLayout() {
   const current = TABS.find((t) => t.path === pathname) ?? TABS[0];
   // 입력 화면을 닫으면 지금 보던 탭(가계부 탭은 보던 달·보기·필터까지)으로 돌아온다
   const addState: TransactionFormState = { returnTo: `${pathname}${search}` };
+  // 저장 되돌리기 후 지금 탭을 새로 불러온다 (본문을 다시 그림)
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
   const tabLink = (tab: Tab) => (
     <NavLink
@@ -41,8 +46,9 @@ export function AppLayout() {
       </header>
 
       <main className="content">
-        <Outlet />
+        <Outlet key={reloadKey} />
       </main>
+      <TxFlashToast onUndone={reload} />
 
       <nav className="tabbar" aria-label="주요 메뉴">
         {TABS.slice(0, 2).map(tabLink)}

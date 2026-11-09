@@ -1,3 +1,5 @@
+import type { TransactionValues } from '../domain/transactionForm';
+
 /** 하단 탭 정의. 순서 = 화면 표시 순서 */
 export const TABS = [
   { path: '/', label: '홈', icon: 'home' },
@@ -27,8 +29,13 @@ export const LEDGER_PATH = '/ledger';
 export const TRANSACTION_NEW_PATH = '/ledger/new';
 /** 내역 상세·수정 */
 export const transactionPath = (id: string) => `/ledger/${id}`;
-/** 입력 화면을 닫고 가계부 탭으로 돌아갈 때 알려 줄 결과 (location.state.flash) */
-export type LedgerFlash = 'saved' | 'deleted';
+/** 저장 토스트의 "되돌리기": 새 내역은 지우고, 수정은 저장 전 값으로 다시 쓴다 */
+export type TxUndo = { op: 'delete'; id: string } | { op: 'restore'; id: string; values: TransactionValues };
+/**
+ * 입력·수정 화면을 닫고 탭 화면(홈·가계부·자산)으로 돌아갈 때 알려 줄 결과 (location.state.txFlash).
+ * 탭 공통 틀(AppLayout)이 토스트로 보여 준다. history state 에 담기므로 함수 대신 값만 넣는다
+ */
+export type TxFlash = { kind: 'saved'; undo?: TxUndo } | { kind: 'deleted' };
 /** 가계부 탭 → 입력·수정 화면으로 갈 때 넘기는 state. 닫으면 보던 달·보기·필터(returnTo)로 돌아간다 */
 export interface TransactionFormState {
   returnTo?: string;

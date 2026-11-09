@@ -2,7 +2,7 @@ import { Calendar, List, ListFilter } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
-import { type LedgerFlash, type TransactionFormState } from '../app/routes';
+import { type TransactionFormState } from '../app/routes';
 import { MonthNav } from '../components/MonthNav';
 import { Sheet } from '../components/Sheet';
 import { TxRow, useTxLabels, type TxLabels } from '../components/TxRow';
@@ -37,11 +37,6 @@ import {
 import { addMonths, formatYearMonth, isInMonth, type YearMonth } from '../domain/month';
 import { MINUS } from '../domain/format';
 import { TYPE_LABEL, TYPE_ORDER, formatNumber, todayKST } from '../domain/transactionForm';
-
-const FLASH_TEXT: Record<LedgerFlash, string> = {
-  saved: '저장했어요.',
-  deleted: '삭제했어요.',
-};
 
 type MonthData = { month: YearMonth; items: Transaction[]; options: TransactionFormOptions };
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: MonthData };
@@ -78,7 +73,6 @@ export function LedgerPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const query = useMemo(() => parseLedgerQuery(searchParams), [searchParams]);
-  const [flash] = useState<LedgerFlash | undefined>(() => (location.state as { flash?: LedgerFlash } | null)?.flash);
   const [filterOpen, setFilterOpen] = useState(false);
   const { state, retry } = useMonthTransactions(ledgerId, query.month);
 
@@ -87,11 +81,6 @@ export function LedgerPage() {
       navigate({ pathname: location.pathname, search: buildLedgerQuery({ ...query, ...next }) }, { replace: true }),
     [navigate, location.pathname, query],
   );
-
-  // 알림은 한 번만: 새로고침·뒤로가기로 다시 뜨지 않게 history state 를 지운다 (쿼리는 유지)
-  useEffect(() => {
-    if (location.state) navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: null });
-  }, [location.state, location.pathname, location.search, navigate]);
 
   const returnState: TransactionFormState = { returnTo: `${location.pathname}${location.search}` };
   const closeFilter = useCallback(() => setFilterOpen(false), []);
@@ -107,12 +96,6 @@ export function LedgerPage() {
 
   return (
     <div className="ledger">
-      {flash && (
-        <p className="toast" role="status">
-          {FLASH_TEXT[flash]}
-        </p>
-      )}
-
       <MonthNav month={query.month} onMove={(d) => setQuery({ month: addMonths(query.month, d), day: null })}>
         {query.view === 'list' ? (
           <button type="button" className="icon-button" aria-label="달력으로 보기" onClick={() => setQuery({ view: 'calendar' })}>
