@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반반 일정 탭·탭바 4개·홈 함께한 날 카드·정기 내역 시안 (BANB-41)</title>
+<!-- 미리보기 전용 CDN. 앱은 npm pretendard / lucide-react 로 번들한다 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
+<style>
+/* 클린 라이트·다크 토큰 (design.md 1.1 그대로) + v1.6 새 토큰 event-* (1.6) */
+[data-theme="clean"]{--color-bg:#F2F4F6;--color-surface:#FFFFFF;--color-surface-sunken:#F2F4F6;--color-border:#E5E8EB;--color-border-strong:#878E98;--color-text:#191C21;--color-text-sub:#5F6670;--color-text-weak:#69707A;--color-primary:#007F55;--color-primary-strong:#006B47;--color-primary-soft:#E6F4EE;--color-on-primary:#FFFFFF;--scrim:rgb(15 16 18 / .45);
+  --color-event-together:#FFDCCF;--color-event-1:#D6E4FF;--color-event-2:#FFEDA8;--color-event-3:#E6DBFF;--color-event-4:#CFEDE4;--card-gutter:0px;--card-radius:0px;--control-radius:12px;}
+[data-theme="clean"][data-mode="dark"]{--color-bg:#0D1311;--color-surface:#161E1B;--color-surface-sunken:#202A26;--color-border:#2C3833;--color-border-strong:#74827C;--color-text:#EEF4F1;--color-text-sub:#B1BEB8;--color-text-weak:#909D97;--color-primary:#3FC08A;--color-primary-strong:#7ADBB0;--color-primary-soft:#14402D;--color-on-primary:#04140D;--scrim:rgb(0 0 0 / .6);
+  --color-event-together:#6B3328;--color-event-1:#26406B;--color-event-2:#4F5216;--color-event-3:#3E3168;--color-event-4:#164A40;}
+* { box-sizing:border-box; }
+body { margin:0; padding:28px; background:#D9DBDF; font-family:'Pretendard Variable',Pretendard,system-ui,sans-serif; word-break:keep-all; color:#1D1F23; }
+h1 { font-size:24px; margin:0 0 4px; } .lead { margin:0 0 8px; font-size:15px; color:#4A4F57; max-width:1100px; line-height:22px; }
+h2 { font-size:17px; margin:28px 0 10px; }
+.row { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+.cap { font-size:13px; font-weight:600; color:#4A4F57; margin:0 0 8px 4px; }
+.anno { font-size:13px; color:#33373D; width:330px; margin:0; padding-left:18px; line-height:20px; }
+.phone { width:360px; height:760px; position:relative; overflow:hidden; border-radius:28px; box-shadow:0 10px 36px rgb(0 0 0 / .18); background:var(--color-bg); color:var(--color-text); }
+.money { font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:-0.01em; }
+.u { font-size:.75em; font-weight:600; margin-left:1px; }
+.acc { color:var(--color-primary-strong); }
+svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
+.ib { width:44px; height:44px; display:flex; align-items:center; justify-content:center; color:var(--color-text-sub); flex:none; }
+.hdr { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 12px; z-index:2; }
+.lsw { display:flex; align-items:center; gap:6px; height:40px; padding:0 10px 0 14px; border-radius:999px; background:var(--color-surface-sunken); font-weight:700; font-size:16px; }
+.lsw svg { width:18px; height:18px; color:var(--color-text-sub); }
+.scroll { position:absolute; top:56px; left:0; right:0; bottom:64px; overflow:hidden; }
+.stack { padding:0 0 24px; display:flex; flex-direction:column; gap:12px; }
+.card { margin:0 var(--card-gutter); background:var(--color-surface); border-radius:var(--card-radius); padding:20px; }
+.mrow { height:48px; display:flex; align-items:center; justify-content:center; gap:2px; font-weight:700; font-size:17px; }
+.mrow .ib { color:var(--color-text); }
+.k { font-size:15px; font-weight:500; color:var(--color-text-sub); display:flex; align-items:center; }
+.k .go { margin-left:auto; color:var(--color-text-weak); display:flex; }
+.hero { font-size:36px; line-height:44px; font-weight:700; letter-spacing:-0.02em; margin-top:4px; }
+.big { font-size:28px; line-height:36px; font-weight:700; letter-spacing:-0.02em; margin-top:4px; }
+.sub { font-size:14px; color:var(--color-text-sub); margin-top:6px; line-height:20px; }
+.sub b { font-weight:700; color:var(--color-text); }
+/* 탭바 4개 + 가운데 ＋ (5.7 v1.6) */
+.tabbar { position:absolute; left:0; right:0; bottom:0; height:64px; background:var(--color-surface); border-top:1px solid var(--color-border); display:grid; grid-template-columns:1fr 1fr 64px 1fr 1fr; align-items:center; padding:0 4px; z-index:2; }
+.tab { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; color:var(--color-text-sub); }
+.tab .pill { width:52px; height:30px; border-radius:999px; display:flex; align-items:center; justify-content:center; }
+.tab .pill svg { width:24px; height:24px; stroke-width:1.75; }
+.tab.on { color:var(--color-text); font-weight:700; } .tab.on .pill { background:var(--color-primary-soft); color:var(--color-primary-strong); }
+.plus { width:52px; height:52px; border-radius:18px; background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; justify-self:center; }
+.plus svg { width:26px; height:26px; }
+/* 일정 탭 달력 (5.24) */
+.cal { background:var(--color-surface); margin:0 var(--card-gutter); border-radius:var(--card-radius); position:absolute; top:48px; left:0; right:0; bottom:0; display:flex; flex-direction:column; }
+.wk { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); height:28px; align-items:center; text-align:center; font-size:13px; font-weight:500; color:var(--color-text-sub); }
+.grid { flex:1; display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); grid-auto-rows:1fr; }
+.cell { border-top:1px solid var(--color-border); padding:3px 2px 0; min-width:0; overflow:hidden; }
+.cell.sel { background:var(--color-primary-soft); }
+.dn { height:22px; display:flex; justify-content:center; align-items:center; font-size:13px; font-weight:500; font-variant-numeric:tabular-nums; margin-bottom:2px; }
+.dn i { font-style:normal; width:22px; height:22px; border-radius:99px; display:flex; align-items:center; justify-content:center; }
+.cell.today .dn i { background:var(--color-primary); color:var(--color-on-primary); font-weight:700; }
+.cell.out { color:var(--color-text-weak); } .cell.out .chip { opacity:.55; }
+.chip { height:15px; border-radius:4px; font-size:11px; line-height:15px; font-weight:600; padding:0 3px; margin-bottom:2px; white-space:nowrap; overflow:hidden; display:flex; align-items:center; gap:2px; color:var(--color-text); }
+.chip .tt { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chip svg { width:9px; height:9px; stroke-width:2.5; flex:none; }
+.chip.rec.acc { color:var(--color-primary-strong); }
+.chip.rec { background:var(--color-surface); box-shadow:inset 0 0 0 1px var(--color-border-strong); font-variant-numeric:tabular-nums; justify-content:center; }
+.more { font-size:11px; line-height:14px; font-weight:600; color:var(--color-text-sub); padding-left:3px; }
+.e-t { background:var(--color-event-together); } .e-1 { background:var(--color-event-1); } .e-2 { background:var(--color-event-2); } .e-3 { background:var(--color-event-3); } .e-4 { background:var(--color-event-4); }
+.legend { display:flex; gap:12px; align-items:center; font-size:12px; font-weight:500; color:var(--color-text-sub); padding:0 16px; height:28px; }
+.legend span { display:flex; align-items:center; gap:4px; } .legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+/* 시트 */
+.scrim { position:absolute; inset:0; background:var(--scrim); z-index:5; }
+.sheet { position:absolute; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:24px 24px 0 0; z-index:6; padding:0 0 20px; }
+.grab { width:36px; height:4px; border-radius:9px; background:var(--color-border-strong); margin:8px auto 0; }
+.shd { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 8px 0 20px; font-size:18px; font-weight:600; }
+.shd .ib { color:var(--color-text); }
+.erow { display:flex; gap:12px; padding:10px 20px; align-items:flex-start; }
+.eic { width:36px; height:36px; border-radius:99px; display:flex; align-items:center; justify-content:center; flex:none; color:var(--color-text); }
+.eic svg { width:18px; height:18px; }
+.erow .t { flex:1; min-width:0; } .erow .t b { display:block; font-size:15px; font-weight:600; line-height:21px; }
+.erow .t span { display:block; font-size:13px; color:var(--color-text-sub); line-height:18px; margin-top:1px; }
+.erow .r { font-size:13px; font-weight:600; color:var(--color-text-sub); padding-top:2px; white-space:nowrap; }
+.badge { height:20px; padding:0 6px; border-radius:8px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:3px; background:var(--color-surface-sunken); color:var(--color-text-sub); }
+.badge svg { width:12px; height:12px; }
+.btn2 { height:48px; border-radius:var(--control-radius); border:1px solid var(--color-border-strong); background:var(--color-surface); display:flex; align-items:center; justify-content:center; gap:6px; font-size:16px; font-weight:600; margin:8px 20px 0; }
+.btn1 { height:52px; border-radius:var(--control-radius); background:var(--color-primary); color:var(--color-on-primary); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; }
+.fix { position:absolute; left:0; right:0; bottom:0; padding:12px 16px 16px; background:var(--color-surface); display:flex; gap:8px; }
+.fix .btn1 { flex:1; }
+.dangero { height:52px; padding:0 18px; border-radius:var(--control-radius); border:1px solid #B23A48; color:#B23A48; display:flex; align-items:center; font-weight:600; }
+/* 입력 화면 */
+.sh { position:absolute; top:0; left:0; right:0; height:56px; background:var(--color-surface); display:flex; align-items:center; padding:0 8px; gap:4px; z-index:2; } .sh b { font-size:18px; }
+.form { position:absolute; top:56px; left:0; right:0; bottom:80px; background:var(--color-surface); padding:4px 20px 0; overflow:hidden; }
+.lb { font-size:13px; font-weight:500; color:var(--color-text-sub); margin:14px 0 8px; display:flex; justify-content:space-between; }
+.inp { height:48px; border-radius:12px; border:1px solid var(--color-border-strong); display:flex; align-items:center; padding:0 14px; font-size:16px; gap:8px; }
+.inp .ph { color:var(--color-text-weak); } .inp svg { color:var(--color-text-sub); } .inp .go { margin-left:auto; color:var(--color-text-weak); }
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
+.ch { height:40px; padding:0 12px; border-radius:999px; border:1px solid var(--color-border-strong); display:inline-flex; align-items:center; gap:5px; font-size:15px; background:var(--color-surface); }
+.ch svg { width:16px; height:16px; color:var(--color-text-sub); }
+.ch.on { background:var(--color-primary-soft); border-color:var(--color-primary); color:var(--color-primary-strong); font-weight:600; } .ch.on svg { color:var(--color-primary-strong); }
+.ch .sw { width:12px; height:12px; border-radius:4px; display:inline-block; box-shadow:inset 0 0 0 1px rgb(0 0 0 / .08); }
+.trow { display:flex; align-items:center; height:52px; font-size:16px; gap:10px; }
+.trow .d { flex:1; } .trow .d small { display:block; font-size:13px; color:var(--color-text-sub); line-height:18px; }
+.tg { width:48px; height:28px; border-radius:99px; background:var(--color-border-strong); position:relative; flex:none; }
+.tg::after { content:''; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:99px; background:#fff; }
+.tg.on { background:var(--color-primary); } .tg.on::after { left:23px; }
+.mini { display:flex; gap:8px; } .mini .inp { flex:1; }
+/* 홈 카드 (5.25) */
+.tcard .l1 { display:flex; align-items:center; gap:8px; font-size:18px; font-weight:700; line-height:26px; letter-spacing:-0.01em; }
+.tcard .l1 svg { color:var(--color-primary); width:20px; height:20px; fill:var(--color-primary-soft); }
+.tcard .l1 b { font-variant-numeric:tabular-nums; }
+.tcard .dd { display:flex; align-items:center; justify-content:space-between; font-size:15px; color:var(--color-text-sub); line-height:22px; margin-top:8px; }
+.tcard .dd b { font-size:15px; font-weight:700; color:var(--color-text); font-variant-numeric:tabular-nums; }
+.tcard .dd b.acc { color:var(--color-primary-strong); }
+.tcard .l1 + .dd { margin-top:10px; }
+.nudge { display:flex; align-items:center; height:52px; padding:0 4px 0 20px; background:var(--color-surface); font-size:15px; font-weight:600; gap:8px; }
+.nudge .go { display:flex; color:var(--color-text-weak); }
+.nudge .x { margin-left:auto; }
+.ministrip { display:flex; flex-direction:column; gap:12px; width:360px; }
+.ministrip .card { box-shadow:0 2px 10px rgb(0 0 0 / .08); border-radius:16px; }
+.mcap { font-size:12px; font-weight:600; color:#4A4F57; margin:0 0 -6px 4px; }
+/* 정기 내역 */
+.rrow { display:flex; align-items:center; gap:12px; min-height:64px; padding:0 20px; }
+.rrow .ic { width:40px; height:40px; border-radius:999px; background:var(--color-surface-sunken); display:flex; align-items:center; justify-content:center; flex:none; }
+.rrow .t { flex:1; min-width:0; } .rrow .t b { display:block; font-size:15px; font-weight:600; line-height:20px; } .rrow .t span { display:block; font-size:13px; color:var(--color-text-sub); line-height:18px; }
+.rrow .m { font-size:16px; font-weight:700; text-align:right; }
+.rrow.paused .m, .rrow.paused .t b { color:var(--color-text-weak); }
+.cb { width:22px; height:22px; border-radius:6px; background:var(--color-primary); color:#fff; display:flex; align-items:center; justify-content:center; flex:none; } .cb svg { width:16px; height:16px; stroke-width:3; }
+.cb.off { background:none; box-shadow:inset 0 0 0 2px var(--color-border-strong); }
+.amtbtn { border-bottom:1px dashed var(--color-border-strong); }
+/* 설정 */
+.grp { background:var(--color-surface); }
+.sr { display:flex; align-items:center; gap:14px; height:56px; padding:0 12px 0 20px; font-size:16px; }
+.sr svg.lead { color:var(--color-text-sub); }
+.sr .v { color:var(--color-text-sub); font-size:15px; }
+.sr > span:first-of-type { flex:1; }
+.sr > svg:last-child { color:var(--color-text-weak); width:18px; height:18px; }
+.sr.new { background:linear-gradient(90deg, rgb(255 214 0 / .18), transparent 70%); }
+/* 키패드 입력 재사용 (5.15) */
+.eh { height:56px; display:flex; align-items:center; gap:8px; padding:0 12px 0 8px; }
+.seg { display:grid; grid-template-columns:repeat(3,1fr); background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:4px; height:40px; flex:1; }
+.seg span { display:flex; align-items:center; justify-content:center; border-radius:9px; font-weight:600; font-size:15px; color:var(--color-text-sub); }
+.seg span.on { background:var(--color-surface); color:var(--color-text); box-shadow:0 1px 2px rgb(0 0 0 / .08); }
+.amt { padding:28px 24px 0; font-size:44px; line-height:52px; font-weight:700; letter-spacing:-0.02em; display:flex; align-items:baseline; }
+.amt .u { font-size:28px; }
+.pills { display:flex; flex-wrap:wrap; gap:8px; padding:28px 20px 0; }
+.pl { height:40px; padding:0 14px 0 10px; border-radius:999px; border:1px solid var(--color-border); background:var(--color-surface); display:inline-flex; align-items:center; gap:6px; font-size:15px; font-weight:600; }
+.pl svg { width:18px; height:18px; color:var(--color-text-sub); }
+.pl.hi { border-color:var(--color-primary); }
+.pad { position:absolute; left:0; right:0; bottom:84px; display:grid; grid-template-columns:repeat(3,1fr); padding:0 16px; }
+.pad span { height:48px; display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:600; }
+.save { position:absolute; left:16px; right:16px; bottom:16px; }
+/* 날짜 바퀴 */
+.wheel { display:grid; grid-template-columns:1.3fr 1fr 1fr; margin:0 20px; position:relative; text-align:center; font-size:18px; font-variant-numeric:tabular-nums; }
+.wheel::before { content:''; position:absolute; left:0; right:0; top:80px; height:40px; border-radius:10px; background:var(--color-surface-sunken); z-index:0; }
+.wheel div { position:relative; z-index:1; } .wheel div span { display:block; height:40px; line-height:40px; color:var(--color-text-weak); }
+.wheel div span.c { color:var(--color-text); font-weight:700; }
+.seg2 { display:grid; grid-template-columns:1fr 1fr; background:var(--color-surface-sunken); border-radius:var(--control-radius); padding:4px; height:44px; margin:0 20px 12px; }
+.seg2 span { display:flex; align-items:center; justify-content:center; border-radius:9px; font-weight:600; font-size:15px; color:var(--color-text-sub); }
+.seg2 span.on { background:var(--color-surface); color:var(--color-text); box-shadow:0 1px 2px rgb(0 0 0 / .08); }
+.hint { margin:12px 20px 0; padding:12px; border-radius:12px; background:var(--color-surface-sunken); font-size:14px; font-weight:500; color:var(--color-text-sub); display:flex; gap:8px; line-height:20px; }
+.hint svg { width:16px; height:16px; margin-top:2px; }
+.empty-row { display:flex; align-items:center; gap:10px; padding:14px 20px; background:var(--color-surface); font-size:15px; color:var(--color-text-sub); line-height:22px; }
+.empty-row svg { color:var(--color-text-sub); }
+</style></head><body>
+<h1>반반 일정 탭 · 탭바 4개 · 홈 함께한 날 카드 · 정기 내역 — 시안 (BANB-41)</h1>
+<p class="lead">기준: BANB-2 "일정 캘린더 명세" + "일정 명세 보강"(클라이언트 승인 2026-11-09), design.md v1.6(5.7 탭바, 1.6 일정 색, 5.24~5.27). 클린 라이트 360×760 + 일정 탭 클린 다크 1장. 데이터는 시안용 샘플(오늘 = 2026년 11월 9일 월요일, 멤버 민지·준호). 노란 바탕 줄 = 이번에 새로 생기는 설정 행.</p>
+<div id="rows"></div>
+<script>
+const ic = (n, s='') => `<i data-lucide="${n}"${s?` style="${s}"`:''}></i>`;
+const won = (v, sign='') => `<span class="money">${sign}${Math.abs(v).toLocaleString('ko-KR')}<span class="u">원</span></span>`;
+const TABS = [['home','house','홈'],['ledger','notebook-pen','가계부'],['+'],['cal','calendar-heart','일정'],['asset','landmark','자산']];
+const tabbar = on => `<div class="tabbar">${TABS.map(t => t[0]==='+' ? `<div class="plus">${ic(on==='cal'?'calendar-plus':'plus')}</div>` : `<div class="tab ${t[0]===on?'on':''}"><span class="pill">${ic(t[1])}</span>${t[2]}</div>`).join('')}</div>`;
+const hdr = () => `<div class="hdr"><div class="lsw">우리집 가계부 ${ic('chevrons-up-down')}</div><div class="ib">${ic('settings')}</div></div>`;
+const month = () => `<div class="mrow"><span class="ib">${ic('chevron-left')}</span>11월<span class="ib">${ic('chevron-right')}</span></div>`;
+const KIND = { anniversary:'heart', appointment:'clock', bill_day:'receipt', other:null };
+const KNAME = { anniversary:'기념일', appointment:'약속', bill_day:'정기 지출일', other:'기타' };
+const WHO = { t:'함께', 1:'민지', 2:'준호' };
+
+/* 11월 샘플 일정 (반복은 펼친 결과) */
+const EV = {
+  2:[['1','요가','appointment']], 3:[['2','치과','appointment']], 5:[['rec','−1.7만']], 7:[['t','캠핑 예약','appointment']],
+  9:[['1','요가','appointment'],['rec','−6.9만']], 11:[['t','아버님 제사','anniversary']],
+  14:[['t','결혼기념일','anniversary'],['t','레스토랑','appointment'],['2','풋살','other'],['1','대학 동기 송년회 겸 연말 선물 교환','appointment']],
+  16:[['1','요가','appointment']], 21:[['2','준호 생일','anniversary'],['2','풋살','other']], 23:[['1','요가','appointment']],
+  25:[['rec','−25만'],['rec','+350만',1]], 27:[['t','카드값','bill_day']], 28:[['2','풋살','other']], 30:[['1','요가','appointment']],
+};
+const chip = e => e[0]==='rec' ? `<div class="chip rec${e[2]?' acc':''}">${e[1]}</div>` : `<div class="chip e-${e[0]}">${KIND[e[2]]?ic(KIND[e[2]]):''}<span class="tt">${e[1]}</span></div>`;
+const cellHtml = (d, out, sel) => {
+  const evs = out ? (d===1?[['t','송년 모임','appointment']]:[]) : (EV[d]||[]);
+  const shown = evs.length > 3 ? evs.slice(0,2) : evs;
+  return `<div class="cell ${d===9&&!out?'today':''} ${out?'out':''} ${sel===d&&!out?'sel':''}"><div class="dn"><i>${d}</i></div>${shown.map(chip).join('')}${evs.length>3?`<div class="more">+${evs.length-2}</div>`:''}</div>`;
+};
+const calendar = (sel, empty) => {
+  let cells = '';
+  for (let d=1; d<=30; d++) cells += empty ? `<div class="cell ${d===9?'today':''}"><div class="dn"><i>${d}</i></div></div>` : cellHtml(d,false,sel);
+  for (let d=1; d<=5; d++) cells += empty ? `<div class="cell out"><div class="dn"><i>${d}</i></div></div>` : cellHtml(d,true,sel);
+  return `<div class="wk">${['일','월','화','수','목','금','토'].map(x=>`<span>${x}</span>`).join('')}</div><div class="grid">${cells}</div>`;
+};
+const calTab = (sel, sheet='', empty=false) => `<div class="phone">${hdr()}<div class="scroll">${month()}
+  <div class="cal" ${empty?'style="top:110px"':''}>${calendar(sel, empty)}</div>
+  ${empty?`<div class="empty-row" style="position:absolute;top:48px;left:0;right:0">${ic('calendar-heart')}<span>아직 일정이 없어요. ＋로 첫 일정을 남겨 보세요</span></div>`:''}
+</div>${tabbar('cal')}${sheet}</div>`;
+
+/* 1 일정 탭 */
+const s1 = calTab(0);
+
+/* 2 날짜 시트 */
+const erow = (who, kind, title, sub, right='') => `<div class="erow"><span class="eic e-${who}">${ic(KIND[kind]||'circle-dot')}</span><div class="t"><b>${title}</b><span>${sub}</span></div>${right?`<span class="r">${right}</span>`:''}</div>`;
+const daySheet = `<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="shd">11월 14일 (토)<span class="ib">${ic('x')}</span></div>
+  ${erow('t','anniversary','결혼기념일','함께 · 매년 · 3주년', `<span class="badge">${ic('pin')}D-5</span>`)}
+  ${erow('t','appointment','레스토랑','함께 · 오후 7:00 · 성수동')}
+  ${erow('2','other','풋살','준호 · 오전 10:00 · 매주 토요일')}
+  ${erow('1','appointment','대학 동기 송년회 겸 연말 선물 교환','민지 · 오후 6:30 · 강남역')}
+  <div class="btn2">${ic('calendar-plus')} 이 날 일정 추가</div></div>`;
+const s2 = calTab(14, daySheet);
+
+/* 3 일정 추가 */
+const s3 = `<div class="phone" style="background:var(--color-surface)"><div class="sh"><span class="ib" style="color:var(--color-text)">${ic('x')}</span><b>일정 추가</b></div>
+<div class="form">
+  <div class="lb"><span>제목</span><span>5/20</span></div><div class="inp">아버님 제사</div>
+  <div class="lb"><span>종류</span></div>
+  <div class="chips"><span class="ch on">${ic('check')}${ic('heart')}기념일</span><span class="ch">${ic('clock')}약속</span><span class="ch">${ic('receipt')}정기 지출일</span><span class="ch">기타</span></div>
+  <div class="lb"><span>누구 일정</span></div>
+  <div class="chips"><span class="ch on">${ic('check')}<i class="sw e-t"></i>함께</span><span class="ch"><i class="sw e-1"></i>민지</span><span class="ch"><i class="sw e-2"></i>준호</span></div>
+  <div class="lb"><span>날짜</span></div>
+  <div class="inp">${ic('moon')}<span>음력 10월 3일 <span style="color:var(--color-text-sub);font-size:14px">· 올해 11월 11일 (수)</span></span><span class="go">${ic('chevron-right')}</span></div>
+  <div class="mini" style="margin-top:8px"><div class="inp">${ic('repeat')}매년 (음력)<span class="go">${ic('chevron-down')}</span></div><div class="inp" style="flex:.8">${ic('sun')}종일<span class="go">${ic('chevron-down')}</span></div></div>
+  <div class="trow" style="margin-top:6px">${ic('pin')}<span class="d">홈에 D-day 고정<small>2개까지 · 지금 1개 고정됨</small></span><span class="tg on"></span></div>
+  <div class="mini"><div class="inp"><span class="ph">${ic('map-pin')}</span><span class="ph">장소 (선택)</span></div><div class="inp"><span class="ph">${ic('sticky-note')}</span><span class="ph">메모 (선택)</span></div></div>
+</div>
+<div class="fix"><div class="btn1">저장</div></div></div>`;
+
+/* 4 날짜 시트 (양력|음력) */
+const wheelCol = (arr, c) => `<div>${arr.map((x,i)=>`<span class="${i===c?'c':''}">${x}</span>`).join('')}</div>`;
+const s4 = `<div class="phone" style="background:var(--color-surface)"><div class="sh"><span class="ib" style="color:var(--color-text)">${ic('x')}</span><b>일정 추가</b></div>
+<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="shd">날짜<span class="ib">${ic('x')}</span></div>
+  <div class="seg2"><span>양력</span><span class="on">음력</span></div>
+  <div class="wheel">${wheelCol(['','2025년','2026년','2027년',''],2)}${wheelCol(['8월','9월','10월','11월','12월'],2)}${wheelCol(['1일','2일','3일','4일','5일'],2)}</div>
+  <div class="hint">${ic('moon')}<span>음력 10월 3일 · 올해는 <b style="color:var(--color-text)">11월 11일 (수)</b>이에요.<br>해마다 음력 날짜에 맞춰 보여 드려요. 윤달은 평달 날짜로 챙겨요.</span></div>
+  <div style="padding:16px 16px 0"><div class="btn1">이 날짜로 할게요</div></div>
+</div></div>`;
+
+/* 5 홈 */
+const tcard = (lines) => `<div class="card tcard">${lines}</div>`;
+const L1 = n => `<div class="l1">${ic('heart')}<span>함께한 지 <b>${n}</b>일째예요</span></div>`;
+const DD = (txt, d, today) => `<div class="dd"><span>${txt}</span><b class="${today?'acc':''}">${d}</b></div>`;
+const s5 = `<div class="phone">${hdr()}<div class="scroll"><div class="stack">
+  <div style="height:0"></div>
+  ${tcard(L1('1,977') + DD('결혼기념일까지 5일 남았어요','D-5') + DD('준호 생일까지 12일 남았어요','D-12'))}
+  <div class="nudge">${ic('repeat')}<span>정기 내역 2건, 기록할까요?</span><span class="go">${ic('chevron-right')}</span><span class="ib x">${ic('x')}</span></div>
+  ${month().replace('class="mrow"','class="mrow" style="margin:-4px 0 -8px"')}
+  <div class="card"><div class="k">우리집 순자산<span class="go">${ic('chevron-right')}</span></div><div class="big">${won(186420000)}</div><div class="sub">지난달보다 <b class="acc">▲ 3,640,000원</b></div></div>
+  <div class="card"><div class="k">11월 남은 돈</div><div class="hero">${won(784500)}</div><div class="sub">수입 <b class="acc">4,200,000</b> · 지출 <b>2,915,500</b> · 저축 <b>500,000</b></div></div>
+</div></div>${tabbar('home')}</div>`;
+
+/* 6 홈 카드 상태 */
+const s6 = `<div class="ministrip" data-theme="clean" style="background:var(--color-bg);padding:16px 0;border-radius:20px">
+  <p class="mcap" style="margin-left:16px">① 기념일 당일</p>${tcard(L1('1,977') + DD('오늘은 결혼기념일이에요','D-day',1) + DD('준호 생일까지 7일 남았어요','D-7'))}
+  <p class="mcap" style="margin-left:16px">② 함께한 날 없음 → D-day 줄만</p>${tcard(DD('결혼기념일까지 5일 남았어요','D-5').replace('class="dd"','class="dd" style="margin-top:0"') + DD('아버님 제사까지 2일 남았어요','D-2'))}
+  <p class="mcap" style="margin-left:16px">③ 함께한 날만 (다가오는 기념일 없음)</p>${tcard(L1('1,977'))}
+  <p class="mcap" style="margin-left:16px">④ 함께한 날·기념일 둘 다 없음 → 카드 숨김 (홈은 정기 내역 줄·월 이동부터)</p>
+  <div style="margin:0 16px;height:40px;border:1.5px dashed #B8BEC6;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#69707A">카드 없음</div>
+</div>`;
+
+/* 7 정기 내역 제안 시트 */
+const rec = (on, icn, t, sub, amt, extra='') => `<div class="rrow"><span class="cb ${on?'':'off'}">${on?ic('check'):''}</span><span class="ic">${ic(icn)}</span><div class="t"><b>${t}</b><span>${sub}</span></div><div class="m"><span class="amtbtn">${amt}</span>${extra}</div></div>`;
+const s7 = `<div class="phone">${hdr()}<div class="scroll"></div>${tabbar('home')}<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="shd">정기 내역 2건<span class="ib">${ic('x')}</span></div>
+  <p style="margin:0 20px 8px;font-size:15px;color:var(--color-text-sub);line-height:22px">이번 달 금액이 다르면 금액을 눌러 고쳐 주세요.</p>
+  ${rec(1,'smartphone','통신비','오늘 · 공동소비 · 준호', won(69000,'−'))}
+  ${rec(1,'tv','넷플릭스','11월 5일 · 4일 지났어요 · 민지', won(17000,'−'))}
+  <div style="padding:16px 16px 0;display:flex;gap:8px"><div class="btn2" style="margin:0;flex:.7;height:52px">오늘은 그만</div><div class="btn1" style="flex:1">2건 기록하기</div></div>
+  <p style="margin:12px 20px 0;font-size:13px;color:var(--color-text-weak);text-align:center">체크를 끄면 이번엔 건너뛰어요</p>
+</div></div>`;
+
+/* 8 설정 + 함께한 날 시트 */
+const sr = (icn, t, v='', cls='') => `<div class="sr ${cls}">${ic(icn,'')}<span>${t}</span>${v?`<span class="v">${v}</span>`:''}${ic('chevron-right')}</div>`;
+const settingsBody = `<div class="sh"><span class="ib" style="color:var(--color-text)">${ic('chevron-left')}</span><b>설정</b></div>
+<div class="scroll" style="bottom:0"><div class="stack" style="padding-top:12px">
+  <div class="grp">${sr('book-open','가계부 이름','우리집 가계부')}${sr('user','내 이름','민지')}${sr('heart-handshake','함께한 날','2021년 6월 12일','new')}${sr('users','멤버·초대')}${sr('shapes','카테고리')}${sr('wallet','주머니')}${sr('repeat','정기 내역','','new')}</div>
+  <div class="grp">${sr('library','가계부 관리')}${sr('palette','화면 테마','클린')}</div>
+</div></div>`;
+const s8 = `<div class="phone">${settingsBody}</div>`;
+const s8b = `<div class="phone">${settingsBody}<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="shd">함께한 날<span class="ib">${ic('x')}</span></div>
+  <p style="margin:0 20px 12px;font-size:15px;color:var(--color-text-sub);line-height:22px">처음 만난 날, 결혼한 날… 우리가 함께한 첫날을 골라 주세요. 홈에 "함께한 지 N일째예요"로 보여요.</p>
+  <div class="wheel">${wheelCol(['2019년','2020년','2021년','2022년','2023년'],2)}${wheelCol(['4월','5월','6월','7월','8월'],2)}${wheelCol(['10일','11일','12일','13일','14일'],2)}</div>
+  <div style="padding:20px 16px 0;display:flex;gap:8px"><div class="btn2" style="margin:0;flex:.6;height:52px">지우기</div><div class="btn1" style="flex:1">저장</div></div>
+</div></div>`;
+
+/* 9 정기 내역 목록 */
+const lrow = (icn, t, sub, amt, paused) => `<div class="rrow ${paused?'paused':''}"><span class="ic">${ic(icn)}</span><div class="t"><b>${t}</b><span>${sub}</span></div><div class="m">${amt}${paused?`<div><span class="badge">${ic('pause')}일시정지</span></div>`:''}</div></div>`;
+const s9 = `<div class="phone"><div class="sh"><span class="ib" style="color:var(--color-text)">${ic('chevron-left')}</span><b style="flex:1">정기 내역</b><span class="ib" style="color:var(--color-text)">${ic('plus')}</span></div>
+<div class="scroll" style="bottom:0"><div class="stack" style="padding-top:12px">
+  <div class="grp" style="padding:4px 0">
+  ${lrow('banknote','월급','매월 25일 · 준호', `<span class="acc">${won(3500000,'+')}</span>`)}
+  ${lrow('building-2','관리비','매월 25일 · 공동소비', won(250000,'−'))}
+  ${lrow('smartphone','통신비','매월 9일 · 공동소비', won(69000,'−'))}
+  ${lrow('tv','넷플릭스','매월 5일 · 개인용돈 · 민지', won(17000,'−'))}
+  ${lrow('piggy-bank','청약','매월 말일 · 민지', won(100000))}
+  ${lrow('car','자동차 보험','매년 3월 2일 · 공동소비', won(820000,'−'), 1)}
+  </div>
+  <p style="margin:0 20px;font-size:13px;color:var(--color-text-sub);line-height:20px">그날이 되면 기록할지 물어봐요. 자동으로 저장하지는 않아요.</p>
+</div></div></div>`;
+
+/* 10 정기 내역 추가 (5.15 재사용) */
+const s10 = `<div class="phone" style="background:var(--color-surface)"><div class="eh"><span class="ib" style="color:var(--color-text)">${ic('x')}</span><div class="seg"><span class="on">지출</span><span>수입</span><span>저축</span></div></div>
+  <p style="margin:4px 24px 0;font-size:13px;font-weight:600;color:var(--color-text-sub)">정기 내역 추가</p>
+  <div class="amt">250,000<span class="u">원</span></div>
+  <div class="pills">
+    <span class="pl hi">${ic('repeat')}매월 25일</span><span class="pl">${ic('house')}주거</span><span class="pl">${ic('wallet')}공동소비</span><span class="pl">${ic('user')}준호</span><span class="pl">${ic('sticky-note')}관리비</span>
+  </div>
+  <div class="pad">${['1','2','3','4','5','6','7','8','9','00','0',''].map(k=>`<span>${k||ic('delete')}</span>`).join('')}</div>
+  <div class="save btn1">저장</div></div>`;
+const s10b = `<div class="phone" style="background:var(--color-surface)"><div class="eh"><span class="ib" style="color:var(--color-text)">${ic('x')}</span><div class="seg"><span class="on">지출</span><span>수입</span><span>저축</span></div></div>
+<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="shd">반복<span class="ib">${ic('x')}</span></div>
+  <div class="seg" style="margin:0 20px 16px;height:44px;grid-template-columns:repeat(3,1fr);display:grid"><span class="on">매월</span><span>매주</span><span>매년</span></div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:0 20px;font-size:15px;font-variant-numeric:tabular-nums;text-align:center">
+    ${Array.from({length:31},(_,i)=>i+1).map(d=>`<span style="height:36px;line-height:36px;border-radius:99px;${d===25?'background:var(--color-primary);color:var(--color-on-primary);font-weight:700':''}">${d}</span>`).join('')}<span style="grid-column:span 4;height:36px;line-height:36px;border-radius:99px;box-shadow:inset 0 0 0 1px var(--color-border-strong);font-weight:600">말일</span>
+  </div>
+  <div style="padding:0 20px">
+    <div class="trow" style="margin-top:8px"><span class="d">시작</span><span style="color:var(--color-text-sub)">2026년 11월 25일</span></div>
+    <div class="trow"><span class="d">끝 (선택)</span><span style="color:var(--color-text-weak)">정하지 않음</span></div>
+  </div>
+  <div style="padding:8px 16px 0"><div class="btn1">매월 25일로 할게요</div></div>
+</div></div>`;
+
+/* 11 일정 없음 + 빈 날 시트 */
+const emptyDay = `<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="shd">11월 12일 (목)<span class="ib">${ic('x')}</span></div>
+  <div style="text-align:center;padding:8px 20px 4px"><div style="width:72px;height:72px;border-radius:99px;background:var(--color-surface-sunken);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:var(--color-text-sub)">${ic('calendar-heart','width:32px;height:32px')}</div>
+  <b style="font-size:16px">이 날은 아직 비어 있어요</b><p style="margin:6px 0 0;font-size:15px;color:var(--color-text-sub)">약속이나 기념일을 남겨 두면 함께 챙길 수 있어요</p></div>
+  <div class="btn2" style="margin-top:16px">${ic('calendar-plus')} 이 날 일정 추가</div></div>`;
+const s11 = calTab(0, '', true);
+const s11b = calTab(12, emptyDay, true).replace('style="top:110px"','style="top:110px"');
+
+/* 12 다크 */
+const s12 = calTab(0);
+
+const SCREENS = [
+  ['cal','1. 일정 탭 — 월 달력', [[s1,'기본']], ['탭바 4칸 + 가운데 ＋. 일정 탭에서는 ＋ 아이콘이 CalendarPlus로 바뀌고 "일정 추가"가 열린다(다른 탭은 내역 추가)', '칸 칩 색 = 누구 일정(함께 살구 · 민지 파랑 · 준호 노랑), 칩 앞 아이콘 = 종류(♡ 기념일 · 시계 약속 · 영수증 정기 지출일 · 기타 없음)', '정기 내역 칩 = 테두리만 있는 칩 + 금액(만 단위). 지출 −, 수입 + 포인트 색', '한 칸 최대 3줄, 넘치면 2개 + "+n"(14일). 긴 제목은 칸 안에서 말줄임(…), 시트에서 전부 보인다. 7칸은 360px 안에 모두 들어온다(minmax(0,1fr))(14일 넷째 일정)', '반복 일정은 펼쳐서 표시(매주 월 요가·매주 토 풋살, 음력 매년 아버님 제사 11일)']],
+  ['day','2. 날짜 누르면 — 그날 목록 시트', [[s2,'14일 선택']], ['고른 날 칸 = primary-soft 바탕', '행: 색 원(누구) 안 아이콘(종류) / 제목(20자까지 줄바꿈, 자르지 않음) / "누구 · 시각 · 장소" 또는 반복', '누구는 이름 글자로도 쓴다 → 색만으로 구분하지 않음', '홈에 고정한 기념일은 오른쪽 배지 📌 D-5', '아래 "이 날 일정 추가"(날짜가 채워진 채 열림)']],
+  ['form','3. 일정 추가·수정 + 음력 날짜', [[s3,'추가 (기념일·음력)'],[s4,'날짜 시트 (양력|음력)']], ['제목 1~20자 글자 수 표시 · 종류 칩 4개(아이콘) · 누구 칩(색 견본 + 이름)', '날짜: 기념일이면 날짜 시트에 [양력 | 음력]. 음력을 고르면 반복이 "매년 (음력)"으로 정해지고 올해 양력 날짜를 함께 보여 준다', '반복 · 종일/시각은 한 줄에 두 칸. 반복 선택지: 안 함 / 매주 (토요일) / 매월 (14일) / 매년 (11월 14일) / 매년 (음력)', '"홈에 D-day 고정"은 기념일일 때만, 가계부당 2개. 2개 찼으면 꺼진 채 비활성 + "이미 2개를 고정했어요"', '"함께한 날" 스위치는 없음 → 설정 › 함께한 날(8번)', '수정 화면: 제목 "일정 수정", 아래 [삭제(위험 외곽)] [저장]. 반복 일정은 1건 저장이라 고치면 모든 날짜에 반영 — 삭제 확인 창 "모든 날짜의 일정이 지워져요"']],
+  ['home','4. 홈 맨 위 — 함께한 날 카드 + 정기 내역 제안', [[s5,'홈'],[s6,'카드 상태']], ['카드 3줄: ① ♡ 함께한 지 N일째예요 ②③ 기념일 D-day(고정한 것 먼저, 없으면 가까운 기념일 순)', '당일은 "오늘은 ○○이에요" + D-day 포인트 색', '함께한 날·다가오는 기념일 둘 다 없으면 카드 숨김. 약속 줄은 넣지 않음(일정 탭에서)', '카드 전체가 버튼 → 일정 탭', '정기 내역 제안 줄: 기록할 정기 내역이 있을 때만 카드 아래 한 줄. X = 오늘은 그만(내일 다시)', '월 이동 줄은 그 아래로 내려간다(아래 두 카드만 월에 걸리기 때문)']],
+  ['recurring','5. 정기 내역 — 제안 · 목록 · 추가', [[s7,'제안 시트'],[s9,'설정 › 정기 내역'],[s10,'추가 (키패드)'],[s10b,'반복 시트']], ['제안 시트: 오늘 것 + 최근 30일 안에 놓친 것. 기본 모두 체크, 금액을 누르면 키패드로 고침, 체크 끄면 이번엔 건너뜀', '"2건 기록하기" → 내역 2건(source=recurring) + 토스트 "2건 기록했어요 · 되돌리기"', '목록: 행 = 아이콘 / 이름 / "주기 · 주머니 · 사람", 일시정지는 흐리게 + 배지', '추가·수정은 내역 입력(5.15) 화면 그대로 + 날짜 알약 대신 반복 알약(매월 25일). 수정 화면엔 일시정지 스위치·삭제', '반복 시트: 매월(1~31일 + 말일) / 매주(요일) / 매년(월·일), 시작·끝(선택). 29~31일을 고르면 "짧은 달은 말일에 기록해요"']],
+  ['settings','6. 설정 — 함께한 날 · 정기 내역 행', [[s8,'설정'],[s8b,'함께한 날 시트']], ['묶음 ①에 "함께한 날"(값 = 날짜, 없으면 "정하지 않음")과 "정기 내역" 두 줄 추가', '함께한 날 = 가계부에 1개(ledger.together_since). 멤버 누구나 바꿀 수 있다', '시트: 날짜 바퀴 + [지우기] [저장]. 지우면 홈 카드 첫 줄이 사라진다']],
+  ['empty','7. 일정 없음', [[s11,'이번 달 일정 0건'],[s11b,'빈 날 시트']], ['이번 달에 일정이 하나도 없으면 달력 위 한 줄: "아직 일정이 없어요. ＋로 첫 일정을 남겨 보세요"', '빈 날을 누르면 빈 화면 시트 + "이 날 일정 추가"']],
+  ['dark','8. 다크 (클린)', [[s12,'일정 탭 다크']], ['일정 색 5개는 다크용 진한 값(1.6). 칩 글자는 text 그대로', '테마(클린·베리·포근)와 상관없이 같은 일정 색 → 부부가 서로 다른 테마를 써도 "민지 = 파랑"이 같다']],
+];
+document.getElementById('rows').innerHTML = SCREENS.map(([k, t, phones, notes]) => `<section data-s="${k}"><h2>${t}</h2><div class="row">
+${phones.map(([p, cap]) => `<div><p class="cap">${cap}</p><div data-theme="clean" ${k==='dark'?'data-mode="dark"':''}>${p}</div></div>`).join('')}
+<div><p class="cap">규칙</p><ul class="anno">${notes.map(c=>`<li>${c}</li>`).join('')}</ul></div>
+</div></section>`).join('');
+const only = new URLSearchParams(location.search).get('s');
+if (only) document.querySelectorAll('section').forEach(s => { if (s.dataset.s !== only) s.remove(); });
+if (new URLSearchParams(location.search).has('bare')) { document.querySelector('h1').remove(); document.querySelector('.lead').remove(); }
+lucide.createIcons();
+</script>
+</body></html>
