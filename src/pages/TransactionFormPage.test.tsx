@@ -208,6 +208,7 @@ describe('내역 입력 — 키패드 + 알약 (5.15 v1.4)', () => {
     await pickChip(user, '주머니', '공동소비');
     await typeAmount(user, digits('99999999999'));
     expect(amountText()).toBe('9,999,999,999');
+    expect(amountOutput()).toHaveClass('is-long'); // 360px 폭에 들어가게 글자를 줄인다
     expect(screen.getByText(/최대 금액이에요/)).toBeInTheDocument();
     expect(reading()).not.toBeNull();
   });

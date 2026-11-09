@@ -991,6 +991,7 @@ a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offse
 .tx-amount { display: flex; align-items: center; font-size: 2.75rem; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; color: var(--color-text); white-space: nowrap; }
 .tx-amount:focus { outline: none; } /* 화면낭독기 첫 포커스용(탭 순서 밖). 누르는 요소가 아니라 테두리를 그리지 않는다 */
 .tx-amount.is-zero { color: var(--color-text-weak); }
+.tx-amount.is-long { font-size: 2.25rem; } /* 10자리(10억 원 이상)는 360px 폭에 들어가게 36px */
 .tx-amount__unit { font-size: 0.65em; margin-left: 2px; align-self: flex-end; padding-bottom: 0.12em; }
 .tx-amount__caret { width: 2px; height: 1em; margin-left: 4px; background: var(--color-primary); animation: tx-caret 1s steps(1) infinite; }
 .tx-amount.is-shaking { animation: tx-shake 0.3s; }

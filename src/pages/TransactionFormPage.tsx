@@ -28,6 +28,7 @@ import { categoryGlyph } from '../domain/categoryIcon';
 import { buildPickerModel, frequentRange, type CategoryUse, type ParentChoice } from '../domain/categoryPicker';
 import {
   FIELD_ORDER,
+  KEYPAD_MAX_DIGITS,
   MEMO_MAX,
   TYPE_LABEL,
   TYPE_ORDER,
@@ -436,7 +437,7 @@ function TransactionForm({
             <output
               ref={amountRef}
               tabIndex={-1}
-              className={`tx-amount${amount === 0 ? ' is-zero' : ''}${shaking ? ' is-shaking' : ''}`}
+              className={`tx-amount${amount === 0 ? ' is-zero' : ''}${draft.amount.length >= KEYPAD_MAX_DIGITS ? ' is-long' : ''}${shaking ? ' is-shaking' : ''}`}
               aria-label={amountAriaLabel(amount)}
               onAnimationEnd={() => setShaking(false)}
             >
