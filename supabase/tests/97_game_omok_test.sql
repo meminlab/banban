@@ -95,8 +95,8 @@ select test.expect_count($$select 1 where not has_table_privilege('anon', 'publi
   and not has_table_privilege('authenticated', 'public.game_move', 'delete')$$, 1);
 select test.expect_count($$select 1 where has_function_privilege('authenticated', 'public.play_move(uuid,integer,integer)', 'execute')
   and not has_function_privilege('anon', 'public.play_move(uuid,integer,integer)', 'execute')
-  and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
-  and not has_function_privilege('anon', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
+  and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid,text)', 'execute')
+  and not has_function_privilege('anon', 'public.invite_game(uuid,uuid,text,uuid,text)', 'execute')
   and has_function_privilege('authenticated', 'public.respond_game(uuid,boolean)', 'execute')
   and has_function_privilege('authenticated', 'public.cancel_game(uuid)', 'execute')
   and not has_function_privilege('anon', 'public.cancel_game(uuid)', 'execute')

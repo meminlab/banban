@@ -85,43 +85,43 @@ set role authenticated;
 
 -- ── 1. 첫 기록: previous_best = null, 새 기록
 select test.as_user('a');
-select test.expect_eq('first', public.record_stack_score(test.v('l1'), 12000, 11)::text,
-  '{"is_new": true, "best_amount": 12000, "previous_best": null}');
+select test.expect_eq('first', public.record_stack_score(test.v('l1'), 120, 11)::text,
+  '{"is_new": true, "best_amount": 120, "previous_best": null}');
 select test.expect_count($$select 1 from public.game_stack_best where ledger_id = test.v('l1') and member_id = test.v('m1_에이')
-  and best_amount = 12000 and best_lines = 11$$, 1);
+  and best_amount = 120 and best_lines = 11$$, 1);
 
 -- ── 2. 낮거나 같은 점수는 기록을 바꾸지 않는다
-select test.expect_eq('lower', public.record_stack_score(test.v('l1'), 5000, 4)::text,
-  '{"is_new": false, "best_amount": 12000, "previous_best": 12000}');
-select test.expect_eq('same', public.record_stack_score(test.v('l1'), 12000, 12)::text,
-  '{"is_new": false, "best_amount": 12000, "previous_best": 12000}');
+select test.expect_eq('lower', public.record_stack_score(test.v('l1'), 50, 4)::text,
+  '{"is_new": false, "best_amount": 120, "previous_best": 120}');
+select test.expect_eq('same', public.record_stack_score(test.v('l1'), 120, 12)::text,
+  '{"is_new": false, "best_amount": 120, "previous_best": 120}');
 select test.expect_count($$select 1 from public.game_stack_best where member_id = test.v('m1_에이') and best_lines = 11$$, 1);
 
 -- ── 3. 더 높으면 바뀐다
-select test.expect_eq('higher', public.record_stack_score(test.v('l1'), 28000, 20)::text,
-  '{"is_new": true, "best_amount": 28000, "previous_best": 12000}');
+select test.expect_eq('higher', public.record_stack_score(test.v('l1'), 280, 20)::text,
+  '{"is_new": true, "best_amount": 280, "previous_best": 120}');
 
--- ── 4. 값 규칙: 0줄·1,000원 단위 아님·줄당 1,000원 미만·2,000원 초과·음수
+-- ── 4. 값 규칙: 0줄·10점 단위 아님·줄당 10점 미만·20점 초과·음수 (BANB-55 점수 단위 1/100)
 select test.expect_error($$select public.record_stack_score(test.v('l1'), 0, 0)$$, 'STACK_BAD_SCORE');
-select test.expect_error($$select public.record_stack_score(test.v('l1'), 1500, 1)$$, 'STACK_BAD_SCORE');
-select test.expect_error($$select public.record_stack_score(test.v('l1'), 9000, 10)$$, 'STACK_BAD_SCORE');
-select test.expect_error($$select public.record_stack_score(test.v('l1'), 3000, 1)$$, 'STACK_BAD_SCORE');
-select test.expect_error($$select public.record_stack_score(test.v('l1'), -1000, 1)$$, 'STACK_BAD_SCORE');
+select test.expect_error($$select public.record_stack_score(test.v('l1'), 15, 1)$$, 'STACK_BAD_SCORE');
+select test.expect_error($$select public.record_stack_score(test.v('l1'), 90, 10)$$, 'STACK_BAD_SCORE');
+select test.expect_error($$select public.record_stack_score(test.v('l1'), 30, 1)$$, 'STACK_BAD_SCORE');
+select test.expect_error($$select public.record_stack_score(test.v('l1'), -10, 1)$$, 'STACK_BAD_SCORE');
 select test.expect_error($$select public.record_stack_score(test.v('l1'), null, 1)$$, 'STACK_BAD_SCORE');
 
 -- ── 5. 멤버가 아니면 쓰기 불가 (X 는 L1 멤버 아님)
 select test.as_user('x');
-select test.expect_error($$select public.record_stack_score(test.v('l1'), 1000, 1)$$, 'NOT_IN_LEDGER');
+select test.expect_error($$select public.record_stack_score(test.v('l1'), 10, 1)$$, 'NOT_IN_LEDGER');
 
 -- ── 6. 같은 사람이라도 가계부가 다르면 기록이 따로
 select test.as_user('a');
-select test.expect_eq('other ledger first', public.record_stack_score(test.v('lx'), 3000, 2)::text,
-  '{"is_new": true, "best_amount": 3000, "previous_best": null}');
-select test.expect_count($$select 1 from public.game_stack_best where member_id = test.v('m1_에이') and best_amount = 28000$$, 1);
+select test.expect_eq('other ledger first', public.record_stack_score(test.v('lx'), 30, 2)::text,
+  '{"is_new": true, "best_amount": 30, "previous_best": null}');
+select test.expect_count($$select 1 from public.game_stack_best where member_id = test.v('m1_에이') and best_amount = 280$$, 1);
 
 -- ── 7. 읽기: 같은 가계부 멤버만. B 는 L1 기록만, X 는 LX 기록만 본다
 select test.as_user('b');
-select public.record_stack_score(test.v('l1'), 32000, 30);
+select public.record_stack_score(test.v('l1'), 320, 30);
 select test.expect_count($$select 1 from public.game_stack_best$$, 2);
 select test.expect_count($$select 1 from public.game_stack_best where ledger_id = test.v('lx')$$, 0);
 select test.as_user('x');
@@ -134,7 +134,7 @@ select test.expect_count($$select 1 from public.game_stack_best$$, 3);
 -- ── 8. 직접 쓰기 불가 (본인 행이라도)
 select test.expect_error($$insert into public.game_stack_best (ledger_id, member_id, best_amount, best_lines)
   values (test.v('l1'), test.v('m1_에이'), 999000, 999)$$, 'permission denied');
-select test.expect_error($$update public.game_stack_best set best_amount = 999000 where member_id = test.v('m1_에이')$$, 'permission denied');
+select test.expect_error($$update public.game_stack_best set best_amount = 9990 where member_id = test.v('m1_에이')$$, 'permission denied');
 select test.expect_error($$delete from public.game_stack_best where member_id = test.v('m1_비')$$, 'permission denied');
 
 -- ── 9. 나간 멤버는 읽기·쓰기 불가
@@ -143,11 +143,11 @@ update public.member set left_at = now() where id = test.v('m1_비');
 set role authenticated;
 select test.as_user('b');
 select test.expect_count($$select 1 from public.game_stack_best$$, 0);
-select test.expect_error($$select public.record_stack_score(test.v('l1'), 40000, 30)$$, 'NOT_IN_LEDGER');
+select test.expect_error($$select public.record_stack_score(test.v('l1'), 400, 30)$$, 'NOT_IN_LEDGER');
 
 -- ── 10. 값 규칙 (관리자 직접 쓰기도)
 reset role;
-select test.expect_error($$update public.game_stack_best set best_amount = 1500 where member_id = test.v('m1_에이')$$, 'game_stack_best_best_amount_check');
-select test.expect_error($$update public.game_stack_best set best_amount = 100000 where member_id = test.v('m1_에이')$$, 'game_stack_best_rule');
+select test.expect_error($$update public.game_stack_best set best_amount = 15 where member_id = test.v('m1_에이')$$, 'game_stack_best_best_amount_check');
+select test.expect_error($$update public.game_stack_best set best_amount = 1000 where member_id = test.v('m1_에이')$$, 'game_stack_best_rule');
 
 rollback;

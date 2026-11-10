@@ -26,7 +26,6 @@ import { StatusScreen } from '../../components/StatusScreen';
 import { listStackBests, recordStackScore } from '../../data/game';
 import { vibrate } from '../../data/gamePrefs';
 import type { Member, StackBest } from '../../data/types';
-import { formatWon } from '../../domain/format';
 import {
   COLS,
   REPEAT_MS,
@@ -35,6 +34,7 @@ import {
   clearMessage,
   dropPosition,
   endView,
+  formatPoints,
   levelMessage,
   myBest,
   newGame,
@@ -63,10 +63,10 @@ interface Finished {
 }
 
 /** 줄 지우는 연출 (빛남 0.2초 + 떠오르며 사라짐). 줄인 움직임이면 0 */
-const CLEAR_MS = 450;
+export const CLEAR_MS = 450;
 const CHEER_MS = 1200;
 
-const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+export const reducedMotion = () => typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 /** 칸 크기: floor(min((폭 − 48) / 8, (높이 − 256) / 14)), 24~36 (design.md 5.34) */
 export function cellSize(width: number, height: number): number {
@@ -180,7 +180,7 @@ export function StackPage() {
     [mine, ledgerId, me, bestList, bests],
   );
 
-  // ── 상태 바꾸기 + 일어난 일(줄 저금·속도·끝) 알리기
+  // ── 상태 바꾸기 + 일어난 일(줄 지움·속도·끝) 알리기
   // 떨어지기 루프가 화면이 다시 그려질 때마다 다시 시작되지 않게, 끝 처리·알림은 ref 로 최신 것을 부른다
   const finishRef = useRef(finish);
   finishRef.current = finish;
@@ -201,10 +201,10 @@ export function StackPage() {
       if (e.type === 'clear') {
         const text = clearMessage(e.count);
         setCheer({ text, key: Date.now(), plus: { amount: e.amount, row: e.rows[0] } });
-        setAnnounce(`${text} ${formatWon(e.amount)}`);
+        setAnnounce(`${text} ${formatPoints(e.amount)}`);
         vibrate(30);
       } else if (e.type === 'level') {
-        // 줄 저금 알약이 먼저 보이고, 이어서 속도 알림
+        // 줄 지움 알약이 먼저 보이고, 이어서 속도 알림
         const text = levelMessage(e.level);
         setTimeout(() => setCheer({ text, key: Date.now() }), CHEER_MS);
         setAnnounce((a) => `${a} ${text}`);
@@ -341,8 +341,8 @@ export function StackPage() {
             <div className="stack-intro__illust">
               <StackIllustration />
             </div>
-            <p className="stack-intro__title">동전·지폐를 쌓아 한 줄을 채우면 저금돼요</p>
-            <p className="stack-intro__sub">맨 위까지 쌓이면 끝나요. 한 줄에 1,000원!</p>
+            <p className="stack-intro__title">동전·지폐를 쌓아 한 줄을 채우면 사라져요</p>
+            <p className="stack-intro__sub">맨 위까지 쌓이면 끝나요. 한 줄에 10점!</p>
           </section>
 
           <section className="play-panel" aria-labelledby="stack-best-title">
@@ -359,14 +359,14 @@ export function StackPage() {
                 </button>
               </p>
             ) : mine !== null ? (
-              <p className="stack-best__amount">{formatWon(mine)}</p>
+              <p className="stack-best__amount">{formatPoints(mine)}</p>
             ) : (
               <div>
                 <p className="stack-best__empty-title">아직 기록이 없어요</p>
                 <p className="stack-best__empty">첫 판을 해 볼까요?</p>
               </div>
             )}
-            {other && <MemberLine memberId={other.member.id} members={members} text={<>{other.member.display_name}님 최고 기록 <b>{formatWon(other.amount)}</b>이에요</>} />}
+            {other && <MemberLine memberId={other.member.id} members={members} text={<>{other.member.display_name}님 최고 기록 <b>{formatPoints(other.amount)}</b>이에요</>} />}
           </section>
 
           <section className="play-panel" aria-labelledby="stack-howto-title">
@@ -404,12 +404,12 @@ export function StackPage() {
       <main className="stack" style={{ ['--stack-cell' as string]: `${size}px` }}>
         <div className="stack-info">
           <div className="stack-info__money">
-            <span className="stack-info__label">모은 돈</span>
-            <b className="stack-info__amount">{formatWon(game.score)}</b>
+            <span className="stack-info__label">점수</span>
+            <b className="stack-info__amount">{formatPoints(game.score)}</b>
           </div>
           <div className="stack-info__meta">
             <span>
-              저금한 줄 <b>{game.lines}</b>
+              지운 줄 <b>{game.lines}</b>
             </span>
             <span>
               속도 <b>{game.level}</b>
@@ -430,7 +430,7 @@ export function StackPage() {
               clearing={game.clearing?.rows ?? null}
               size={size}
               dim={phase === 'paused'}
-              label={`모은 돈 ${formatWon(game.score)}, 저금한 줄 ${game.lines}`}
+              label={`점수 ${formatPoints(game.score)}, 지운 줄 ${game.lines}`}
             />
           </BoardGestures>
           {cheer && (
@@ -440,7 +440,7 @@ export function StackPage() {
               </span>
               {cheer.plus && (
                 <span key={`p${cheer.key}`} className="stack-plus" style={{ top: cheer.plus.row * size }} aria-hidden="true">
-                  +{formatWon(cheer.plus.amount)}
+                  +{formatPoints(cheer.plus.amount)}
                 </span>
               )}
             </>
@@ -480,7 +480,7 @@ export function StackPage() {
  * 판 위 몸짓 (design.md 5.34): 좌우로 밀기 = 칸 하나만큼 갈 때마다 1칸 · 톡 = 돌리기
  * · 아래로 빠르게 밀기 = 바로 내리기 · 천천히 아래로 끌기 = 끄는 동안 빨리 내림
  */
-function BoardGestures({
+export function BoardGestures({
   size,
   onAction,
   enabled,
@@ -540,7 +540,7 @@ function BoardGestures({
 
 /* ───────────────────────── 버튼 4개 (항상 보임) ───────────────────────── */
 
-function Controls({ onAction, disabled }: { onAction: (a: StackAction) => void; disabled: boolean }) {
+export function Controls({ onAction, disabled }: { onAction: (a: StackAction) => void; disabled: boolean }) {
   return (
     <div className="stack-controls" role="group" aria-label="조작">
       <RepeatButton label="왼쪽으로" onAction={() => onAction('left')} disabled={disabled} repeat>
@@ -666,7 +666,7 @@ function PauseSheet({
           {reason === 'away' ? '앱을 나가서 잠시 멈췄어요' : '잠깐 쉬는 중이에요'}
         </h2>
         <p className="play-sheet__line">
-          모은 돈 <b>{formatWon(score)}</b> · 저금한 줄 <b>{lines}</b>
+          점수 <b>{formatPoints(score)}</b> · 지운 줄 <b>{lines}</b>
         </p>
         <div className="play-actions">
           <button type="button" className="button button--secondary" onClick={onQuit}>
@@ -714,9 +714,9 @@ function EndSheet({
         <h2 id="stack-end-title" className="play-sheet__title">
           {v.title}
         </h2>
-        <p className="stack-end__amount">{formatWon(finished.amount)}</p>
+        <p className="stack-end__amount">{formatPoints(finished.amount)}</p>
         <p className="play-sheet__line">
-          저금한 줄 <b>{finished.lines}</b> · 속도 <b>{finished.level}</b>
+          지운 줄 <b>{finished.lines}</b> · 속도 <b>{finished.level}</b>
         </p>
         {other && v.compare && (
           <MemberLine
@@ -725,20 +725,20 @@ function EndSheet({
             text={
               v.compare === 'beat' ? (
                 <>
-                  {other.member.display_name}님 기록 <b>{formatWon(other.amount)}</b>을 넘었어요
+                  {other.member.display_name}님 기록 <b>{formatPoints(other.amount)}</b>을 넘었어요
                 </>
               ) : (
                 <>
-                  {other.member.display_name}님 최고 기록 <b>{formatWon(other.amount)}</b>이에요
+                  {other.member.display_name}님 최고 기록 <b>{formatPoints(other.amount)}</b>이에요
                 </>
               )
             }
           />
         )}
-        {v.zeroNote && <p className="play-sheet__note">한 줄만 채워도 1,000원이에요</p>}
+        {v.zeroNote && <p className="play-sheet__note">한 줄만 채워도 10점이에요</p>}
         {v.showMyBest && finished.prevBest !== null && (
           <p className="play-sheet__note">
-            내 최고 기록 <b>{formatWon(finished.prevBest)}</b>
+            내 최고 기록 <b>{formatPoints(finished.prevBest)}</b>
           </p>
         )}
         {finished.save === 'saving' && <p className="play-sheet__note">기록을 저장하고 있어요</p>}

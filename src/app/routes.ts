@@ -114,3 +114,7 @@ export const PLAY_PATH = '/play';
 export const STACK_PATH = '/play/stack';
 /** 오목 한 판 (대기실·대국·결과) */
 export const omokPath = (gameId: string) => `/play/omok/${gameId}`;
+/** 반반 쌓기 대전 한 판 (대기실·대전·결과, BANB-55) */
+export const stackVsPath = (gameId: string) => `/play/stack-vs/${gameId}`;
+/** 판 종류에 맞는 화면 */
+export const gamePath = (game: { id: string; kind?: string }) => (game.kind === 'stack_vs' ? stackVsPath(game.id) : omokPath(game.id));

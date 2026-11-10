@@ -76,12 +76,12 @@ describe('칸 크기 (design.md 5.34)', () => {
 describe('반반 쌓기 시작 화면', () => {
   it('내 최고 기록 + 멤버 최고 기록 1줄 + 이렇게 해요', async () => {
     bests = [
-      { member_id: 'mA', best_amount: 28000, best_lines: 25 },
-      { member_id: 'mB', best_amount: 32000, best_lines: 30 },
+      { member_id: 'mA', best_amount: 280, best_lines: 25 },
+      { member_id: 'mB', best_amount: 320, best_lines: 30 },
     ];
     renderPage();
-    expect(await screen.findByText('28,000원')).toBeInTheDocument();
-    expect(screen.getByText(/준호님 최고 기록/)).toHaveTextContent('준호님 최고 기록 32,000원이에요');
+    expect(await screen.findByText('280점')).toBeInTheDocument();
+    expect(screen.getByText(/준호님 최고 기록/)).toHaveTextContent('준호님 최고 기록 320점이에요');
     expect(screen.getByText(/좌우로 밀거나/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /시작하기/ })).toBeInTheDocument();
   });
@@ -100,7 +100,7 @@ describe('반반 쌓기 플레이', () => {
     await startPlaying();
     const controls = screen.getByRole('group', { name: '조작' });
     expect(within(controls).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['왼쪽으로', '돌리기', '오른쪽으로', '바로 내리기']);
-    expect(screen.getByRole('img', { name: '모은 돈 0원, 저금한 줄 0' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '점수 0점, 지운 줄 0' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '일시정지' }));
     const sheet = screen.getByRole('dialog', { name: '잠깐 쉬는 중이에요' });
@@ -124,11 +124,11 @@ describe('반반 쌓기 플레이', () => {
     expect(screen.getByRole('dialog', { name: '앱을 나가서 잠시 멈췄어요' })).toBeInTheDocument();
   });
 
-  it('한 줄을 채우면 1,000원 + "한 줄 저금했어요!", 그만하기 → 첫 기록 저장', async () => {
+  it('한 줄을 채우면 10점 + "한 줄 지웠어요!", 그만하기 → 첫 기록 저장', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
     // 늘 0 → 조각 순서: 동전, 동전, 동전 둘, 동전, 동전, 동전 둘 … (같은 조각 3연속 막기)
     vi.spyOn(Math, 'random').mockReturnValue(0);
-    recordStackScore.mockResolvedValue({ previous_best: null, best_amount: 1000, is_new: true });
+    recordStackScore.mockResolvedValue({ previous_best: null, best_amount: 10, is_new: true });
     renderPage();
     await startPlaying();
 
@@ -146,31 +146,31 @@ describe('반반 쌓기 플레이', () => {
     press('오른쪽으로', 3);
     press('바로 내리기');
 
-    expect(screen.getByText('한 줄 저금했어요!')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '모은 돈 1,000원, 저금한 줄 1' })).toBeInTheDocument();
+    expect(screen.getByText('한 줄 지웠어요!')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '점수 10점, 지운 줄 1' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '일시정지' }));
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: '그만하기' }));
     });
     const end = screen.getByRole('dialog', { name: '첫 기록이에요!' });
-    expect(end).toHaveTextContent('1,000원');
-    expect(end).toHaveTextContent('저금한 줄 1 · 속도 1');
+    expect(end).toHaveTextContent('10점');
+    expect(end).toHaveTextContent('지운 줄 1 · 속도 1');
     expect(recordStackScore).toHaveBeenCalledTimes(1);
-    expect(recordStackScore).toHaveBeenCalledWith('ledger-1', 1000, 1);
+    expect(recordStackScore).toHaveBeenCalledWith('ledger-1', 10, 1);
   });
 
-  it('0원으로 그만두면 기록하지 않고 "한 줄만 채워도 1,000원이에요"', async () => {
+  it('0점으로 그만두면 기록하지 않고 "한 줄만 채워도 10점이에요"', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
-    bests = [{ member_id: 'mB', best_amount: 32000, best_lines: 30 }];
+    bests = [{ member_id: 'mB', best_amount: 320, best_lines: 30 }];
     renderPage();
     await act(async () => undefined);
     await startPlaying();
     fireEvent.click(screen.getByRole('button', { name: '일시정지' }));
     fireEvent.click(screen.getByRole('button', { name: '그만하기' }));
     const end = screen.getByRole('dialog', { name: '여기까지 할게요' });
-    expect(end).toHaveTextContent('한 줄만 채워도 1,000원이에요');
-    expect(end).toHaveTextContent('준호님 최고 기록 32,000원이에요');
+    expect(end).toHaveTextContent('한 줄만 채워도 10점이에요');
+    expect(end).toHaveTextContent('준호님 최고 기록 320점이에요');
     expect(recordStackScore).not.toHaveBeenCalled();
   });
 

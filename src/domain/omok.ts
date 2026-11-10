@@ -3,7 +3,7 @@
  * 승부 판정·차례·빈칸 검사는 서버(supabase/migrations/20261109230000_game_omok.sql)가 한다.
  * 여기 함수는 화면 표시용(판 그리기, 이긴 줄 강조, 남은 시간, 전적, 문구)이고 서버와 같은 규칙을 따른다.
  */
-import type { Game, GameMove, GameStatus } from '../data/types';
+import type { Game, GameKind, GameMove, GameStatus } from '../data/types';
 
 export const BOARD_SIZE = 15;
 export const CELL_COUNT = BOARD_SIZE * BOARD_SIZE;
@@ -85,7 +85,8 @@ type GameTimes = Pick<Game, 'status' | 'invite_expires_at' | 'started_at' | 'las
  */
 export function effectiveStatus(game: GameTimes, now: Date): GameStatus {
   if (game.status === 'invited' && Date.parse(game.invite_expires_at) <= now.getTime()) return 'expired';
-  if (game.status === 'active' && game.rule !== 'renju_lite') {
+  // free 판만 24시간 중단 (renju_lite 는 30초 마감, 반반 쌓기 대전은 30초 끊김 — 둘 다 서버 시각으로 판 화면이 확정)
+  if (game.status === 'active' && (game.rule === 'free' || game.rule === undefined)) {
     const base = game.last_move_at ?? game.started_at;
     if (base && Date.parse(base) + ABANDON_HOURS * 3600_000 <= now.getTime()) return 'abandoned';
   }
@@ -227,10 +228,11 @@ export interface HeadToHead {
   draw: number;
 }
 
-/** 나와 상대 둘 사이 전적 (끝난 판만. 중단·거절·만료는 세지 않는다) */
-export function headToHead(games: readonly Game[], me: string, opponent: string): HeadToHead {
+/** 나와 상대 둘 사이 전적 (끝난 판만. 중단·거절·만료는 세지 않는다). 게임 종류마다 따로 (오목 / 반반 쌓기 대전) */
+export function headToHead(games: readonly Game[], me: string, opponent: string, kind: GameKind = 'omok'): HeadToHead {
   const r: HeadToHead = { win: 0, loss: 0, draw: 0 };
   for (const g of games) {
+    if ((g.kind ?? 'omok') !== kind) continue;
     if (g.status !== 'finished' || !isPlayer(g, me) || !isPlayer(g, opponent) || me === opponent) continue;
     if (g.winner_id === null) r.draw += 1;
     else if (g.winner_id === me) r.win += 1;
@@ -272,8 +274,12 @@ export function isBusy(games: readonly Game[], memberId: string, now: Date): boo
 /** 이름 뒤 조사 없이 쓰는 호칭 */
 const nim = (name: string) => `${name}님`;
 
+/** 게임 이름 */
+export const gameName = (kind: GameKind | undefined) => (kind === 'stack_vs' ? '반반 쌓기 대전' : '오목');
+
 /** 초대 알림 문구 */
-export const inviteMessage = (inviterName: string) => `${nim(inviterName)}이 오목 한 판 하자고 해요`;
+export const inviteMessage = (inviterName: string, kind: GameKind = 'omok') =>
+  kind === 'stack_vs' ? `${nim(inviterName)}이 반반 쌓기 대전을 하재요` : `${nim(inviterName)}이 오목 한 판 하자고 해요`;
 
 /** 초대 남은 시간 (분 단위, 홈 카드): "9분 남았어요" / 1분 미만 "곧 사라져요" */
 export function minutesLeftText(ms: number): string {
@@ -305,7 +311,7 @@ export function roomCopy(status: GameStatus, game: Game, me: string, nameOf: (me
     default:
       return iInvited
         ? { title: `${opp} 답을 기다리고 있어요`, desc: `${opp} 휴대폰에 초대를 보냈어요` }
-        : { title: inviteMessage(nameOf(game.created_by)), desc: '10분 안에 답해 주세요' };
+        : { title: inviteMessage(nameOf(game.created_by), game.kind), desc: '10분 안에 답해 주세요' };
   }
 }
 

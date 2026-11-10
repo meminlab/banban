@@ -98,6 +98,10 @@
   --color-piece-wallet-line: #6E4426;
   --color-piece-piggy: #F3A9B6;
   --color-piece-piggy-line: #A84A5E;
+  /* 반반 쌓기 대전 영수증 줄 (design.md 1.9, 테마 공통) */
+  --color-receipt-paper: #FFFFFF;
+  --color-receipt-line: #7D7365;
+  --color-receipt-ink: #A99F90;
 
   color-scheme: light dark;
 }
@@ -130,6 +134,9 @@
     --color-piece-wallet-line: #EBCBAE;
     --color-piece-piggy: #C67786;
     --color-piece-piggy-line: #FFD9E0;
+    --color-receipt-paper: #E6DED0;
+    --color-receipt-line: #7A6F60;
+    --color-receipt-ink: #9C917F;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;

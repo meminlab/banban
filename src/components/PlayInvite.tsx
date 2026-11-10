@@ -1,12 +1,13 @@
-import { ChevronRight, Gamepad2, X } from 'lucide-react';
+import { ChevronRight, Gamepad2, Ticket, X } from 'lucide-react';
 import { useState, useSyncExternalStore } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../app/games';
 import { useLedgerId } from '../app/guards';
-import { omokPath, PLAY_PATH } from '../app/routes';
+import { gamePath, PLAY_PATH } from '../app/routes';
 import { GameError, inviteGame, respondGame } from '../data/game';
 import type { Game } from '../data/types';
 import {
+  gameName,
   inviteMessage,
   inviteRemainingMs,
   minutesLeftText,
@@ -42,6 +43,8 @@ export function playErrorMessage(e: unknown, nameOf?: (id: string) => string, op
         return `${opp}이 한 수 둔 뒤에 다시 제안할 수 있어요`;
       case 'GAME_DRAW_PENDING':
         return `${opp} 무승부 제안에 먼저 답해 주세요`;
+      case 'GAME_BAD_BET':
+        return '내기는 30자까지 쓸 수 있어요';
       case 'GAME_NOT_FOUND':
       case 'NOT_IN_LEDGER':
         return '이 판은 볼 수 없어요';
@@ -91,7 +94,7 @@ export function useRespond(onDone?: () => void) {
     try {
       const r = await respondGame(game.id, accept);
       upsert({ ...game, status: r.status });
-      if (r.status === 'active') navigate(omokPath(game.id), { state: { justAccepted: true } });
+      if (r.status === 'active') navigate(gamePath(game), { state: { justAccepted: true } });
       else if (r.status === 'expired') setExpired(game);
       else if (!r.applied) refresh();
       onDone?.();
@@ -106,9 +109,9 @@ export function useRespond(onDone?: () => void) {
   async function inviteBack(game: Game) {
     setBusy(true);
     try {
-      const id = await inviteGame(ledgerId, game.created_by);
+      const id = await inviteGame(ledgerId, game.created_by, undefined, { kind: game.kind });
       refresh();
-      navigate(omokPath(id));
+      navigate(gamePath({ id, kind: game.kind }));
     } catch (e) {
       setError(playErrorMessage(e, nameOf, game.created_by));
     } finally {
@@ -143,6 +146,22 @@ function useMyOpenGame(): MyOpenGame | null {
   const { open, me } = useGames();
   const now = useNow(1000);
   return me ? myOpenGame(open, me, now) : null;
+}
+
+/**
+ * 내기 상자 (BANB-55, design.md 5.36): 받는 쪽이 수락 전에 본다 · 대기실. 내기가 없으면 그리지 않는다
+ */
+export function BetBox({ bet, label = '내기' }: { bet: string | null | undefined; label?: string }) {
+  if (!bet) return null;
+  return (
+    <div className="play-bet">
+      <Ticket size={20} aria-hidden="true" />
+      <span className="play-bet__body">
+        <span className="play-bet__label">{label}</span>
+        <span className="play-bet__text">{bet}</span>
+      </span>
+    </div>
+  );
 }
 
 /** 거절·수락 버튼 줄 (홈 카드·결과 시트) */
@@ -183,14 +202,15 @@ export function PlayInviteBanner({ hidden: hide_ }: { hidden?: boolean }) {
   if (hide_ || mine?.kind !== 'invited-me' || hidden.banner.has(mine.game.id)) return null;
   const g = mine.game;
   return (
-    <section className="play-banner" role="alert" aria-label="오목 초대">
+    <section className="play-banner" role="alert" aria-label={`${gameName(g.kind)} 초대`}>
       <div className="play-banner__head">
         <GameAvatar memberId={g.created_by} members={members} size={32} />
         <div className="play-banner__text">
-          <p className="play-banner__title">{inviteMessage(nameOf(g.created_by))}</p>
+          <p className="play-banner__title">{inviteMessage(nameOf(g.created_by), g.kind)}</p>
           <p className="play-banner__sub">10분 안에 답해 주세요</p>
         </div>
       </div>
+      <BetBox bet={g.bet} />
       <div className="play-actions">
         <button type="button" className="button button--secondary" onClick={() => hide('banner', g.id)}>
           나중에
@@ -227,7 +247,7 @@ export function PlayInviteRow() {
         onClick={() => document.getElementById(PLAY_CARD_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
       >
         <Gamepad2 size={20} strokeWidth={2} aria-hidden="true" className="play-row__icon" />
-        <span className="recurring-row__text">{inviteMessage(nameOf(g.created_by))}</span>
+        <span className="recurring-row__text">{inviteMessage(nameOf(g.created_by), g.kind)}</span>
         <ChevronRight size={20} strokeWidth={2} aria-hidden="true" />
       </button>
       <button type="button" className="icon-button" aria-label="이 알림 숨기기" onClick={() => hide('row', g.id)}>
@@ -266,7 +286,8 @@ export function PlayHomeCard() {
     return (
       <section className="play-card" id={PLAY_CARD_ID} aria-label="같이 놀기" data-testid="play-card">
         <CardLabel isNew />
-        <p className="play-card__title">{inviteMessage(nameOf(mine.game.created_by))}</p>
+        <p className="play-card__title">{inviteMessage(nameOf(mine.game.created_by), mine.game.kind)}</p>
+        <BetBox bet={mine.game.bet} />
         <RespondButtons game={mine.game} />
       </section>
     );
@@ -275,15 +296,19 @@ export function PlayHomeCard() {
   if (mine) {
     const g = mine.game;
     const opp = nameOf(opponentOf(g, me));
-    const title = mine.kind === 'waiting' ? `${opp}님 답을 기다리고 있어요` : turnText(g, me, nameOf);
+    const vs = g.kind === 'stack_vs';
+    const title =
+      mine.kind === 'waiting' ? `${opp}님 답을 기다리고 있어요` : vs ? `${opp}님과 반반 쌓기 대전 중` : turnText(g, me, nameOf);
     const sub =
       mine.kind === 'waiting'
-        ? `오목 · ${minutesLeftText(inviteRemainingMs(g, now))}`
-        : '진행 중인 오목이 있어요 · 이어 두기';
+        ? `${gameName(g.kind)} · ${minutesLeftText(inviteRemainingMs(g, now))}`
+        : vs
+          ? '진행 중인 대전이 있어요 · 이어서 하기'
+          : '진행 중인 오목이 있어요 · 이어 두기';
     return (
-      <Link to={omokPath(g.id)} className="play-card play-card--link" id={PLAY_CARD_ID} data-testid="play-card">
+      <Link to={gamePath(g)} className="play-card play-card--link" id={PLAY_CARD_ID} data-testid="play-card">
         <CardLabel />
-        <span className={`play-card__title${mine.kind === 'playing' && turnMemberId(g) === me ? ' is-my-turn' : ''}`}>{title}</span>
+        <span className={`play-card__title${mine.kind === 'playing' && !vs && turnMemberId(g) === me ? ' is-my-turn' : ''}`}>{title}</span>
         <span className="play-card__sub">{sub}</span>
       </Link>
     );

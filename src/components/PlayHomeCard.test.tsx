@@ -30,6 +30,8 @@ function game(patch: Partial<Game>): Game {
     id: 'g1',
     ledger_id: 'ledger-1',
     kind: 'omok',
+    bet: null,
+    seed: null,
     black_id: 'mB',
     white_id: 'mA',
     status: 'invited',
@@ -60,9 +62,10 @@ function renderCard() {
 }
 
 describe('홈 "같이 놀기" (design.md 5.32 줄이기)', () => {
+  const allMembers = games.members.slice();
   beforeEach(() => {
     games.open = [];
-    games.members = games.members.slice(0, 2);
+    games.members = allMembers.slice(0, 2);
   });
 
   it('평소엔 한 줄: "같이 놀기 · 오목 · 반반 쌓기" → 미니게임 화면', () => {
@@ -99,5 +102,20 @@ describe('홈 "같이 놀기" (design.md 5.32 줄이기)', () => {
     games.members = games.members.slice(0, 1);
     renderCard();
     expect(screen.queryByTestId('play-card')).not.toBeInTheDocument();
+  });
+
+  it('반반 쌓기 대전 초대 받음: "○○님이 반반 쌓기 대전을 하재요" + 내기 상자(수락 전에 보임)', () => {
+    games.open = [game({ kind: 'stack_vs', rule: 'stack_vs', seed: 7, bet: '진 사람이 설거지', created_by: 'mB', black_id: 'mA', white_id: 'mB' })];
+    renderCard();
+    expect(screen.getByText('준호님이 반반 쌓기 대전을 하재요')).toBeInTheDocument();
+    expect(screen.getByText('진 사람이 설거지')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '좋아요' })).toBeInTheDocument();
+  });
+
+  it('반반 쌓기 대전 중: "준호님과 반반 쌓기 대전 중" → 대전 화면', () => {
+    games.open = [game({ kind: 'stack_vs', rule: 'stack_vs', seed: 7, status: 'active', started_at: '2026-11-09T07:56:00Z' })];
+    renderCard();
+    expect(screen.getByText('준호님과 반반 쌓기 대전 중')).toBeInTheDocument();
+    expect(screen.getByTestId('play-card')).toHaveAttribute('href', '/play/stack-vs/g1');
   });
 });
