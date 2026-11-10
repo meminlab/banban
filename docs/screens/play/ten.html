@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>딱 10원(가칭) 시안 (BANB-56)</title>
+<title>도토리 열 알 시안 (BANB-56)</title>
 <!-- 미리보기 전용 CDN. 앱은 npm pretendard / lucide-react 로 번들한다 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://unpkg.com/lucide@1.69.0/dist/umd/lucide.min.js"></script>
@@ -184,9 +184,9 @@ svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
 .betbig { margin-top:14px; padding:14px 16px; border-radius:16px; background:var(--color-primary-soft); }
 .betbig small { display:flex; justify-content:center; align-items:center; gap:4px; font-size:13px; color:var(--color-text-sub); } .betbig small svg { width:14px; height:14px; }
 .betbig b { display:block; font-size:22px; line-height:30px; font-weight:800; color:var(--color-primary-strong); margin-top:2px; letter-spacing:-0.01em; }
-/* ── v1.10 딱 10원 (design.md 1.10 · 5.40~5.44) — 새 토큰은 coin-ink 1개 ── */
-[data-theme="clean"]{--color-coin-ink:#4A3200;}
-[data-theme="clean"][data-mode="dark"]{--color-coin-ink:#2A1C00;}
+/* ── v1.10 도토리 열 알 (design.md 1.10 · 5.40~5.44) — 새 토큰 acorn-* 4개, 테마 공통 ── */
+[data-theme="clean"]{--color-acorn-body:#E2AE72;--color-acorn-cap:#7A4E24;--color-acorn-edge:#8A5A2B;--color-acorn-ink:#3D2408;}
+[data-theme="clean"][data-mode="dark"]{--color-acorn-body:#C68F55;--color-acorn-cap:#8C5F33;--color-acorn-edge:#E8C9A0;--color-acorn-ink:#24160A;}
 .land { width:640px; height:360px; position:relative; overflow:hidden; border-radius:24px; box-shadow:0 10px 36px rgb(0 0 0 / .18); background:var(--color-surface); color:var(--color-text); }
 .gtop { position:absolute; top:0; left:0; right:0; height:48px; display:flex; align-items:center; padding:0 12px 0 4px; gap:6px; z-index:2; }
 .gtop .ib { color:var(--color-text); }
@@ -251,8 +251,8 @@ svg.lucide { width:20px; height:20px; stroke-width:2; flex:none; }
 .ncard ul { padding-left:18px; margin:8px 0 0; }
 .ministrip .card { box-shadow:0 2px 10px rgb(0 0 0 / .08); border-radius:16px; }
 </style></head><body>
-<h1>딱 10원 (가칭 "숫자 모아 열 만들기") — 시안 (BANB-56)</h1>
-<p class="lead">기준: BANB-2 "새 게임: 숫자 모아 열 만들기(가칭) 명세"(2026-11-10 클라이언트 승인), design.md v1.10(1.10 coin-ink, 5.40~5.44). 클린 라이트 1테마만(토큰 절약). 게임은 <b>가로 640×360</b>(360×640 폰을 눕힌 크기), 메뉴·시작·회전 안내는 세로 360×760. 시안 이름은 추천안 <b>"딱 10원"</b>으로 그렸다(확정 전, 바꾸면 글자만 바뀜). 그림은 반반 쌓기의 동전(<code>piece-coin</code>) 식구 — 원작의 이름·과일 그림·초록 판·빨강·효과음은 쓰지 않는다. 나 = 민지(하늘), 상대 = 준호(노랑).</p>
+<h1>도토리 열 알 — 시안 (BANB-56)</h1>
+<p class="lead">기준: BANB-2 "새 게임: 숫자 모아 열 만들기(가칭) 명세"(2026-11-10 클라이언트 승인) + 클라이언트 결정(이름 <b>"도토리 열 알"</b>, 점수 "점"), design.md v1.10(1.10 acorn-*, 5.40~5.44). 클린 라이트 1테마만(토큰 절약). 게임은 <b>가로 640×360</b>(360×640 폰을 눕힌 크기), 메뉴·시작·회전 안내는 세로 360×760. 칸 그림은 banban 고유 <b>숫자 도토리</b>(갈색 몸통 + 짙은 깍정이) — 원작의 이름·과일 그림·빨강·초록 판·효과음은 쓰지 않는다. 나 = 민지(하늘), 상대 = 준호(노랑).</p>
 <div id="rows"></div>
 <script>
 const ic = (n, s='') => `<i data-lucide="${n}"${s?` style="${s}"`:''}></i>`;
@@ -263,13 +263,17 @@ const av = (p, size='', st='') => `<span class="av ${size} e-${P[p].e}"${st?` st
 const COLS = 15, ROWS = 8;
 function rng(seed){ let a = seed; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 function makeGrid(seed, emptyRate=0){ const r = rng(seed); const g = []; for (let y=0;y<ROWS;y++){ const row=[]; for (let x=0;x<COLS;x++){ row.push(r() < emptyRate ? 0 : 1 + Math.floor(r()*9)); } g.push(row);} return g; }
+/* 숫자 도토리 (5.41): 몸통 원 + 깍정이(모자) + 꼭지, 숫자는 몸통 가운데 */
+const acornPath = (cx, cy, s) => { const r = s*0.37, by = cy + s*0.10; return { r, by, cap:`M${cx-s*0.38} ${cy-s*0.13} C${cx-s*0.38} ${cy-s*0.38} ${cx+s*0.38} ${cy-s*0.38} ${cx+s*0.38} ${cy-s*0.13} Q${cx} ${cy-s*0.07} ${cx-s*0.38} ${cy-s*0.13} Z` }; };
 const coin = (cx, cy, s, n, o={}) => {
-  const d = s*0.84, r = d/2;
   if (!n) return `<circle cx="${cx}" cy="${cy}" r="1.6" fill="var(--color-stack-dot)"/>`;
+  const { r, by, cap } = acornPath(cx, cy, s);
   const lift = o.lift ? `transform="translate(${cx} ${cy}) scale(1.08) translate(${-cx} ${-cy})"` : '';
-  return `<g ${lift} opacity="${o.op ?? 1}"><circle cx="${cx}" cy="${cy}" r="${r-0.75}" fill="var(--color-piece-coin)" stroke="${o.lift?'var(--color-primary)':'var(--color-piece-coin-edge)'}" stroke-width="${o.lift?2.5:1.5}"/>
-    <circle cx="${cx}" cy="${cy}" r="${r*0.74}" fill="none" stroke="var(--color-piece-coin-edge)" stroke-opacity=".35" stroke-width="1"/>
-    <text x="${cx}" y="${cy + s*0.165}" text-anchor="middle" font-size="${Math.round(s*0.48)}" font-weight="800" fill="var(--color-coin-ink)" font-family="Pretendard Variable, Pretendard, system-ui">${n}</text></g>`;
+  const ed = o.lift ? 'var(--color-primary)' : 'var(--color-acorn-edge)', w = o.lift ? 2.5 : 1.5;
+  return `<g ${lift} opacity="${o.op ?? 1}"><circle cx="${cx}" cy="${by}" r="${r}" fill="var(--color-acorn-body)" stroke="${ed}" stroke-width="${w}"/>
+    <path d="${cap}" fill="var(--color-acorn-cap)" stroke="${ed}" stroke-width="${w}" stroke-linejoin="round"/>
+    <line x1="${cx}" y1="${cy-s*0.31}" x2="${cx+s*0.07}" y2="${cy-s*0.45}" stroke="var(--color-acorn-cap)" stroke-width="${Math.max(2, s*0.07)}" stroke-linecap="round"/>
+    <text x="${cx}" y="${by + s*0.16}" text-anchor="middle" font-size="${Math.round(s*0.46)}" font-weight="800" fill="var(--color-acorn-ink)" font-family="Pretendard Variable, Pretendard, system-ui">${n}</text></g>`;
 };
 function boardSvg(g, s, o={}){
   let c = '';
@@ -318,14 +322,14 @@ const fA = land({ g:Ga, score:35, left:84, sel:[3,2,4,3], finger:true });
 const fB = land({ g:Gb, score:35, left:83, sel:[3,2,5,3], finger:true });
 const fC = land({ g:Gc, score:40, flash:true, left:83, extra:(bx,by,s) => {
   const [cx, cy] = cellXY(bx,by,s,4,2.5);
-  let fly = ''; [[0.25,0.55],[0.5,0.35],[0.75,0.15]].forEach(([t,op],i) => { const x = cx + (70 - cx)*t, y = cy + (24 - cy)*t - 20*Math.sin(Math.PI*t); fly += `<svg style="position:absolute;left:${x-12}px;top:${y-12}px;z-index:3" width="24" height="24"><circle cx="12" cy="12" r="10" fill="var(--color-piece-coin)" stroke="var(--color-piece-coin-edge)" stroke-width="1.5" opacity="${op+0.3}"/></svg>`; });
-  return `${fly}<div class="plusn" style="left:${cx-22}px;top:${cy-14}px">+5점</div><div class="gpill" style="top:${by+12}px">${ic('sparkles')}동전 5개로 열 만들었어요!</div>`; } });
+  let fly = ''; [[0.25,0.55],[0.5,0.35],[0.75,0.15]].forEach(([t,op],i) => { const x = cx + (70 - cx)*t, y = cy + (24 - cy)*t - 20*Math.sin(Math.PI*t); fly += `<svg style="position:absolute;left:${x-12}px;top:${y-12}px;z-index:3" width="24" height="24"><g opacity="${op+0.3}">${coin(12,12,26,' ')}</g></svg>`; });
+  return `${fly}<div class="plusn" style="left:${cx-22}px;top:${cy-14}px">+5점</div><div class="gpill" style="top:${by+12}px">${ic('sparkles')}도토리 5개로 열 알 모았어요!</div>`; } });
 const fD = land({ g:Glate, score:52, left:10, best:41, extra:(bx,by) => `<div class="gpill" style="top:${by+12}px">${ic('timer')}남은 시간 10초예요</div>` });
 
 /* 1인 결과 */
 const soloRes = (newBest) => land({ g:Glate, score: newBest?52:38, best: newBest?41:52, left:0, dim:.5, extra:() => `<div class="cscrim"></div>
   <div class="lcard" style="width:440px"><div style="display:flex;gap:14px;align-items:center">
-    <span class="circ56 ${newBest?'p':''}">${ic(newBest?'trophy':'coins')}</span>
+    <span class="circ56 ${newBest?'p':''}">${ic(newBest?'trophy':'nut')}</span>
     <div style="flex:1"><h3>${newBest?'새 최고 기록이에요!':'끝났어요'}</h3><p>${newBest?'지난 최고 41점보다 11점 더 얻었어요':'내 최고 기록은 <b class="num" style="color:var(--color-text)">52점</b>예요'}</p></div>
     <div class="bigsc">${newBest?52:38}<small>점</small></div></div>
     <div class="rec" style="margin-top:16px">${av('j','', 'width:24px;height:24px;font-size:11px')}<span>준호님 최고 기록 <b class="num">47점</b>${newBest?' — 내가 앞섰어요':''}</span></div>
@@ -351,50 +355,46 @@ const menu = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-
   <div class="card" style="padding:8px 0"><p class="sect" style="padding-top:8px">둘이 같이</p>
     ${row('grid-3x3','오목','준호님과 <b style="display:inline;font-size:13px" class="num">3승 2패 1무</b>')}
     ${row('receipt','반반 쌓기 대전','줄을 지워 영수증을 보내요')}
-    ${row('hand-coins','딱 10원 대전','같은 판으로 2분 동안 겨뤄요', true)}
+    ${row('swords','도토리 열 알 대전','같은 판으로 2분 동안 겨뤄요', true)}
     <p class="sect" style="padding-top:8px">혼자서</p>
     ${row('piggy-bank','반반 쌓기','내 최고 <b style="display:inline;font-size:13px" class="num">280점</b>')}
-    ${row('coins','딱 10원','내 최고 <b style="display:inline;font-size:13px" class="num">41점</b>', true)}</div>
-  <div class="card" style="padding:4px 0"><div class="srow">${ic('vibrate')}<div style="flex:1"><div>진동</div><div style="font-size:13px;color:var(--color-text-sub)">줄을 지우거나 열을 만들 때 짧게 울려요</div></div><span class="sw"></span></div></div>
+    ${row('nut','도토리 열 알','내 최고 <b style="display:inline;font-size:13px" class="num">41점</b>', true)}</div>
+  <div class="card" style="padding:4px 0"><div class="srow">${ic('vibrate')}<div style="flex:1"><div>진동</div><div style="font-size:13px;color:var(--color-text-sub)">줄을 지우거나 도토리를 모을 때 짧게 울려요</div></div><span class="sw"></span></div></div>
 </div></div></div>`;
 const mini = (() => { const g = [[3,0,5,2,6],[7,4,1,9,1],[2,0,8,3,5]], s = 40; let c=''; g.forEach((r,y)=>r.forEach((n,x)=>{ const ls = x>=1&&x<=2&&y>=0&&y<=1; c += coin(x*s+s/2, y*s+s/2, s, n, {lift:ls}); }));
   return `<div style="position:relative;width:200px;height:120px;margin:0 auto"><svg width="200" height="120" style="background:var(--color-stack-board);border-radius:12px">${c}</svg><div class="sel ten" style="left:${s-3}px;top:-3px;width:${2*s+6}px;height:${2*s+6}px"></div><div class="sum ten" style="left:${3*s-10}px;top:-16px;height:24px;font-size:13px">10${ic('check','width:14px;height:14px;stroke-width:3')}</div></div>`; })();
-const start = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>딱 10원</b></div><div class="scroll" style="bottom:80px"><div class="stack" style="padding-top:12px">
-  <div class="card" style="text-align:center;padding-top:24px">${mini}<div class="t18" style="margin-top:16px">숫자 동전을 네모로 묶어<br>딱 10원을 만들어요</div></div>
+const start = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>도토리 열 알</b></div><div class="scroll" style="bottom:80px"><div class="stack" style="padding-top:12px">
+  <div class="card" style="text-align:center;padding-top:24px">${mini}<div class="t18" style="margin-top:16px">숫자 도토리를 네모로 묶어<br>합 10을 만들어요</div></div>
   <div class="card"><div class="k">내 최고 기록</div><div class="big num">41<span style="font-size:18px;font-weight:600;color:var(--color-text-sub);margin-left:2px">점</span></div>
     <div class="rec" style="justify-content:flex-start;padding:0 12px;margin-top:12px">${av('j','', 'width:24px;height:24px;font-size:11px')}<span style="font-weight:500">준호님 최고 기록 <b class="num">47점</b>예요</span></div></div>
   <div class="card"><div class="k">이렇게 해요</div><div class="howto">
     <div><span class="c">${ic('square-dashed-mouse-pointer')}</span>손가락으로 끌어 네모를 그려요</div>
-    <div><span class="c">${ic('equal')}</span>네모 안 숫자 합이 10이면 동전이 모여요</div>
+    <div><span class="c">${ic('equal')}</span>네모 안 숫자 합이 10이면 도토리를 모아요</div>
     <div><span class="c">${ic('timer')}</span>2분 동안 많이 모을수록 좋아요</div></div></div>
 </div></div><div class="fix"><div class="btn1">${ic('play')}시작하기</div></div></div>`;
-const rotBefore = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>딱 10원</b></div><div class="rot">
+const rotBefore = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>도토리 열 알</b></div><div class="rot">
   <div class="rotart"><span class="ph1"></span><span class="ph2"></span>${ic('rotate-cw')}</div>
   <h3>가로로 돌려 주세요</h3><p>판이 옆으로 넓어서 폰을 눕혀서 해요.<br>돌리면 3초 뒤에 시작해요</p>
   <div class="hint" style="margin-top:24px;text-align:left">${ic('info')}<span>화면이 안 돌아가면 기기의 <b>화면 회전 잠금</b>을 꺼 주세요</span></div></div>
   <div class="fix"><div class="btn2" style="flex:1">나가기</div></div></div>`;
-const rotDuring = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>딱 10원</b></div><div class="rot">
+const rotDuring = `<div class="phone"><div class="sh"><span class="ib">${ic('chevron-left')}</span><b>도토리 열 알</b></div><div class="rot">
   <div class="rotart"><span class="ph1"></span><span class="ph2"></span>${ic('rotate-cw')}</div>
   <h3>가로로 돌려 주세요</h3><p>게임은 멈추지 않아요.<br>시간이 계속 흐르고 있어요</p>
   <div class="paused"><div><small>남은 시간</small><b class="t">1:12</b></div><div><small>점수</small><b>35점</b></div></div></div></div>`;
 
-/* ── 이름 후보 ── */
-const acorn = (cx, cy, s, n) => `<g><ellipse cx="${cx}" cy="${cy+s*0.08}" rx="${s*0.36}" ry="${s*0.38}" fill="#D9A066" stroke="#8A5A2B" stroke-width="1.5"/><path d="M${cx-s*0.42} ${cy-s*0.12} Q${cx} ${cy-s*0.5} ${cx+s*0.42} ${cy-s*0.12} Z" fill="#8A5A2B"/><line x1="${cx}" y1="${cy-s*0.4}" x2="${cx+s*0.06}" y2="${cy-s*0.5}" stroke="#5E3B17" stroke-width="2.5" stroke-linecap="round"/><text x="${cx}" y="${cy+s*0.26}" text-anchor="middle" font-size="${s*0.4}" font-weight="800" fill="#3D2408" font-family="Pretendard Variable">${n}</text></g>`;
-const button = (cx, cy, s, n) => `<g><circle cx="${cx}" cy="${cy}" r="${s*0.42}" fill="#9EC5E8" stroke="#3E6E99" stroke-width="1.5"/><circle cx="${cx}" cy="${cy}" r="${s*0.33}" fill="none" stroke="#3E6E99" stroke-opacity=".4"/>${[[-1,-1],[1,-1],[-1,1],[1,1]].map(([a,b])=>`<circle cx="${cx+a*s*0.2}" cy="${cy+b*s*0.2}" r="${s*0.035}" fill="#3E6E99" opacity=".5"/>`).join('')}<text x="${cx}" y="${cy+s*0.15}" text-anchor="middle" font-size="${s*0.42}" font-weight="800" fill="#13324F" font-family="Pretendard Variable">${n}</text></g>`;
-const art = f => { const s = 44, ns = [[3,7,2,5],[6,1,4,8]]; let c=''; ns.forEach((r,y)=>r.forEach((n,x)=>{ c += f(x*s+s/2+4, y*s+s/2+4, s, n); })); return `<svg width="${4*s+8}" height="${2*s+8}">${c}</svg>`; };
-const names = `<div class="row" style="gap:16px">
-  <div class="ncard pick"><div class="art">${art((x,y,s,n)=>coin(x,y,s,n))}</div><h3>딱 10원 <em>추천</em></h3><b>숫자 동전(1~9원)을 묶어 10원 만들기</b>
-    <ul><li>가계부 앱다운 그림. 반반 쌓기 동전과 한 식구라 새 그림·색이 거의 없다(새 토큰 1개)</li><li>점수는 "점"(동전 1개 = 1점) — 클라이언트 결정</li><li>대전 이름도 자연스럽다: "딱 10원 대전"</li><li>걸림: 이름엔 "원"이 있지만 점수는 "점"이다</li></ul></div>
-  <div class="ncard"><div class="art">${art(acorn)}</div><h3>도토리 열 알</h3><b>숫자 도토리를 모아 열 알 채우기</b>
-    <ul><li>가장 따뜻하고 귀여운 느낌</li><li>도토리 그림·갈색 2개를 새로 만들어야 한다</li><li>가계부와 이어지는 이야기가 약하다</li></ul></div>
-  <div class="ncard"><div class="art">${art(button)}</div><h3>열 맞춤</h3><b>숫자 단추를 묶어 합 열 맞추기</b>
-    <ul><li>규칙이 이름에 그대로 — 처음 봐도 안다</li><li>중립적이라 기억에 덜 남는다</li><li>단추 그림·파랑 계열을 새로 만들어야 한다</li></ul></div></div>`;
+/* ── 숫자 도토리 정의 ── */
+const acornSet = (() => { const s = 56; let c=''; [1,2,3,4,5,6,7,8,9].forEach((n,i)=>{ c += coin(i*s+s/2+6, s/2+6, s, n); }); return `<svg width="${9*s+12}" height="${s+12}">${c}</svg>`; })();
+const acornStates = (() => { const s = 56; return `<svg width="${3*s+40}" height="${s+12}">${coin(s/2+6, s/2+6, s, 7)}${coin(s*1.5+26, s/2+6, s, 3, {lift:true})}${coin(s*2.5+40, s/2+6, s, 0)}</svg>`; })();
+const names = `<div class="ncard" style="width:620px"><div class="art">${acornSet}</div><h3>도토리 열 알 <em>확정</em></h3><b>숫자 도토리(1~9)를 네모로 묶어 합 10 = 도토리 열 알을 모은다</b>
+  <ul><li>몸통 = 원(지름 s × 0.74) <code>acorn-body</code> + 1.5px <code>acorn-edge</code>, 위쪽 깍정이(모자) <code>acorn-cap</code>, 짧은 꼭지. 숫자는 몸통 가운데 s × 0.46 /800 <code>acorn-ink</code></li>
+  <li>색은 갈색 계열 4개뿐, 테마 공통. 빨강·초록·잎을 쓰지 않아 과일과 겹치지 않는다</li><li>판은 반반 쌓기 크림 판(<code>stack-board</code>) 그대로 — 따뜻한 톤</li></ul>
+  <div class="art" style="margin-top:12px;gap:20px;align-items:center">${acornStates}<span style="font-size:12px;color:#5F6670;line-height:18px">보통 · 합 10 네모 안(테두리 <code>primary</code> + 1.08배) · 빈칸(점)</span></div></div>`;
 
 const SCREENS = [
-  ['names','1. 이름 · 그림 후보 (클라이언트 확정 필요)', [[names,'후보 3개 — 같은 판 일부를 각 그림으로']], ['세 후보 모두 원작 이름("사과")·과일 그림·초록 판·빨강을 쓰지 않는다', '<b>추천: 딱 10원</b> — 가계부 앱 안의 게임이라 "돈"으로 이야기가 이어지고, 반반 쌓기 동전 그림·색을 그대로 써서 새 토큰이 1개(숫자 글자색)뿐이다', '나머지 시안은 모두 "딱 10원"으로 그렸다. 다른 후보로 정해지면 그림(칸 1개)과 글자만 바꾼다 — 배치·크기·동작은 같다']],
-  ['menu','2. 게임 고르기 · 시작 (세로)', [[menu,'미니게임 화면 — 행 2개 추가'],[start,'시작 화면'],[rotBefore,'시작하기 → 세로면 "가로로 돌려 주세요"']], ['미니게임 화면: "혼자서"에 <b>딱 10원</b>(`Coins`, 보조 "내 최고 41점", 없으면 "합이 10이 되게 동전을 묶어요"), "둘이 같이"에 <b>딱 10원 대전</b>(`HandCoins`, 보조 = 전적, 없으면 "같은 판으로 2분 동안 겨뤄요")', '대전 행 → 상대 고르기·내기·대기실은 반반 쌓기 대전(5.36) 그대로', '시작 화면은 세로: 그림 카드(합 10 네모 예시) → 기록 카드 → 이렇게 해요 3줄 → 시작하기', '시작하기를 눌렀는데 세로면 회전 안내 화면. 가로가 되면 3초 세기 후 시작. 이미 가로면 바로 3초 세기']],
-  ['rotate','3. 가로로 돌려 주세요 (세로일 때)', [[rotBefore,'시작 전'],[rotDuring,'게임 중 세로로 돌림']], ['방향 고정이 안 되는 PWA·iOS Safari 대비. 세로가 되면 판 대신 이 화면', '게임 중: <b>멈추지 않는다</b>(명세 — 시간은 흐름). 남은 시간·모은 동전을 보여 줘 급한 걸 알게. 남은 시간 숫자는 매초 바뀜', '버튼 없이 돌리기만 하면 바로 판으로 돌아간다. 시작 전 화면에만 "나가기"', '그림: 연한 세로 폰 → 진한 가로 폰 + `RotateCw`(아이콘 세트 Lucide 그대로, 새 그림 아님)']],
-  ['play','4. 플레이 (가로 640×360)', [[fA,'끄는 중 — 합 7 (아무 일 없음)'],[fB,'합 10 — 네모가 진해지고 "10 ✓"'],[fC,'손을 뗌 → 터짐 + "+5" + 점수 깜빡'],[fD,'남은 10초']], ['정보 배치는 익숙하게: <b>점수 왼쪽 위, 남은 시간 오른쪽 위 + 판 오른쪽 세로 막대</b>(위에서 아래로 줄어듦). 판은 가운데 크게', '칸 s = floor(min((폭 − 72) / 15, (높이 − 64) / 8)), 30~48. 640×360 → 37(판 555×296), 667×375 → 38, 932×430 → 45. 좌우 노치는 safe-area만큼 더 띄운다', '네모: 손가락이 처음 닿은 칸 ~ 지금 칸까지(칸 단위로 딱 맞춤). 2px `primary` + 8% 바탕. 네모 오른쪽 위 알약에 <b>합</b>을 늘 보여 준다', '합 = 10: 테두리 3px + 16% 바탕, 알약이 `primary` "10 ✓", 안의 동전 테두리 `primary` + 살짝 커짐(1.08). 진동 켬이면 10이 되는 순간 짧게(15ms)', '손을 떼면 합 10: 동전이 0.15초 커졌다 점수 쪽으로 날아감(0.4초) → 자리에 "+5점" 0.6초 → 점수 숫자 바탕 0.3초 깜빡. 빈칸은 다시 채우지 않음(작은 점만)', '첫 번째 터짐과 4개 이상 한 번에는 알약 "열 만들었어요!" / "동전 5개로 열 만들었어요!" 1.2초. 나머지는 "+N점"만(시끄럽지 않게)', '합이 10이 아니면: 네모만 사라짐(벌점·흔들림 없음)', '점수 단위는 "점"(클라이언트 결정 2026-11-10), 동전 1개 = 1점. 남은 10초: 시간 숫자 `primary-strong` + 알약 "남은 시간 10초예요" 1.2초 1번. 소리 없음(효과음 자리도 안 만듦)', '‹ = 나가기 확인 창 "그만할까요? 이번 판 기록은 남지 않아요"(1인) — 창이 떠도 시간은 흐름']],
+  ['acorn','1. 숫자 도토리 (이름 확정: 도토리 열 알)', [[names,'1~9 · 상태 3가지 (칸 56 확대)']], ['클라이언트 확정 2026-11-10: 이름 "도토리 열 알", 대전 "도토리 열 알 대전"', '도토리 1개 = 1점. 터지면 "+5점", 알약 "도토리 5개로 열 알 모았어요!"', '대비: 숫자/몸통 7.24(다크 6.25), 테두리/판 5.18(다크 9.6)']],
+  ['menu','2. 게임 고르기 · 시작 (세로)', [[menu,'미니게임 화면 — 행 2개 추가'],[start,'시작 화면'],[rotBefore,'시작하기 → 세로면 "가로로 돌려 주세요"']], ['미니게임 화면: "혼자서"에 <b>도토리 열 알</b>(`Nut`, 보조 "내 최고 41점", 없으면 "합이 10이 되게 도토리를 묶어요"), "둘이 같이"에 <b>도토리 열 알 대전</b>(`Swords`, 보조 = 전적, 없으면 "같은 판으로 2분 동안 겨뤄요")', '대전 행 → 상대 고르기·내기·대기실은 반반 쌓기 대전(5.36) 그대로', '시작 화면은 세로: 그림 카드(합 10 네모 예시) → 기록 카드 → 이렇게 해요 3줄 → 시작하기', '시작하기를 눌렀는데 세로면 회전 안내 화면. 가로가 되면 3초 세기 후 시작. 이미 가로면 바로 3초 세기']],
+  ['rotate','3. 가로로 돌려 주세요 (세로일 때)', [[rotBefore,'시작 전'],[rotDuring,'게임 중 세로로 돌림']], ['방향 고정이 안 되는 PWA·iOS Safari 대비. 세로가 되면 판 대신 이 화면', '게임 중: <b>멈추지 않는다</b>(명세 — 시간은 흐름). 남은 시간·점수를 보여 줘 급한 걸 알게. 남은 시간 숫자는 매초 바뀜', '버튼 없이 돌리기만 하면 바로 판으로 돌아간다. 시작 전 화면에만 "나가기"', '그림: 연한 세로 폰 → 진한 가로 폰 + `RotateCw`(아이콘 세트 Lucide 그대로, 새 그림 아님)']],
+  ['play','4. 플레이 (가로 640×360)', [[fA,'끄는 중 — 합 7 (아무 일 없음)'],[fB,'합 10 — 네모가 진해지고 "10 ✓"'],[fC,'손을 뗌 → 터짐 + "+5" + 점수 깜빡'],[fD,'남은 10초']], ['정보 배치는 익숙하게: <b>점수 왼쪽 위, 남은 시간 오른쪽 위 + 판 오른쪽 세로 막대</b>(위에서 아래로 줄어듦). 판은 가운데 크게', '칸 s = floor(min((폭 − 72) / 15, (높이 − 64) / 8)), 30~48. 640×360 → 37(판 555×296), 667×375 → 38, 932×430 → 45. 좌우 노치는 safe-area만큼 더 띄운다', '네모: 손가락이 처음 닿은 칸 ~ 지금 칸까지(칸 단위로 딱 맞춤). 2px `primary` + 8% 바탕. 네모 오른쪽 위 알약에 <b>합</b>을 늘 보여 준다', '합 = 10: 테두리 3px + 16% 바탕, 알약이 `primary` "10 ✓", 안의 도토리 테두리 `primary` + 살짝 커짐(1.08). 진동 켬이면 10이 되는 순간 짧게(15ms)', '손을 떼면 합 10: 도토리가 0.15초 커졌다 점수 쪽으로 날아감(0.4초) → 자리에 "+5점" 0.6초 → 점수 숫자 바탕 0.3초 깜빡. 빈칸은 다시 채우지 않음(작은 점만)', '첫 번째 터짐과 4개 이상 한 번에는 알약 "열 알 모았어요!" / "도토리 5개로 열 알 모았어요!" 1.2초. 나머지는 "+N점"만(시끄럽지 않게)', '합이 10이 아니면: 네모만 사라짐(벌점·흔들림 없음)', '점수 단위는 "점"(클라이언트 결정 2026-11-10), 도토리 1개 = 1점. 남은 10초: 시간 숫자 `primary-strong` + 알약 "남은 시간 10초예요" 1.2초 1번. 소리 없음(효과음 자리도 안 만듦)', '‹ = 나가기 확인 창 "그만할까요? 이번 판 기록은 남지 않아요"(1인) — 창이 떠도 시간은 흐름']],
   ['solo','5. 1인 결과', [[soloRes(true),'새 최고 기록'],[soloRes(false),'보통']], ['판을 흐리게 두고 가운데 카드(가로라 바텀시트 대신). 왼쪽 아이콘·제목, 오른쪽 큰 점수 40/800 + "점"', '최고 기록 = 반반 쌓기 기록 저장 재사용(가계부 × 멤버 최고 1개). 멤버 비교 줄은 반반 쌓기 5.34 규칙', '한 판 더 = 새 시드로 바로 3초 세기. 나가기 → 미니게임 화면(세로)', '첫 판(기록 없음) → 제목 "첫 기록이에요!", 0점 → "다음엔 하나 만들어 봐요"']],
   ['versus','6. 대전', [[vCount,'3초 세기 — 같은 판'],[vPlay,'플레이 — 상대 점수 작게 + 받은 반응'],[vOff,'상대 끊김 · 남은 10초'],[vWait,'끝 — 점수 맞춰 보는 중'],[vRes(true),'결과 — 이김 + 내기'],[vRes(false),'결과 — 짐']], ['둘 다 들어오면 같은 시드 판을 흐리게 보여 주고 3·2·1(마감 시각은 서버 기준). 알약 "같은 판으로 동시에 시작해요"', '상대 점수: 내 점수 옆 회색 알약 [아바타 28] "준호 31" — 내 점수(24/800)보다 작게(17/800). 0.5초마다 갱신. 판은 보여 주지 않는다(같은 판이라 정답 힌트가 됨)', '이모지 반응: 반반 쌓기 대전(5.37) 그대로 — `SmilePlus`, 받은 이모지는 상대 알약 아래 말풍선 2초, 보낸 뒤 3초 쉼', '상대 끊김: 판은 각자 독립이라 <b>멈추지 않는다</b>. 상대 알약 흐림 + `WifiOff` + 마지막 점수, 토스트 1번 "준호님 연결이 끊겼어요. 판은 그대로 이어져요". 돌아오면 토스트 "준호님이 돌아왔어요"', '내가 끊김: 판은 계속, 위에 작은 알약 "연결이 끊겼어요. 다시 연결되면 점수를 보낼게요"(그림 없음)', '시간이 끝나면 드래그 기록을 보내고 "점수를 맞춰 보는 중이에요"(최대 5초 — 명세). 화면 점수는 참고, 결과는 서버 계산값', '결과: 왼쪽 제목 + 한 줄 "준호님 32점, 나 35점" + 점수 2칸(이긴 쪽 테두리), 오른쪽 내기 상자·전적·버튼. 무승부 = `Handshake` "비겼어요!" / 내기 상자 "이번엔 둘 다 무사해요"', '서버 점수가 화면 점수와 다르면 결과는 서버 값만 보여 준다(설명 문구 없음 — 정상 조작이면 같음)']],
 ];
