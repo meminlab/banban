@@ -27,7 +27,7 @@ describe('manifest', () => {
       display: 'standalone',
       start_url: '/',
       scope: '/',
-      orientation: 'portrait',
+      orientation: 'any', // 도토리 열 알(가로 전용) 때문에 세로 고정 금지 (BANB-58)
       theme_color: '#FFFFFF', // index.html meta theme-color와 같게(흰 상단바)
       background_color: '#FFFFFF',
     });
