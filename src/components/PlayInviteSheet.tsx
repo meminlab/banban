@@ -6,16 +6,16 @@ import { useLedgerId } from '../app/guards';
 import { gamePath } from '../app/routes';
 import { inviteGame } from '../data/game';
 import type { Game, GameKind } from '../data/types';
-import { formatHeadToHead, headToHead, isBusy } from '../domain/omok';
+import { formatHeadToHead, headToHead, isBusy, isVsKind } from '../domain/omok';
 import { BET_MAX, betLength, clampBet, normalizeBet } from '../domain/stackVs';
 import { GameAvatar } from './GameAvatar';
 import { playErrorMessage } from './PlayInvite';
 import { Sheet } from './Sheet';
 
 /**
- * 상대 고르기 시트 (design.md 5.28 · 5.36): 미니게임 화면의 오목 / 반반 쌓기 대전 행, 대전 결과의 "한 판 더".
+ * 상대 고르기 시트 (design.md 5.28 · 5.36 · 5.44): 미니게임 화면의 오목 / 반반 쌓기 대전 / 도토리 열 알 대전 행, 대전 결과의 "한 판 더".
  * 다른 판(오목 포함)을 하는 멤버는 고를 수 없다(1인 1판). 고를 수 있는 상대가 1명이면 미리 골라 둔다.
- * 반반 쌓기 대전은 내기 걸기(선택, 1~30자)를 함께 보낸다.
+ * 대전(반반 쌓기·도토리 열 알)은 내기 걸기(선택, 1~30자)를 함께 보낸다.
  */
 export function PlayInviteSheet({
   kind,
@@ -43,7 +43,7 @@ export function PlayInviteSheet({
   const [error, setError] = useState<string | null>(null);
   const titleId = useId();
   const betId = useId();
-  const vs = kind === 'stack_vs';
+  const vs = isVsKind(kind);
 
   if (!me) return null;
   const fixed = rematchOf ? (rematchOf.black_id === me ? rematchOf.white_id : rematchOf.black_id) : null;
@@ -54,7 +54,7 @@ export function PlayInviteSheet({
     if (!finished) return '';
     const r = headToHead(finished, me, id, kind);
     if (r.win + r.loss + r.draw === 0) return vs ? '처음 하는 대전이에요' : formatHeadToHead(r);
-    return vs ? `${r.win}승 ${r.loss}패` : formatHeadToHead(r);
+    return vs ? `${r.win}승 ${r.loss}패${r.draw > 0 ? ` ${r.draw}무` : ''}` : formatHeadToHead(r);
   };
 
   async function send() {
@@ -130,7 +130,11 @@ export function PlayInviteSheet({
         <p className="notice-box">
           <Info size={16} aria-hidden="true" />
           <span>
-            {vs ? '줄을 지우면 상대 판에 영수증이 올라가요.' : '초대받은 사람이 흑으로 먼저 둬요.'}
+            {kind === 'ten_vs'
+              ? '같은 판으로 2분 동안 누가 더 많이 모으나 겨뤄요.'
+              : vs
+                ? '줄을 지우면 상대 판에 영수증이 올라가요.'
+                : '초대받은 사람이 흑으로 먼저 둬요.'}
             <br />
             10분 안에 답이 없으면 초대가 사라져요.
           </span>

@@ -27,6 +27,8 @@ import { PlayHomePage } from '../pages/play/PlayHomePage';
 import { OmokPage } from '../pages/play/OmokPage';
 import { StackPage } from '../pages/play/StackPage';
 import { StackVsPage } from '../pages/play/StackVsPage';
+import { TenPage } from '../pages/play/TenPage';
+import { TenVsPage } from '../pages/play/TenVsPage';
 import { ThemeProvider } from './theme';
 
 export function App() {
@@ -72,6 +74,8 @@ export function App() {
               <Route path="play/omok/:gameId" element={<OmokPage />} />
               <Route path="play/stack" element={<StackPage />} />
               <Route path="play/stack-vs/:gameId" element={<StackVsPage />} />
+              <Route path="play/ten" element={<TenPage />} />
+              <Route path="play/ten-vs/:gameId" element={<TenVsPage />} />
             </Route>
           </Route>
         </Route>

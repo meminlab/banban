@@ -206,8 +206,8 @@ export type LedgerRpcError =
   | 'NOT_IN_LEDGER';
 
 /** 같이 놀기 (BANB-49). 쓰기는 DB 함수로만(invite_game / respond_game / play_move / resign_game / sweep_games) */
-/** omok = 오목 / stack_vs = 반반 쌓기 대전 (BANB-55) */
-export type GameKind = 'omok' | 'stack_vs';
+/** omok = 오목 / stack_vs = 반반 쌓기 대전 (BANB-55) / ten_vs = 도토리 열 알 대전 (BANB-57) */
+export type GameKind = 'omok' | 'stack_vs' | 'ten_vs';
 export type GameStatus = 'invited' | 'active' | 'finished' | 'declined' | 'canceled' | 'expired' | 'abandoned';
 /** five·resign·turn_timeout = 승자 있음 / draw(판이 참)·draw_agreed(무승부 합의) = 무 / timeout = 24시간 중단(free 판) */
 export type GameEndReason =
@@ -220,9 +220,11 @@ export type GameEndReason =
   /** 반반 쌓기 대전 (BANB-55): 먼저 맨 위에 닿음 / 그만하기 / 30초 안에 못 돌아옴 — 모두 그 사람 패 */
   | 'topout'
   | 'quit'
-  | 'disconnect';
+  | 'disconnect'
+  /** 도토리 열 알 대전 (BANB-57): 마감 뒤 점수가 높은 사람 승 (같으면 draw) */
+  | 'score';
 /** 판의 룰 (BANB-53): free = 옛 판(시간 제한 없음·24시간 중단·33 허용) / renju_lite = 33 금지 + 한 수 30초. 서버만 정한다 */
-export type GameRule = 'free' | 'renju_lite' | 'stack_vs';
+export type GameRule = 'free' | 'renju_lite' | 'stack_vs' | 'ten_vs';
 
 export interface Game {
   id: string;
@@ -244,7 +246,7 @@ export interface Game {
   last_move_at: string | null;
   finished_at: string | null;
   rule: GameRule;
-  /** renju_lite 대국 중: 지금 차례의 마감 (서버 시각). free 판은 null */
+  /** renju_lite 대국 중: 지금 차례의 마감 (서버 시각). free 판은 null. ten_vs: 수락 뒤 공통 판 마감 (시작 = 마감 − 120초) */
   turn_deadline: string | null;
   /** 답을 기다리는 무승부 제안을 한 사람 (member id) */
   draw_offer_by: string | null;
@@ -252,8 +254,19 @@ export interface Game {
   draw_offer_count: number | null;
   /** 반반 쌓기 대전 내기 문구 (초대한 사람, 1~30자). 오목·내기 없음 = null */
   bet: string | null;
-  /** 반반 쌓기 대전 조각 순서 값 (두 사람 같은 값). 오목 = null */
+  /** 대전 순서 값 (두 사람 같은 값): 반반 쌓기 = 조각 순서, 도토리 열 알 = 판. 오목 = null */
   seed: number | null;
+}
+
+/** 도토리 열 알 대전 사람별 기록 (BANB-57). 판이 끝나기 전에는 자기 것만 읽힌다 */
+export interface TenBoardRow {
+  member_id: string;
+  /** 터진 네모 [x1, y1, x2, y2] 목록 */
+  drags: unknown;
+  /** 서버가 다시 센 점수 */
+  score: number;
+  final: boolean;
+  saved_at: string;
 }
 
 /** 반반 쌓기 대전 사람별 판 저장본 (BANB-55) */

@@ -116,5 +116,10 @@ export const STACK_PATH = '/play/stack';
 export const omokPath = (gameId: string) => `/play/omok/${gameId}`;
 /** 반반 쌓기 대전 한 판 (대기실·대전·결과, BANB-55) */
 export const stackVsPath = (gameId: string) => `/play/stack-vs/${gameId}`;
+/** 도토리 열 알 1인 모드 (BANB-57) */
+export const TEN_PATH = '/play/ten';
+/** 도토리 열 알 대전 한 판 (대기실·대전·결과, BANB-57) */
+export const tenVsPath = (gameId: string) => `/play/ten-vs/${gameId}`;
 /** 판 종류에 맞는 화면 */
-export const gamePath = (game: { id: string; kind?: string }) => (game.kind === 'stack_vs' ? stackVsPath(game.id) : omokPath(game.id));
+export const gamePath = (game: { id: string; kind?: string }) =>
+  game.kind === 'stack_vs' ? stackVsPath(game.id) : game.kind === 'ten_vs' ? tenVsPath(game.id) : omokPath(game.id);
