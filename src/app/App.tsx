@@ -26,6 +26,7 @@ import { GamesLayout } from './games';
 import { PlayHomePage } from '../pages/play/PlayHomePage';
 import { OmokPage } from '../pages/play/OmokPage';
 import { StackPage } from '../pages/play/StackPage';
+import { StackVsPage } from '../pages/play/StackVsPage';
 import { ThemeProvider } from './theme';
 
 export function App() {
@@ -70,6 +71,7 @@ export function App() {
               <Route path="play" element={<PlayHomePage />} />
               <Route path="play/omok/:gameId" element={<OmokPage />} />
               <Route path="play/stack" element={<StackPage />} />
+              <Route path="play/stack-vs/:gameId" element={<StackVsPage />} />
             </Route>
           </Route>
         </Route>

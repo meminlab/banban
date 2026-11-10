@@ -22,12 +22,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../../app/games';
 import { useLedgerId } from '../../app/guards';
-import { omokPath, PLAY_PATH } from '../../app/routes';
+import { gamePath, omokPath, PLAY_PATH } from '../../app/routes';
 import { Dialog } from '../../components/Dialog';
 import { GameAvatar } from '../../components/GameAvatar';
 import { Icon } from '../../components/Icon';
 import { OmokBoard } from '../../components/OmokBoard';
-import { playErrorMessage, RespondButtons } from '../../components/PlayInvite';
+import { BetBox, playErrorMessage, RespondButtons } from '../../components/PlayInvite';
 import { Sheet } from '../../components/Sheet';
 import { StatusScreen } from '../../components/StatusScreen';
 import {
@@ -232,7 +232,7 @@ export function OmokPage() {
 }
 
 /** 다른 가계부의 판·두 사람이 아닌 판 (design.md 5.31) */
-function NoAccess() {
+export function NoAccess() {
   const navigate = useNavigate();
   return (
     <div className="shell">
@@ -247,7 +247,7 @@ function NoAccess() {
 }
 
 /** 하위 화면 제목줄 + 오른쪽 자리 */
-function GameTopbar({ title, right }: { title: string; right?: ReactNode }) {
+export function GameTopbar({ title, right }: { title: string; right?: ReactNode }) {
   const navigate = useNavigate();
   function back() {
     const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
@@ -326,7 +326,8 @@ const PERSON_STATE: Record<PersonState, { icon: ReactNode; text: string }> = {
   out: { icon: <CircleX size={14} aria-hidden="true" />, text: '못 와요' },
 };
 
-function WaitingRoom({
+/** 대기실 — 오목·반반 쌓기 대전 같이 쓴다 (대전: 돌 표시 없음 · 내기 상자 · "같은 조각이 같은 순서로 나와요", design.md 5.36) */
+export function WaitingRoom({
   game,
   me,
   status,
@@ -354,12 +355,17 @@ function WaitingRoom({
   const opp = opponentOf(game, me);
   const oppName = nameOf(opp);
   const iInvited = game.created_by === me;
+  const vs = game.kind === 'stack_vs';
 
   let copy = roomCopy(status, game, me, nameOf);
   if (phase === 'both') {
     copy = {
       title: '둘 다 왔어요!',
-      desc: game.black_id === me ? '내가 흑으로 먼저 둬요. 곧 시작해요' : `${oppName}님이 흑으로 먼저 둬요. 곧 시작해요`,
+      desc: vs
+        ? '같은 조각이 같은 순서로 나와요. 곧 시작해요'
+        : game.black_id === me
+          ? '내가 흑으로 먼저 둬요. 곧 시작해요'
+          : `${oppName}님이 흑으로 먼저 둬요. 곧 시작해요`,
     };
   } else if (phase === 'wait-inviter') {
     copy = { title: `${oppName}님을 기다리고 있어요`, desc: `${oppName}님이 들어오면 시작해요` };
@@ -391,9 +397,9 @@ function WaitingRoom({
     setBusy(true);
     setError(null);
     try {
-      const id = await inviteGame(ledgerId, opp);
+      const id = await inviteGame(ledgerId, opp, undefined, { kind: game.kind, bet: game.bet });
       refresh();
-      navigate(omokPath(id), { replace: true });
+      navigate(gamePath({ id, kind: game.kind }), { replace: true });
     } catch (e) {
       setError(playErrorMessage(e, nameOf, opp));
       refresh();
@@ -428,7 +434,7 @@ function WaitingRoom({
                     </span>
                   )}
                   <div className={`play-room__person is-${st}`}>
-                    <GameAvatar memberId={id} members={members} size={56} stone={stone} dim={st !== 'in'} />
+                    <GameAvatar memberId={id} members={members} size={56} stone={vs ? undefined : stone} dim={st !== 'in'} />
                     <span className="play-room__name">{id === me ? '나' : nameOf(id)}</span>
                     <span className="play-room__state">
                       {PERSON_STATE[st].icon}
@@ -442,6 +448,11 @@ function WaitingRoom({
         )}
         <h2 className="play-room__title">{copy.title}</h2>
         <p className="play-room__desc">{copy.desc}</p>
+        {vs && !ended && status !== 'declined' && (
+          <div className="play-room__bet">
+            <BetBox bet={game.bet} label={`${game.created_by === me ? '내가' : `${nameOf(game.created_by)}님이`} 건 내기`} />
+          </div>
+        )}
         {status === 'invited' && !phase && (
           <p className="play-room__timer">
             <b>{formatRemaining(inviteRemainingMs(game, now))}</b>

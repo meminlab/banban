@@ -6,10 +6,10 @@
  */
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
-import type { Game, GameEndReason, GameMove, GameRule, GameStatus, StackBest } from './types';
+import type { Game, GameEndReason, GameKind, GameMove, GameRule, GameStatus, StackBest, StackBoardRow, StackGarbage } from './types';
 
 const GAME_COLUMNS =
-  'id, ledger_id, kind, black_id, white_id, status, winner_id, end_reason, move_count, created_by, rematch_of, created_at, invite_expires_at, started_at, last_move_at, finished_at, rule, turn_deadline, draw_offer_by, draw_offer_count';
+  'id, ledger_id, kind, black_id, white_id, status, winner_id, end_reason, move_count, created_by, rematch_of, created_at, invite_expires_at, started_at, last_move_at, finished_at, rule, turn_deadline, draw_offer_by, draw_offer_count, bet, seed';
 const MOVE_COLUMNS = 'game_id, ledger_id, seq, x, y, member_id, created_at';
 
 export type GameErrorCode =
@@ -31,7 +31,13 @@ export type GameErrorCode =
   | 'GAME_DRAW_PENDING'
   | 'GAME_DRAW_TOO_SOON'
   | 'GAME_NOT_DRAW_TARGET'
-  | 'STACK_BAD_SCORE';
+  | 'STACK_BAD_SCORE'
+  | 'GAME_BAD_KIND'
+  | 'GAME_BAD_BET'
+  | 'STACK_BAD_STATE'
+  | 'STACK_BAD_CLEAR'
+  | 'STACK_BAD_SEQ'
+  | 'STACK_BAD_REASON';
 
 const CODES: GameErrorCode[] = [
   'NOT_IN_LEDGER',
@@ -53,6 +59,12 @@ const CODES: GameErrorCode[] = [
   'GAME_DRAW_TOO_SOON',
   'GAME_NOT_DRAW_TARGET',
   'STACK_BAD_SCORE',
+  'GAME_BAD_KIND',
+  'GAME_BAD_BET',
+  'STACK_BAD_STATE',
+  'STACK_BAD_CLEAR',
+  'STACK_BAD_SEQ',
+  'STACK_BAD_REASON',
 ];
 
 /** 서버가 거부한 요청 (code 로 문구를 고른다). 네트워크 오류는 그대로 던진다 */
@@ -84,6 +96,12 @@ export interface GameResult {
   /** 서버 지금 시각 (화면 시계 보정) */
   server_now?: string;
   seq?: number;
+  finished_at?: string | null;
+  /** 반반 쌓기 대전: 상대가 마지막으로 보인(저장한) 시각 */
+  opp_seen_at?: string | null;
+  /** 반반 쌓기 대전 보내기: 서버가 정한 영수증 줄 수·빈칸 */
+  lines?: number;
+  hole?: number;
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
@@ -130,13 +148,22 @@ export async function listMoves(gameId: string): Promise<GameMove[]> {
   return (data ?? []) as GameMove[];
 }
 
-/** 오목 초대 (흑 = 초대받은 사람). rematchOf 를 주면 그 판의 흑백을 바꾼다("한 판 더"). 새 판 id */
-export function inviteGame(ledgerId: string, opponentId: string, rematchOf?: string): Promise<string> {
+/**
+ * 초대. 오목 = 흑이 초대받은 사람, rematchOf 를 주면 그 판의 흑백을 바꾼다("한 판 더").
+ * 반반 쌓기 대전 = kind 'stack_vs' + 내기 문구(선택, 1~30자). 새 판 id
+ */
+export function inviteGame(
+  ledgerId: string,
+  opponentId: string,
+  rematchOf?: string,
+  opts: { kind?: GameKind; bet?: string | null } = {},
+): Promise<string> {
   return rpc<string>('invite_game', {
     p_ledger_id: ledgerId,
     p_opponent: opponentId,
-    p_kind: 'omok',
+    p_kind: opts.kind ?? 'omok',
     p_rematch_of: rematchOf ?? null,
+    p_bet: opts.bet ?? null,
   });
 }
 
@@ -323,4 +350,134 @@ export interface StackScoreResult {
 export async function recordStackScore(ledgerId: string, amount: number, lines: number): Promise<StackScoreResult> {
   const r = await rpc<StackScoreResult>('record_stack_score', { p_ledger_id: ledgerId, p_amount: amount, p_lines: lines });
   return { ...r, previous_best: r.previous_best == null ? null : Number(r.previous_best), best_amount: Number(r.best_amount) };
+}
+
+/* ───────────────────────── 반반 쌓기 대전 (BANB-55) ───────────────────────── */
+
+/** 두 사람의 판 저장본 (돌아왔을 때 이어서 · 결과의 지운 줄 · 거의 동시) */
+export async function listStackBoards(gameId: string): Promise<StackBoardRow[]> {
+  const { data, error } = await getSupabase()
+    .from('game_stack_board')
+    .select('member_id, state, lines, seen_at, topped_out_at')
+    .eq('game_id', gameId);
+  if (error) throw error;
+  return (data ?? []) as StackBoardRow[];
+}
+
+/** 이 판에서 오간 방해 줄 묶음 (순번 순) */
+export async function listStackGarbage(gameId: string): Promise<StackGarbage[]> {
+  const { data, error } = await getSupabase()
+    .from('game_stack_garbage')
+    .select('game_id, ledger_id, from_member, seq, cleared, lines, hole, created_at')
+    .eq('game_id', gameId)
+    .order('seq');
+  if (error) throw error;
+  return (data ?? []) as StackGarbage[];
+}
+
+/** 판 저장 (2초마다·앱을 내릴 때). state = null 이면 "보임" 시각만. 끊김으로 닫혔으면 applied = false */
+export function stackVsSave(gameId: string, state: unknown, lines: number): Promise<GameResult> {
+  return rpc<GameResult>('stack_vs_save', { p_game_id: gameId, p_state: state ?? null, p_lines: lines });
+}
+
+/** 방해 줄 보내기 (한 번에 2줄 이상). seq = 내 보내기 순번(1부터). 같은 순번 다시 = 한 번만 */
+export function stackVsSend(gameId: string, seq: number, cleared: number): Promise<GameResult> {
+  return rpc<GameResult>('stack_vs_send', { p_game_id: gameId, p_seq: seq, p_cleared: cleared });
+}
+
+/** 끝내기: 맨 위에 닿음 / 그만하기 — 부른 사람이 진다. 이미 끝났으면 applied = false */
+export function stackVsEnd(gameId: string, reason: 'topout' | 'quit'): Promise<GameResult> {
+  return rpc<GameResult>('stack_vs_end', { p_game_id: gameId, p_reason: reason });
+}
+
+/** 끊김 확정: 서버가 30초 넘게 없는 사람이 있을 때만 닫는다. 아직이면 GAME_NOT_TIMED_OUT */
+export function stackVsClaimDisconnect(gameId: string): Promise<GameResult> {
+  return rpc<GameResult>('stack_vs_claim_disconnect', { p_game_id: gameId });
+}
+
+export interface StackVsPreview {
+  cells: string;
+  lines: number;
+  sent: number;
+  danger: boolean;
+}
+
+interface StackVsHandlers {
+  onGarbage: (row: StackGarbage) => void;
+  onGame: (game: Game) => void;
+  onPresence: (memberIds: string[]) => void;
+  onPreview: (memberId: string, preview: StackVsPreview) => void;
+  onEmoji: (memberId: string, index: number) => void;
+  onResync: () => void;
+  onConnected?: (connected: boolean) => void;
+}
+
+export interface StackVsRoom {
+  stop: () => void;
+  /** 내 판 미리보기 (저장하지 않는 broadcast) */
+  sendPreview: (preview: StackVsPreview) => void;
+  /** 이모지 반응 (저장하지 않는 broadcast) */
+  sendEmoji: (index: number) => void;
+  /** 앱을 내렸다/돌아왔다 — Presence 에서 빠지거나 다시 들어간다 (상대 화면 30초 세기) */
+  setHere: (here: boolean) => void;
+}
+
+/**
+ * 대전 한 판의 실시간 (채널 1개):
+ *  - Postgres Changes: 방해 줄 INSERT(받는 사람 판에 올라감) · 판 UPDATE(시작·끝). 구독자 RLS 적용
+ *  - Presence: 지금 대전 화면을 보고 있는 멤버 (앱을 내리면 빠진다 → 상대 화면 "연결이 잠깐 끊겼어요")
+ *  - Broadcast: 판 미리보기(0.5초마다 바뀌었을 때만) · 이모지 반응. 저장하지 않고, 보낸 사람 자신에게는 오지 않는다
+ */
+export function subscribeStackVsRoom(gameId: string, myMemberId: string, handlers: StackVsHandlers): StackVsRoom {
+  const sb = getSupabase();
+  const channel = sb.channel(`stackvs:${gameId}`, { config: { presence: { key: myMemberId }, broadcast: { self: false } } });
+  let here = true;
+  let subscribed = false;
+  let connected: boolean | null = null;
+  channel
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_stack_garbage', filter: `game_id=eq.${gameId}` }, (p) =>
+      handlers.onGarbage(p.new as StackGarbage),
+    )
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game', filter: `id=eq.${gameId}` }, (p) =>
+      handlers.onGame(p.new as Game),
+    )
+    .on('presence', { event: 'sync' }, () => handlers.onPresence(Object.keys(channel.presenceState())))
+    .on('broadcast', { event: 'preview' }, ({ payload }) => {
+      const p = payload as { m?: string } & Partial<StackVsPreview>;
+      if (p.m && typeof p.cells === 'string')
+        handlers.onPreview(p.m, { cells: p.cells, lines: Number(p.lines) || 0, sent: Number(p.sent) || 0, danger: p.danger === true });
+    })
+    .on('broadcast', { event: 'emoji' }, ({ payload }) => {
+      const p = payload as { m?: string; e?: number };
+      if (p.m && typeof p.e === 'number') handlers.onEmoji(p.m, p.e);
+    });
+  watchStatus(
+    channel,
+    handlers.onResync,
+    () => {
+      subscribed = true;
+      if (here) void channel.track({ at: Date.now() });
+    },
+    (up) => {
+      if (!up) subscribed = false;
+      if (connected === up) return;
+      connected = up;
+      handlers.onConnected?.(up);
+    },
+  );
+  const send = (event: string, payload: Record<string, unknown>) => {
+    if (subscribed) void channel.send({ type: 'broadcast', event, payload: { m: myMemberId, ...payload } });
+  };
+  return {
+    stop: () => void sb.removeChannel(channel),
+    sendPreview: (p) => send('preview', { ...p }),
+    sendEmoji: (e) => send('emoji', { e }),
+    setHere: (h) => {
+      if (h === here) return;
+      here = h;
+      if (!subscribed) return;
+      if (h) void channel.track({ at: Date.now() });
+      else void channel.untrack();
+    },
+  };
 }

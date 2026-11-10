@@ -1625,3 +1625,101 @@ a.play-card:focus-visible { outline: 3px solid var(--color-primary); outline-off
   .stack-fading { animation: none; opacity: 0; }
   .stack-board { transition: none; }
 }
+
+/* ── 반반 쌓기 대전 (BANB-55, design.md 1.9 · 5.36~5.39) ── */
+/* 영수증 줄: 흰 종이 + 갈색 테두리, 빈칸 쪽은 찢긴 지그재그 (StackBoard drawReceipts) */
+.stack-receipt { fill: var(--color-receipt-paper); stroke: var(--color-receipt-line); }
+.stack-receipt__ink line { stroke: var(--color-receipt-ink); }
+
+/* 미니게임 행이 버튼일 때 (상대 고르기 시트를 연다) */
+button.play-game { width: 100%; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+button.play-game:disabled { cursor: default; }
+
+/* 내기 상자 (받는 쪽 배너·홈 카드·대기실·한 판 더) */
+.play-bet { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--color-surface-sunken); color: var(--color-text-sub); text-align: left; }
+.play-bet svg { flex: none; }
+.play-bet__body { display: flex; min-width: 0; flex-direction: column; }
+.play-bet__label { font-size: 0.75rem; color: var(--color-text-sub); }
+.play-bet__text { font-size: 0.9375rem; font-weight: 600; color: var(--color-text); overflow-wrap: anywhere; }
+.play-banner .play-bet, .play-card .play-bet { margin-top: 4px; }
+.play-room__bet { width: 100%; max-width: 360px; margin-top: 16px; }
+.play-sheet .play-bet { width: 100%; margin-bottom: 8px; }
+
+/* 상대 고르기 시트 + 내기 걸기 */
+.play-invite-sheet { display: flex; flex-direction: column; gap: 16px; }
+.play-invite-sheet .play-send { min-height: 52px; }
+.play-bet-field { display: flex; flex-direction: column; gap: 8px; }
+.play-bet-field__label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9375rem; font-weight: 600; }
+.play-bet-field__hint { font-size: 0.8125rem; font-weight: 400; color: var(--color-text-sub); }
+.play-bet-field__box { position: relative; }
+.play-bet-field__box .input { width: 100%; min-height: 52px; padding-right: 64px; }
+.play-bet-field__count { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 0.8125rem; color: var(--color-text-weak); font-variant-numeric: tabular-nums; pointer-events: none; }
+
+/* 대전 화면 */
+.vs-shell .topbar { position: relative; }
+.vs-react.is-cooling { color: var(--color-text-weak); }
+.vs-react.is-cooling::after { content: ''; position: absolute; inset: 8px; border-radius: 50%; border: 2px solid var(--color-border-strong); border-top-color: var(--color-primary); animation: play-spin 1s linear infinite; }
+.vs-react { position: relative; }
+.vs-emoji-picker { position: fixed; top: calc(56px + var(--safe-top, 0px)); right: max(12px, calc(50% - 240px + 12px)); z-index: 20; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: var(--color-surface); box-shadow: 0 6px 20px rgb(0 0 0 / 0.16); }
+.vs-emoji { width: 44px; height: 44px; border: 0; border-radius: 50%; background: none; font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.vs-emoji:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
+.vs-info { display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: 100px; padding: 6px 12px; }
+.vs-opp { position: relative; display: flex; gap: 8px; flex: 1; min-width: 0; height: 88px; padding: 2px; border-radius: var(--control-radius, 12px); box-shadow: inset 0 0 0 1px var(--color-border); }
+.vs-opp.is-danger { box-shadow: inset 0 0 0 2px var(--color-primary); }
+.vs-opp__mini { position: relative; flex: none; width: 48px; height: 84px; border-radius: 8px; background: var(--color-stack-board); overflow: hidden; }
+.vs-opp.is-away .vs-opp__mini svg { opacity: 0.35; }
+.vs-opp__off { position: absolute; inset: 0; margin: auto; color: var(--color-text-sub); }
+.vs-mini { display: block; }
+.vs-mini__coin { fill: var(--color-piece-coin); }
+.vs-mini__bill { fill: var(--color-piece-bill); }
+.vs-mini__wallet { fill: var(--color-piece-wallet); }
+.vs-mini__piggy { fill: var(--color-piece-piggy); }
+.vs-mini__receipt { fill: var(--color-receipt-paper); stroke: var(--color-receipt-line); stroke-width: 0.8; }
+.vs-opp__body { display: flex; min-width: 0; flex-direction: column; justify-content: center; gap: 2px; padding-right: 6px; }
+.vs-opp__name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.9375rem; font-weight: 600; }
+.vs-opp__name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-opp__stat { font-size: 0.75rem; color: var(--color-text-sub); white-space: nowrap; }
+.vs-opp__stat b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.vs-bubble { position: absolute; top: 50%; left: auto; right: 8px; z-index: 5; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 4px 14px rgb(0 0 0 / 0.16); font-size: 2rem; line-height: 1; pointer-events: none; animation: vs-pop var(--motion-fast, 150ms) ease-out; }
+.vs-bubble::before { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); border: 6px solid transparent; border-left: 0; border-right-color: var(--color-surface); }
+@keyframes vs-pop { from { transform: translateY(-50%) scale(0.7); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
+.vs-mine { display: flex; flex: none; flex-direction: column; align-items: flex-end; font-size: 0.75rem; color: var(--color-text-sub); white-space: nowrap; }
+.vs-mine__label { font-size: 0.8125rem; }
+.vs-mine__lines { font-size: 1.5rem; line-height: 1.75rem; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.vs-mine__meta b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.stack-next.vs-next { width: 56px; height: 64px; }
+.vs-board-row { display: flex; align-items: stretch; gap: 6px; }
+.vs-receipts { position: relative; flex: none; width: 26px; display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-radius: 8px; background: var(--color-surface-sunken); }
+.vs-receipts__icon { color: var(--color-text-weak); }
+.vs-receipts__stack { display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; margin-top: auto; }
+.vs-receipts__count { order: 99; font-size: 0.8125rem; font-weight: 800; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.vs-receipts__paper path { fill: var(--color-receipt-paper); stroke: var(--color-receipt-line); }
+.vs-receipts__paper line { stroke: var(--color-receipt-ink); }
+.vs-board-wrap.is-rising .stack-board { animation: vs-rise 250ms ease-out; }
+@keyframes vs-rise { from { transform: translateY(var(--stack-cell, 36px)); } to { transform: translateY(0); } }
+.vs-pill { position: absolute; top: 16px; left: 50%; z-index: 2; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px; max-width: calc(100% - 16px); padding: 8px 14px; border-radius: 999px; font-size: 0.875rem; font-weight: 700; white-space: nowrap; pointer-events: none; }
+.vs-pill--sent, .vs-pill--info { background: var(--color-inverse-surface); color: var(--color-on-inverse); }
+.vs-pill--received { background: var(--color-surface); color: var(--color-text); box-shadow: inset 0 0 0 1.5px var(--color-receipt-line); }
+.vs-pill--top { top: 16px; }
+.vs-away-backdrop { position: fixed; inset: 0; z-index: 12; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgb(0 0 0 / 0.25); }
+.vs-away { width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 20px; border-radius: 16px; background: var(--color-surface); text-align: center; }
+.vs-away__ring { position: relative; width: 96px; height: 96px; margin-bottom: 8px; }
+.vs-away__ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.875rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.vs-away__track { fill: none; stroke: var(--color-surface-sunken); }
+.vs-away__arc { fill: none; stroke: var(--color-primary); stroke-linecap: round; transition: stroke-dashoffset 250ms linear; }
+.vs-away__title { margin: 0; word-break: keep-all; font-size: 1.25rem; font-weight: 700; }
+.vs-away__desc { margin: 0; word-break: keep-all; font-size: 0.9375rem; color: var(--color-text-sub); line-height: 1.5; }
+.vs-away__note { margin: 4px 0 0; word-break: keep-all; font-size: 0.8125rem; color: var(--color-text-sub); }
+.vs-end-error { position: fixed; left: 16px; right: 16px; bottom: calc(96px + var(--safe-bottom)); z-index: 12; }
+/* 결과: 내기 상자 · 숫자 2칸 */
+.vs-bet-result { display: flex; width: 100%; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; padding: 14px 12px; border-radius: 16px; background: var(--color-primary-soft); }
+.vs-bet-result__bet { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--color-text-sub); overflow-wrap: anywhere; }
+.vs-bet-result__who { font-size: 1.375rem; font-weight: 800; color: var(--color-primary-strong); }
+.vs-stats { display: grid; width: 100%; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.vs-stats__cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 64px; border-radius: 12px; background: var(--color-surface-sunken); font-size: 0.8125rem; color: var(--color-text-sub); }
+.vs-stats__cell b { font-size: 1.375rem; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .vs-board-wrap.is-rising .stack-board, .vs-bubble { animation: none; }
+  .vs-react.is-cooling::after { animation: none; }
+  .vs-away__arc { transition: none; }
+}

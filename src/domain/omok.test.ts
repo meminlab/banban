@@ -44,6 +44,8 @@ function game(over: Partial<Game> = {}): Game {
     id: 'g1',
     ledger_id: 'l1',
     kind: 'omok',
+    bet: null,
+    seed: null,
     black_id: B,
     white_id: A,
     status: 'active',
@@ -323,5 +325,24 @@ describe('무승부 제안', () => {
     expect(canOfferDraw(game({ draw_offer_count: 0 }), B)).toBe(false); // 거절당한 같은 차례 (DR-06)
     expect(canOfferDraw(game({ move_count: 2, draw_offer_count: 0 }), B)).toBe(true);
     expect(canOfferDraw(game({ status: 'finished' }), B)).toBe(false);
+  });
+});
+
+describe('게임 종류 (BANB-55)', () => {
+  it('전적은 종류마다 따로 (오목 / 반반 쌓기 대전)', async () => {
+    const { headToHead, inviteMessage, gameName } = await import('./omok');
+    const done = (kind: Game['kind'], winner: string, id: string) => game({ id, kind, status: 'finished', winner_id: winner, end_reason: kind === 'omok' ? 'five' : 'topout' });
+    const games = [done('omok', A, 'o1'), done('stack_vs', B, 's1'), done('stack_vs', B, 's2')];
+    expect(headToHead(games, A, B)).toEqual({ win: 1, loss: 0, draw: 0 });
+    expect(headToHead(games, A, B, 'stack_vs')).toEqual({ win: 0, loss: 2, draw: 0 });
+    expect(inviteMessage('민지', 'stack_vs')).toBe('민지님이 반반 쌓기 대전을 하재요');
+    expect(inviteMessage('민지')).toBe('민지님이 오목 한 판 하자고 해요');
+    expect(gameName('stack_vs')).toBe('반반 쌓기 대전');
+  });
+
+  it('반반 쌓기 대전은 24시간 중단을 화면에서 보지 않는다 (서버 30초 끊김으로 닫음)', async () => {
+    const { effectiveStatus } = await import('./omok');
+    const g = game({ kind: 'stack_vs', rule: 'stack_vs', status: 'active', started_at: iso(-30 * HOUR), last_move_at: null });
+    expect(effectiveStatus(g, NOW)).toBe('active');
   });
 });

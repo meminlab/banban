@@ -32,6 +32,62 @@ function gridOf(board: Board | null, active: Active | null): Grid {
   return g;
 }
 
+/**
+ * 영수증 줄 (BANB-55, design.md 5.38): 줄마다 종이 영수증 1장. 빈칸 왼쪽·오른쪽 조각을 각각 한 덩어리로,
+ * 벽 쪽 끝은 곧게 · 빈칸 쪽 끝은 찢긴 지그재그(이 4개, 깊이 s × 0.12). 칸마다 인쇄 글자 막대 2줄
+ */
+function drawReceipts(g: Grid, s: number): ReactElement[] {
+  const gap = Math.max(1.5, s * 0.06);
+  const depth = s * 0.12;
+  const rows = new Map<number, { y: number; xs: number[] }>();
+  for (const [k, c] of g) {
+    if (c.kind !== 'receipt') continue;
+    const [x, y] = k.split(',').map(Number);
+    const r = rows.get(c.id) ?? { y, xs: [] };
+    r.xs.push(x);
+    rows.set(c.id, r);
+  }
+  const out: ReactElement[] = [];
+  for (const [id, { y, xs }] of rows) {
+    xs.sort((a, b) => a - b);
+    // 이어진 칸끼리 한 조각
+    const segs: [number, number][] = [];
+    for (const x of xs) {
+      const last = segs[segs.length - 1];
+      if (last && last[1] === x - 1) last[1] = x;
+      else segs.push([x, x]);
+    }
+    const top = y * s + gap;
+    const bottom = y * s + s - gap;
+    const h = bottom - top;
+    segs.forEach(([a, b], i) => {
+      const left = a * s + (a === 0 ? 0 : gap);
+      const right = (b + 1) * s - (b === COLS - 1 ? 0 : gap);
+      const pts: string[] = [`${left},${top}`, `${right},${top}`];
+      // 오른쪽 끝: 벽이면 곧게, 아니면 지그재그
+      if (b === COLS - 1) pts.push(`${right},${bottom}`);
+      else for (let t = 1; t <= 8; t++) pts.push(`${right - (t % 2 ? depth : 0)},${top + (h * t) / 8}`);
+      pts.push(`${left},${bottom}`);
+      if (a !== 0) for (let t = 7; t >= 1; t--) pts.push(`${left + (t % 2 ? depth : 0)},${top + (h * t) / 8}`);
+      out.push(<polygon key={`rc${id}:${i}`} className="stack-receipt" points={pts.join(' ')} strokeWidth={1.5} strokeLinejoin="round" />);
+      for (let x = a; x <= b; x++) {
+        const w = Math.max(1.5, s * 0.07);
+        const pad = s * 0.18;
+        // 칸마다 길이를 조금씩 다르게 (자리로 정해지는 값 — 다시 그려도 같다)
+        const k1 = ((x * 7 + y * 3) % 5) / 10;
+        const k2 = ((x * 3 + y * 5 + 2) % 5) / 10;
+        out.push(
+          <g key={`ri${id}:${x}`} className="stack-receipt__ink" strokeWidth={w} strokeLinecap="round">
+            <line x1={x * s + pad} y1={y * s + s * 0.36} x2={x * s + s - pad - k1 * s * 0.4} y2={y * s + s * 0.36} />
+            <line x1={x * s + pad} y1={y * s + s * 0.66} x2={x * s + s - pad - k2 * s * 0.4} y2={y * s + s * 0.66} />
+          </g>,
+        );
+      }
+    });
+  }
+  return out;
+}
+
 function drawPieces(g: Grid, s: number): ReactElement[] {
   const gap = Math.max(1.5, s * 0.06);
   const rx = s * 0.2;
@@ -42,6 +98,7 @@ function drawPieces(g: Grid, s: number): ReactElement[] {
   const coins: ReactElement[] = [];
 
   for (const [k, c] of g) {
+    if (c.kind === 'receipt') continue;
     const [x, y] = k.split(',').map(Number);
     const X = x * s;
     const Y = y * s;
@@ -109,7 +166,7 @@ function drawPieces(g: Grid, s: number): ReactElement[] {
         </g>,
       );
   }
-  return [...outline, ...tiles, ...deco, ...bridges, ...coins];
+  return [...drawReceipts(g, s), ...outline, ...tiles, ...deco, ...bridges, ...coins];
 }
 
 export function StackBoard({
@@ -181,7 +238,7 @@ export function StackIllustration({ size = 26 }: { size?: number }) {
     const deco = PIECES[kind].deco;
     shapeOf(kind, rot).forEach(([x, y], i) => g.set(`${ox + x},${oy + y}`, { id, kind, deco: deco === i }));
   };
-  // 맨 아래 줄은 한 칸(x = 4)만 비워 "한 줄을 채우면 저금"을 보여 준다
+  // 맨 아래 줄은 한 칸(x = 4)만 비워 "한 줄을 채우면 사라짐"을 보여 준다
   put('wallet', 0, 0, 2, 1);
   put('coin2', 0, 2, 3, 2);
   put('bent', 0, 5, 2, 3);

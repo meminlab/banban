@@ -1,6 +1,7 @@
 /**
  * 반반 쌓기 1인 모드 (BANB-52, design.md 5.33~5.35) — 화면과 분리된 순수 게임 규칙.
- * 판 8칸 × 14줄, 조각 6종(1·2·3·3·4·5칸). 한 줄을 채우면 "저금"되어 사라지고 모은 돈이 오른다.
+ * 판 8칸 × 14줄, 조각 6종(1·2·3·3·4·5칸). 한 줄을 채우면 사라지고 점수가 오른다.
+ * 점수는 돈(원)이 아니라 "점"으로 표시한다 (클라이언트 결정 2026-11-10, BANB-55) — DB 값(best_amount)은 숫자 그대로
  * 시간은 화면이 step(state, ms)로 흘려 준다(테스트에서 시간을 직접 넣을 수 있게).
  */
 
@@ -38,8 +39,8 @@ export const PIECES: Record<PieceKind, PieceDef> = {
 
 export const PIECE_KINDS = Object.keys(PIECES) as PieceKind[];
 
-/** 한 번에 지운 줄 수 → 모은 돈 (1줄 1,000 · 2줄 3,000 · 3줄 6,000) */
-export const CLEAR_AMOUNT = [0, 1000, 3000, 6000] as const;
+/** 한 번에 지운 줄 수 → 점수 (1줄 10 · 2줄 30 · 3줄 60, 클라이언트 결정 2026-11-10 — 예전 1,000 · 3,000 · 6,000의 1/100) */
+export const CLEAR_AMOUNT = [0, 10, 30, 60] as const;
 /** 속도 1의 한 칸 떨어지는 시간 */
 export const BASE_FALL_MS = 800;
 export const MIN_FALL_MS = 120;
@@ -51,10 +52,13 @@ export const LOCK_MS = 400;
 /** 좌우 버튼을 길게 누를 때 반복 간격 */
 export const REPEAT_MS = 150;
 
-/** 판 칸: 비었으면 null. id 가 같은 칸끼리 한 조각으로 이어 그린다 */
+/** 판 칸 종류: 조각 6종 + 대전 영수증 줄 (BANB-55, design.md 5.38) */
+export type CellKind = PieceKind | 'receipt';
+
+/** 판 칸: 비었으면 null. id 가 같은 칸끼리 한 조각으로 이어 그린다 (영수증 줄은 줄마다 다른 id) */
 export interface BoardCell {
   id: number;
-  kind: PieceKind;
+  kind: CellKind;
   /** 무늬 칸 */
   deco: boolean;
 }
@@ -71,7 +75,14 @@ export interface Active {
 export type StackEvent =
   | { type: 'clear'; rows: number[]; count: number; amount: number }
   | { type: 'level'; level: number }
+  | { type: 'garbage'; lines: number }
   | { type: 'over' };
+
+/** 대전 방해 줄 묶음 (BANB-55): lines 줄, 줄마다 hole 칸이 빈다 (같은 묶음은 같은 자리) */
+export interface GarbageBatch {
+  lines: number;
+  hole: number;
+}
 
 export interface StackState {
   board: Board;
@@ -90,6 +101,8 @@ export interface StackState {
   clearing: { rows: number[]; leftMs: number } | null;
   over: boolean;
   nextId: number;
+  /** 대전: 받았지만 아직 올라오지 않은 영수증 줄. 다음 조각을 놓을 때 바닥에서 올라온다 (1인 모드는 늘 빈 목록) */
+  garbage: GarbageBatch[];
   /** 마지막 동작에서 일어난 일 (화면이 알림·진동에 쓴다) */
   events: StackEvent[];
 }
@@ -231,12 +244,41 @@ export function newGame(rng: Rng): StackState {
     clearing: null,
     over: false,
     nextId: 2,
+    garbage: [],
     events: [],
   };
 }
 
-/** 다음 조각을 꺼낸다. 나올 자리가 막혀 있으면 끝 */
-function spawnNext(s: StackState, rng: Rng, events: StackEvent[]): StackState {
+/**
+ * 영수증 줄을 바닥에 올린다 (BANB-55, design.md 5.38): 줄마다 판 전체가 한 줄 위로 밀리고 바닥에 hole 칸만 빈 줄이 생긴다.
+ * 맨 위 줄에 칸이 있는데 밀려 나가면 overflow(= 맨 위에 닿음)
+ */
+export function addGarbage(board: Board, batches: readonly GarbageBatch[], nextId: number): { board: Board; nextId: number; overflow: boolean } {
+  let b = board;
+  let id = nextId;
+  let overflow = false;
+  for (const batch of batches) {
+    const hole = Math.min(COLS - 1, Math.max(0, Math.floor(batch.hole)));
+    for (let i = 0; i < batch.lines; i++) {
+      if (b[0].some((c) => c !== null)) overflow = true;
+      const rowId = id++;
+      const row = Array.from({ length: COLS }, (_, x) => (x === hole ? null : { id: rowId, kind: 'receipt' as const, deco: false }));
+      b = [...b.slice(1), row];
+    }
+  }
+  return { board: b, nextId: id, overflow };
+}
+
+/** 다음 조각을 꺼낸다(받은 영수증 줄이 있으면 먼저 올린다). 나올 자리가 막혀 있으면 끝 */
+function spawnNext(state: StackState, rng: Rng, events: StackEvent[]): StackState {
+  let s = state;
+  if (s.garbage.length > 0) {
+    const lines = s.garbage.reduce((n, g) => n + g.lines, 0);
+    const up = addGarbage(s.board, s.garbage, s.nextId);
+    events = [...events, { type: 'garbage', lines }];
+    s = { ...s, board: up.board, nextId: up.nextId, garbage: [] };
+    if (up.overflow) return { ...s, active: null, over: true, events: [...events, { type: 'over' }] };
+  }
   const active = spawnAt(s.next, s.nextId);
   const next = pickPiece(s.recent, rng);
   const recent = [...s.recent, next].slice(-2);
@@ -247,7 +289,8 @@ function spawnNext(s: StackState, rng: Rng, events: StackEvent[]): StackState {
 }
 
 /** 지금 조각을 판에 고정 → 꽉 찬 줄이 있으면 지우는 중으로, 없으면 다음 조각 */
-function lock(s: StackState, rng: Rng, clearMs: number): StackState {
+function lock(s: StackState, opt: StepOptions): StackState {
+  const { rng, clearMs } = opt;
   if (!s.active) return s;
   const a = s.active;
   const board = s.board.map((row) => row.slice());
@@ -261,7 +304,8 @@ function lock(s: StackState, rng: Rng, clearMs: number): StackState {
 
   const amount = amountFor(rows.length);
   const lines = s.lines + rows.length;
-  const level = levelFor(lines);
+  // 대전은 속도를 시간으로 정한다(화면이 level 을 넣어 준다) — 줄 수로 바꾸지 않는다
+  const level = opt.timeLevel ? s.level : levelFor(lines);
   const events: StackEvent[] = [...s.events, { type: 'clear', rows, count: rows.length, amount }];
   if (level > s.level) events.push({ type: 'level', level });
   const scored: StackState = { ...locked, score: s.score + amount, lines, level, events };
@@ -279,6 +323,8 @@ export interface StepOptions {
   rng: Rng;
   /** 줄 지우는 연출 시간 (줄인 움직임이면 0) */
   clearMs: number;
+  /** 대전 (BANB-55): 속도를 지운 줄로 올리지 않는다 (화면이 지난 시간으로 level 을 정함) */
+  timeLevel?: boolean;
 }
 
 /**
@@ -317,7 +363,7 @@ export function step(state: StackState, ms: number, opt: StepOptions): StackStat
         left = 0;
       } else {
         left -= need;
-        s = lock(s, opt.rng, opt.clearMs);
+        s = lock(s, opt);
       }
     }
   }
@@ -360,16 +406,21 @@ export function act(state: StackState, action: StackAction, opt: StepOptions): S
       return fits(s.board, m) ? { ...s, active: m, fallMs: 0, lockMs: null } : state;
     }
     case 'hard':
-      return lock({ ...s, active: dropPosition(s.board, a) }, opt.rng, opt.clearMs);
+      return lock({ ...s, active: dropPosition(s.board, a) }, opt);
   }
 }
 
 // ───────────────────────── 문구 (해요체, design.md 5.34)
 
+/** 점수 "12,000점" (원·저금처럼 돈을 떠올리지 않게, 클라이언트 결정 2026-11-10) */
+export function formatPoints(points: number): string {
+  return `${Math.max(0, Math.round(points)).toLocaleString('ko-KR')}점`;
+}
+
 export function clearMessage(count: number): string {
   if (count >= 3) return '세 줄 한꺼번에! 대단해요';
-  if (count === 2) return '두 줄 한 번에 저금했어요!';
-  return '한 줄 저금했어요!';
+  if (count === 2) return '두 줄 한 번에 지웠어요!';
+  return '한 줄 지웠어요!';
 }
 
 export const levelMessage = (level: number) => `속도 ${level}${hasFinalConsonant(String(level)) ? '이에요' : '예요'}. 조금 빨라져요`;
@@ -409,13 +460,13 @@ export interface EndView {
   /** 원을 primary-soft 로 (새 최고 기록) */
   highlight: boolean;
   title: string;
-  /** 멤버 비교 줄: 'beat' = "○○님 기록 N원을 넘었어요", 'show' = "○○님 최고 기록 N원이에요", null = 숨김 */
+  /** 멤버 비교 줄: 'beat' = "○○님 기록 N점을 넘었어요", 'show' = "○○님 최고 기록 N점이에요", null = 숨김 */
   compare: 'beat' | 'show' | null;
-  /** 기록을 못 넘었으면 "내 최고 기록 N원" 줄 */
+  /** 기록을 못 넘었으면 "내 최고 기록 N점" 줄 */
   showMyBest: boolean;
-  /** 0원이면 "한 줄만 채워도 1,000원이에요" */
+  /** 0점이면 "한 줄만 채워도 10점이에요" */
   zeroNote: boolean;
-  /** 서버에 기록을 보낼지 (0원 판은 기록하지 않는다) */
+  /** 서버에 기록을 보낼지 (0점 판은 기록하지 않는다) */
   save: boolean;
 }
 

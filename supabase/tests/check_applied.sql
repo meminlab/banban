@@ -20,6 +20,9 @@
 --           (game·game_move 행이 추가되어 15행. 둘 다 policies 1)
 --           game_renju = true (20261110000000 마이그레이션: game.rule 기본 renju_lite·빈 값 없음, 시간 초과·무승부 함수 로그인 사용자만, 33 판정 함수 실행 불가)
 --             RL-05 옛 판 확인: select rule, status, count(*) from public.game group by 1, 2; → 마이그레이션 전 판은 모두 free
+--           game_stack_vs = true (20261110100000 마이그레이션: 반반 쌓기 대전 — game.kind stack_vs·내기·순서 값, 판 저장본·방해 줄 테이블 직접 쓰기 불가,
+--             대전 함수 로그인 사용자만, invite_game 5개 인자(종류·내기), 실시간 발행에 game_stack_garbage)
+--           (game_stack_board·game_stack_garbage 행이 추가되어 18행. 둘 다 policies 1)
 --           (leave_rpc 는 20261106150000 이후 leave_ledger(uuid) 기준)
 select c.relname                                          as table_name,
        c.relrowsecurity                                   as rls_enabled,
@@ -117,7 +120,7 @@ select c.relname                                          as table_name,
         and not has_table_privilege('authenticated', 'public.game_move', 'insert')
         and has_function_privilege('authenticated', 'public.play_move(uuid,integer,integer)', 'execute')
         and not has_function_privilege('anon', 'public.play_move(uuid,integer,integer)', 'execute')
-        and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid)', 'execute')
+        and has_function_privilege('authenticated', 'public.invite_game(uuid,uuid,text,uuid,text)', 'execute')
         and has_function_privilege('authenticated', 'public.cancel_game(uuid)', 'execute')
         and not has_function_privilege('authenticated', 'public.game_close_stale(uuid)', 'execute')
         and (select count(*) from pg_publication_tables where pubname = 'supabase_realtime'
@@ -135,11 +138,28 @@ select c.relname                                          as table_name,
         and has_function_privilege('authenticated', 'public.respond_draw(uuid,boolean)', 'execute')
         and not has_function_privilege('anon', 'public.claim_turn_timeout(uuid)', 'execute')
         and not has_function_privilege('authenticated', 'public.omok_is_double_three(int[],int[],int,int)', 'execute')
-        and not has_table_privilege('authenticated', 'public.game', 'update')) as game_renju
+        and not has_table_privilege('authenticated', 'public.game', 'update')) as game_renju,
+       (to_regclass('public.game_stack_board') is not null
+        and to_regclass('public.game_stack_garbage') is not null
+        and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'game' and column_name = 'bet')
+        and (select pg_get_constraintdef(oid) like '%stack_vs%' from pg_constraint
+              where conrelid = 'public.game'::regclass and conname = 'game_kind_check')
+        and to_regprocedure('public.invite_game(uuid,uuid,text,uuid)') is null
+        and not has_table_privilege('authenticated', 'public.game_stack_board', 'insert')
+        and not has_table_privilege('authenticated', 'public.game_stack_board', 'update')
+        and not has_table_privilege('authenticated', 'public.game_stack_garbage', 'insert')
+        and has_function_privilege('authenticated', 'public.stack_vs_save(uuid,jsonb,integer)', 'execute')
+        and has_function_privilege('authenticated', 'public.stack_vs_send(uuid,integer,integer)', 'execute')
+        and has_function_privilege('authenticated', 'public.stack_vs_end(uuid,text)', 'execute')
+        and has_function_privilege('authenticated', 'public.stack_vs_claim_disconnect(uuid)', 'execute')
+        and not has_function_privilege('anon', 'public.stack_vs_send(uuid,integer,integer)', 'execute')
+        and not has_function_privilege('authenticated', 'public.stack_vs_close_overdue(public.game)', 'execute')
+        and (select count(*) from pg_publication_tables where pubname = 'supabase_realtime'
+              and schemaname = 'public' and tablename = 'game_stack_garbage') = 1) as game_stack_vs
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move', 'game_stack_best')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move', 'game_stack_best', 'game_stack_board', 'game_stack_garbage')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)
@@ -152,3 +172,12 @@ select active_ledgers, count(*) as users from (
 
 -- BANB-24 카테고리 아이콘 채움 현황 (기대: 기본 카테고리는 icon 있음. 비어 있는 것은 이름 바꾼 기본값·직접 만든 것뿐)
 select (icon is not null) as has_icon, (parent_id is null) as is_parent, count(*) from public.category group by 1, 2 order by 1, 2;
+
+-- BANB-55 점수 단위 1/100 (20261110100000): 마이그레이션 적용 "전"과 "후"에 각각 실행해 결과를 PR·이슈에 남긴다
+--   기대: rows 같음 · 후 sum = 전 sum / 100 · 후 not_unit10 = 0 · 후 out_of_rule = 0
+select count(*) as rows,
+       coalesce(sum(best_amount), 0) as sum_amount,
+       min(best_amount) as min_amount, max(best_amount) as max_amount,
+       count(*) filter (where best_amount % 10 <> 0) as not_unit10,
+       count(*) filter (where best_amount not between best_lines * 10 and best_lines * 20) as out_of_rule
+from public.game_stack_best;

@@ -206,12 +206,23 @@ export type LedgerRpcError =
   | 'NOT_IN_LEDGER';
 
 /** 같이 놀기 (BANB-49). 쓰기는 DB 함수로만(invite_game / respond_game / play_move / resign_game / sweep_games) */
-export type GameKind = 'omok';
+/** omok = 오목 / stack_vs = 반반 쌓기 대전 (BANB-55) */
+export type GameKind = 'omok' | 'stack_vs';
 export type GameStatus = 'invited' | 'active' | 'finished' | 'declined' | 'canceled' | 'expired' | 'abandoned';
 /** five·resign·turn_timeout = 승자 있음 / draw(판이 참)·draw_agreed(무승부 합의) = 무 / timeout = 24시간 중단(free 판) */
-export type GameEndReason = 'five' | 'resign' | 'draw' | 'timeout' | 'turn_timeout' | 'draw_agreed';
+export type GameEndReason =
+  | 'five'
+  | 'resign'
+  | 'draw'
+  | 'timeout'
+  | 'turn_timeout'
+  | 'draw_agreed'
+  /** 반반 쌓기 대전 (BANB-55): 먼저 맨 위에 닿음 / 그만하기 / 30초 안에 못 돌아옴 — 모두 그 사람 패 */
+  | 'topout'
+  | 'quit'
+  | 'disconnect';
 /** 판의 룰 (BANB-53): free = 옛 판(시간 제한 없음·24시간 중단·33 허용) / renju_lite = 33 금지 + 한 수 30초. 서버만 정한다 */
-export type GameRule = 'free' | 'renju_lite';
+export type GameRule = 'free' | 'renju_lite' | 'stack_vs';
 
 export interface Game {
   id: string;
@@ -239,6 +250,31 @@ export interface Game {
   draw_offer_by: string | null;
   /** 마지막 무승부 제안 때의 move_count (다시 제안은 move_count 가 이보다 클 때) */
   draw_offer_count: number | null;
+  /** 반반 쌓기 대전 내기 문구 (초대한 사람, 1~30자). 오목·내기 없음 = null */
+  bet: string | null;
+  /** 반반 쌓기 대전 조각 순서 값 (두 사람 같은 값). 오목 = null */
+  seed: number | null;
+}
+
+/** 반반 쌓기 대전 사람별 판 저장본 (BANB-55) */
+export interface StackBoardRow {
+  member_id: string;
+  state: unknown;
+  lines: number;
+  seen_at: string;
+  topped_out_at: string | null;
+}
+
+/** 반반 쌓기 대전 방해 줄 묶음 (서버가 장수·빈칸을 정함) */
+export interface StackGarbage {
+  game_id: string;
+  ledger_id: string;
+  from_member: string;
+  seq: number;
+  cleared: number;
+  lines: number;
+  hole: number;
+  created_at: string;
 }
 
 export interface GameMove {

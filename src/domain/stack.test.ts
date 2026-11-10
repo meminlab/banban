@@ -164,26 +164,26 @@ describe('떨어지기·고정 (design.md 5.34)', () => {
 });
 
 describe('줄 저금', () => {
-  it('모은 돈: 1줄 1,000 · 2줄 3,000 · 3줄 6,000', () => {
-    expect([0, 1, 2, 3].map(amountFor)).toEqual([0, 1000, 3000, 6000]);
+  it('점수: 1줄 10 · 2줄 30 · 3줄 60', () => {
+    expect([0, 1, 2, 3].map(amountFor)).toEqual([0, 10, 30, 60]);
   });
 
-  it('한 줄 채우면 지우고 1,000원, 위 칸이 내려온다', () => {
+  it('한 줄 채우면 지우고 10점, 위 칸이 내려온다', () => {
     const b = filledBoard([13], 7);
     b[12][0] = { id: 77, kind: 'coin1', deco: false };
     const s = stateWith(b, 'coin1', 7, 0);
     const r = act(s, 'hard', opt);
-    expect(r.score).toBe(1000);
+    expect(r.score).toBe(10);
     expect(r.lines).toBe(1);
-    expect(r.events).toContainEqual({ type: 'clear', rows: [13], count: 1, amount: 1000 });
+    expect(r.events).toContainEqual({ type: 'clear', rows: [13], count: 1, amount: 10 });
     expect(r.board[13][0]?.kind).toBe('coin1');
     expect(r.board[13].filter(Boolean)).toHaveLength(1);
   });
 
-  it('세로 지폐로 세 줄을 한 번에 → 6,000원', () => {
+  it('세로 지폐로 세 줄을 한 번에 → 60점', () => {
     const b = filledBoard([11, 12, 13], 0);
     const r = act(stateWith(b, 'bill', 0, 0, 1), 'hard', opt);
-    expect(r.score).toBe(6000);
+    expect(r.score).toBe(60);
     expect(r.lines).toBe(3);
     expect(r.board.every((row) => row.every((c) => c === null))).toBe(true);
   });
@@ -262,8 +262,8 @@ describe('끝 판정', () => {
 
 describe('문구', () => {
   it('줄 저금·속도 알림', () => {
-    expect(clearMessage(1)).toBe('한 줄 저금했어요!');
-    expect(clearMessage(2)).toBe('두 줄 한 번에 저금했어요!');
+    expect(clearMessage(1)).toBe('한 줄 지웠어요!');
+    expect(clearMessage(2)).toBe('두 줄 한 번에 지웠어요!');
     expect(clearMessage(3)).toBe('세 줄 한꺼번에! 대단해요');
     expect(levelMessage(3)).toBe('속도 3이에요. 조금 빨라져요');
     expect(levelMessage(2)).toBe('속도 2예요. 조금 빨라져요');
