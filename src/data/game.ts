@@ -6,7 +6,8 @@
  */
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabase } from './supabase';
-import type { Game, GameEndReason, GameKind, GameMove, GameRule, GameStatus, StackBest, StackBoardRow, StackGarbage } from './types';
+import type { Drag, TenBest } from '../domain/ten';
+import type { Game, GameEndReason, GameKind, GameMove, GameRule, GameStatus, StackBest, StackBoardRow, StackGarbage, TenBoardRow } from './types';
 
 const GAME_COLUMNS =
   'id, ledger_id, kind, black_id, white_id, status, winner_id, end_reason, move_count, created_by, rematch_of, created_at, invite_expires_at, started_at, last_move_at, finished_at, rule, turn_deadline, draw_offer_by, draw_offer_count, bet, seed';
@@ -37,7 +38,9 @@ export type GameErrorCode =
   | 'STACK_BAD_STATE'
   | 'STACK_BAD_CLEAR'
   | 'STACK_BAD_SEQ'
-  | 'STACK_BAD_REASON';
+  | 'STACK_BAD_REASON'
+  | 'TEN_BAD_SEED'
+  | 'TEN_BAD_DRAGS';
 
 const CODES: GameErrorCode[] = [
   'NOT_IN_LEDGER',
@@ -65,6 +68,8 @@ const CODES: GameErrorCode[] = [
   'STACK_BAD_CLEAR',
   'STACK_BAD_SEQ',
   'STACK_BAD_REASON',
+  'TEN_BAD_SEED',
+  'TEN_BAD_DRAGS',
 ];
 
 /** 서버가 거부한 요청 (code 로 문구를 고른다). 네트워크 오류는 그대로 던진다 */
@@ -102,6 +107,9 @@ export interface GameResult {
   /** 반반 쌓기 대전 보내기: 서버가 정한 영수증 줄 수·빈칸 */
   lines?: number;
   hole?: number;
+  /** 도토리 열 알 대전: 서버가 다시 센 내 점수 · (끝난 판이면) 상대 점수 */
+  my_score?: number;
+  opp_score?: number | null;
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
@@ -479,5 +487,117 @@ export function subscribeStackVsRoom(gameId: string, myMemberId: string, handler
       if (h) void channel.track({ at: Date.now() });
       else void channel.untrack();
     },
+  };
+}
+
+/* ───────────────────────── 도토리 열 알 (BANB-57) ───────────────────────── */
+
+/** 1인 최고 기록 (가계부 × 멤버 1개, 같은 가계부 현재 멤버만 읽기) */
+export async function listTenBests(ledgerId: string): Promise<TenBest[]> {
+  const { data, error } = await getSupabase().from('game_ten_best').select('member_id, best_score').eq('ledger_id', ledgerId);
+  if (error) throw error;
+  return (data ?? []) as TenBest[];
+}
+
+export interface TenScoreResult {
+  /** 서버가 순서 값 + 드래그 기록으로 다시 센 점수 (화면 점수 대신 이 값을 보여 준다) */
+  score: number;
+  previous_best: number | null;
+  best_score: number | null;
+  is_new: boolean;
+}
+
+/** 1인 판이 끝날 때 1번: 서버가 다시 세어 더 높을 때만 바꾼다 (0점은 저장 안 함) */
+export function recordTenScore(ledgerId: string, seed: number, drags: readonly Drag[]): Promise<TenScoreResult> {
+  return rpc<TenScoreResult>('record_ten_score', { p_ledger_id: ledgerId, p_seed: seed, p_drags: drags });
+}
+
+/** 대전 기록 (판이 끝나기 전에는 내 것만 읽힌다) */
+export async function listTenBoards(gameId: string): Promise<TenBoardRow[]> {
+  const { data, error } = await getSupabase().from('game_ten_board').select('member_id, drags, score, final, saved_at').eq('game_id', gameId);
+  if (error) throw error;
+  return (data ?? []) as TenBoardRow[];
+}
+
+/**
+ * 대전 기록 저장 (터진 네모 전부, 처음부터). final = 마감 뒤 마지막 1번.
+ * 서버가 다시 센 점수(my_score)를 돌려준다. 마감 + 5초가 지났거나 끝난 판이면 applied = false + 지금 상태
+ */
+export function tenVsSave(gameId: string, drags: readonly Drag[], final: boolean): Promise<GameResult> {
+  return rpc<GameResult>('ten_vs_save', { p_game_id: gameId, p_drags: drags, p_final: final });
+}
+
+/** 그만하기 = 내가 진다 */
+export function tenVsQuit(gameId: string): Promise<GameResult> {
+  return rpc<GameResult>('ten_vs_quit', { p_game_id: gameId });
+}
+
+/** 결과 확정: 마감 + 5초가 지났을 때만 마지막으로 받은 점수로 닫는다. 아직이면 GAME_NOT_TIMED_OUT */
+export function tenVsSettle(gameId: string): Promise<GameResult> {
+  return rpc<GameResult>('ten_vs_settle', { p_game_id: gameId });
+}
+
+interface TenVsHandlers {
+  onGame: (game: Game) => void;
+  onPresence: (memberIds: string[]) => void;
+  /** 상대 화면 점수 (참고용, 저장 안 함) */
+  onScore: (memberId: string, score: number) => void;
+  onEmoji: (memberId: string, index: number) => void;
+  onResync: () => void;
+  onConnected?: (connected: boolean) => void;
+}
+
+export interface TenVsRoom {
+  stop: () => void;
+  /** 내 화면 점수 (broadcast, 0.5초마다 바뀌었을 때만) */
+  sendScore: (score: number) => void;
+  sendEmoji: (index: number) => void;
+}
+
+/**
+ * 도토리 열 알 대전 한 판의 실시간 (채널 1개):
+ *  - Postgres Changes: 판 UPDATE(시작·끝). 구독자 RLS 적용
+ *  - Presence: 지금 대전 화면을 보고 있는 멤버 (빠지면 상대 알약 "연결 끊김" — 판은 멈추지 않는다)
+ *  - Broadcast: 화면 점수 · 이모지 반응. 저장하지 않고, 보낸 사람 자신에게는 오지 않는다
+ */
+export function subscribeTenVsRoom(gameId: string, myMemberId: string, handlers: TenVsHandlers): TenVsRoom {
+  const sb = getSupabase();
+  const channel = sb.channel(`tenvs:${gameId}`, { config: { presence: { key: myMemberId }, broadcast: { self: false } } });
+  let subscribed = false;
+  let connected: boolean | null = null;
+  channel
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game', filter: `id=eq.${gameId}` }, (p) =>
+      handlers.onGame(p.new as Game),
+    )
+    .on('presence', { event: 'sync' }, () => handlers.onPresence(Object.keys(channel.presenceState())))
+    .on('broadcast', { event: 'score' }, ({ payload }) => {
+      const p = payload as { m?: string; s?: number };
+      if (p.m && typeof p.s === 'number') handlers.onScore(p.m, p.s);
+    })
+    .on('broadcast', { event: 'emoji' }, ({ payload }) => {
+      const p = payload as { m?: string; e?: number };
+      if (p.m && typeof p.e === 'number') handlers.onEmoji(p.m, p.e);
+    });
+  watchStatus(
+    channel,
+    handlers.onResync,
+    () => {
+      subscribed = true;
+      void channel.track({ at: Date.now() });
+    },
+    (up) => {
+      if (!up) subscribed = false;
+      if (connected === up) return;
+      connected = up;
+      handlers.onConnected?.(up);
+    },
+  );
+  const send = (event: string, payload: Record<string, unknown>) => {
+    if (subscribed) void channel.send({ type: 'broadcast', event, payload: { m: myMemberId, ...payload } });
+  };
+  return {
+    stop: () => void sb.removeChannel(channel),
+    sendScore: (score) => send('score', { s: score }),
+    sendEmoji: (e) => send('emoji', { e }),
   };
 }

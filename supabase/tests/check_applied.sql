@@ -155,11 +155,20 @@ select c.relname                                          as table_name,
         and not has_function_privilege('anon', 'public.stack_vs_send(uuid,integer,integer)', 'execute')
         and not has_function_privilege('authenticated', 'public.stack_vs_close_overdue(public.game)', 'execute')
         and (select count(*) from pg_publication_tables where pubname = 'supabase_realtime'
-              and schemaname = 'public' and tablename = 'game_stack_garbage') = 1) as game_stack_vs
+              and schemaname = 'public' and tablename = 'game_stack_garbage') = 1) as game_stack_vs,
+       -- BANB-57 도토리 열 알 (20261110200000): 대전 종류·판 계산·기록 함수, 1인 기록. 기대: true
+       (select to_regclass('public.game_ten_best') is not null and to_regclass('public.game_ten_board') is not null
+        and has_function_privilege('authenticated', 'public.record_ten_score(uuid,bigint,jsonb)', 'execute')
+        and has_function_privilege('authenticated', 'public.ten_vs_save(uuid,jsonb,boolean)', 'execute')
+        and has_function_privilege('authenticated', 'public.ten_vs_quit(uuid)', 'execute')
+        and has_function_privilege('authenticated', 'public.ten_vs_settle(uuid)', 'execute')
+        and not has_function_privilege('authenticated', 'public.ten_replay(bigint,jsonb)', 'execute')
+        and array_to_string(public.ten_board(12345), '') like '228278914719738259522249%'
+        and pg_get_constraintdef((select oid from pg_constraint where conname = 'game_kind_check')) like '%ten_vs%') as game_ten
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
-  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move', 'game_stack_best', 'game_stack_board', 'game_stack_garbage')
+  and c.relname in ('ledger', 'member', 'invite', 'category', 'pocket', 'transaction', 'asset', 'profile', 'user_preference', 'asset_balance_history', 'event', 'recurring_transaction', 'recurring_occurrence', 'game', 'game_move', 'game_stack_best', 'game_stack_board', 'game_stack_garbage', 'game_ten_best', 'game_ten_board')
 order by c.relname;
 
 -- 가계부 상한 분포 (BANB-16 적용 후 기대: member_limit = 4 한 줄만)

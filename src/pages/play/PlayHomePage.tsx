@@ -1,23 +1,24 @@
-import { ChevronRight, Grid3x3, PiggyBank, Receipt, Vibrate } from 'lucide-react';
+import { ChevronRight, Grid3x3, Nut, PiggyBank, Receipt, Swords, Vibrate } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGames, useMemberName, useNow } from '../../app/games';
 import { useLedgerId } from '../../app/guards';
-import { MEMBERS_PATH, STACK_PATH, gamePath } from '../../app/routes';
+import { MEMBERS_PATH, STACK_PATH, TEN_PATH, gamePath } from '../../app/routes';
 import { useLoad } from '../../app/useLoad';
 import { PlayInviteBanner } from '../../components/PlayInvite';
 import { PlayInviteSheet } from '../../components/PlayInviteSheet';
 import { StatusScreen } from '../../components/StatusScreen';
 import { SubPageTopbar } from '../../components/SubPageTopbar';
-import { listFinishedGames, listStackBests } from '../../data/game';
+import { listFinishedGames, listStackBests, listTenBests } from '../../data/game';
 import type { GameKind } from '../../data/types';
 import { readGameVibrate, saveGameVibrate } from '../../data/gamePrefs';
-import { formatHeadToHead, gameName, headToHead, myOpenGame, opponentOf, turnText } from '../../domain/omok';
+import { formatHeadToHead, gameName, headToHead, isVsKind, myOpenGame, opponentOf, turnText } from '../../domain/omok';
 import { formatPoints, myBest } from '../../domain/stack';
+import { myTenBest, points } from '../../domain/ten';
 
 /**
- * 미니게임 화면 (BANB-49 → v1.8 → v1.9, design.md 5.32·5.36): 두던 판 → 게임 목록
- * (둘이 같이: 오목 · 반반 쌓기 대전 / 혼자서: 반반 쌓기) · 진동 설정.
+ * 미니게임 화면 (BANB-49 → v1.8 → v1.9 → v1.10, design.md 5.32·5.36·5.42): 두던 판 → 게임 목록
+ * (둘이 같이: 오목 · 반반 쌓기 대전 · 도토리 열 알 대전 / 혼자서: 반반 쌓기 · 도토리 열 알) · 진동 설정.
  * 둘이 하는 게임 행을 누르면 상대 고르기 시트(멤버 2명이면 미리 골라 둠, 대전은 내기 걸기) → "○○님 초대하기" → 대기실.
  * 진행 중인 판이 있으면 새 초대는 막는다(한 사람 진행 중 판 1개). 혼자 쓰는 가계부도 반반 쌓기는 할 수 있다.
  */
@@ -29,6 +30,7 @@ export function PlayHomePage() {
   const now = useNow(1000);
   const finished = useLoad(() => listFinishedGames(ledgerId), [ledgerId]);
   const stackBests = useLoad(() => listStackBests(ledgerId), [ledgerId]);
+  const tenBests = useLoad(() => listTenBests(ledgerId), [ledgerId]);
   const [vibrateOn, setVibrateOn] = useState(readGameVibrate);
   const [sheet, setSheet] = useState<GameKind | null>(null);
   const location = useLocation();
@@ -62,15 +64,17 @@ export function PlayHomePage() {
     if (!r || !withId || r.win + r.loss + r.draw === 0) return null;
     return (
       <>
-        {nameOf(withId)}님과 <b>{kind === 'stack_vs' ? `${r.win}승 ${r.loss}패` : formatHeadToHead(r)}</b>
+        {nameOf(withId)}님과 <b>{isVsKind(kind) ? `${r.win}승 ${r.loss}패${r.draw > 0 ? ` ${r.draw}무` : ''}` : formatHeadToHead(r)}</b>
       </>
     );
   }
   const duoBlocked = mine ? '두던 판을 끝내면 새로 할 수 있어요' : others.length === 0 ? '같이 쓰는 멤버가 있어야 해요' : null;
   const stackBest = stackBests.state.status === 'ready' ? myBest(stackBests.state.data, me) : null;
+  const tenBest = tenBests.state.status === 'ready' ? myTenBest(tenBests.state.data, me) : null;
   const duoGames: { kind: GameKind; icon: ReactNode; desc: string }[] = [
     { kind: 'omok', icon: <Grid3x3 size={24} />, desc: '다섯 개를 먼저 이으면 이겨요' },
     { kind: 'stack_vs', icon: <Receipt size={24} />, desc: '줄을 지워 영수증을 보내요' },
+    { kind: 'ten_vs', icon: <Swords size={24} />, desc: '같은 판으로 2분 동안 겨뤄요' },
   ];
 
   return (
@@ -86,11 +90,11 @@ export function PlayHomePage() {
             <p className="play-panel__title">
               {nameOf(opponentOf(mine.game, me))}님과 {gameName(mine.game.kind)} ·{' '}
               <span className="is-accent">
-                {mine.kind === 'waiting' ? '답을 기다리는 중' : mine.game.kind === 'stack_vs' ? '대전 중' : turnText(mine.game, me, nameOf)}
+                {mine.kind === 'waiting' ? '답을 기다리는 중' : isVsKind(mine.game.kind) ? '대전 중' : turnText(mine.game, me, nameOf)}
               </span>
             </p>
             <Link to={gamePath(mine.game)} className="button button--primary button--block play-link-button">
-              {mine.game.kind === 'stack_vs' ? '이어서 하기' : mine.kind === 'playing' ? '이어 두기' : '이어서 두기'}
+              {isVsKind(mine.game.kind) ? '이어서 하기' : mine.kind === 'playing' ? '이어 두기' : '이어서 두기'}
             </Link>
           </section>
         )}
@@ -152,6 +156,26 @@ export function PlayHomePage() {
                 <ChevronRight size={20} aria-hidden="true" className="play-game__arrow" />
               </Link>
             </li>
+            <li>
+              <Link to={TEN_PATH} className="play-game play-game--link">
+                <span className="play-game__icon" aria-hidden="true">
+                  <Nut size={24} />
+                </span>
+                <span className="play-game__body">
+                  <span className="play-game__name">도토리 열 알</span>
+                  <span className="play-game__desc">
+                    {tenBest !== null ? (
+                      <>
+                        내 최고 <b>{points(tenBest)}</b>
+                      </>
+                    ) : (
+                      '합이 10이 되게 도토리를 묶어요'
+                    )}
+                  </span>
+                </span>
+                <ChevronRight size={20} aria-hidden="true" className="play-game__arrow" />
+              </Link>
+            </li>
           </ul>
         </section>
         <section className="play-panel" aria-label="진동">
@@ -160,7 +184,7 @@ export function PlayHomePage() {
             <span className="switch-row__text">
               <span className="switch-row__label">진동</span>
               <span className="switch-row__sub" id="play-vibrate-sub">
-                줄을 지우거나 끝날 때 짧게 울려요
+                줄을 지우거나 도토리를 모을 때 짧게 울려요
               </span>
             </span>
             <input

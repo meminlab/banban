@@ -15,6 +15,7 @@ import {
   opponentOf,
   turnMemberId,
   turnText,
+  isVsKind,
   type MyOpenGame,
 } from '../domain/omok';
 import { Dialog } from './Dialog';
@@ -296,9 +297,9 @@ export function PlayHomeCard() {
   if (mine) {
     const g = mine.game;
     const opp = nameOf(opponentOf(g, me));
-    const vs = g.kind === 'stack_vs';
+    const vs = isVsKind(g.kind);
     const title =
-      mine.kind === 'waiting' ? `${opp}님 답을 기다리고 있어요` : vs ? `${opp}님과 반반 쌓기 대전 중` : turnText(g, me, nameOf);
+      mine.kind === 'waiting' ? `${opp}님 답을 기다리고 있어요` : vs ? `${opp}님과 ${gameName(g.kind)} 중` : turnText(g, me, nameOf);
     const sub =
       mine.kind === 'waiting'
         ? `${gameName(g.kind)} · ${minutesLeftText(inviteRemainingMs(g, now))}`

@@ -102,6 +102,11 @@
   --color-receipt-paper: #FFFFFF;
   --color-receipt-line: #7D7365;
   --color-receipt-ink: #A99F90;
+  /* 도토리 열 알 숫자 도토리 (design.md 1.10, 테마 공통) */
+  --color-acorn-body: #E2AE72;
+  --color-acorn-cap: #7A4E24;
+  --color-acorn-edge: #8A5A2B;
+  --color-acorn-ink: #3D2408;
 
   color-scheme: light dark;
 }
@@ -137,6 +142,10 @@
     --color-receipt-paper: #E6DED0;
     --color-receipt-line: #7A6F60;
     --color-receipt-ink: #9C917F;
+    --color-acorn-body: #C68F55;
+    --color-acorn-cap: #8C5F33;
+    --color-acorn-edge: #E8C9A0;
+    --color-acorn-ink: #24160A;
     --shadow-sm: none;
     --shadow-md: none;
     --shadow-lg: none;

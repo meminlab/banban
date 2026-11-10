@@ -74,6 +74,7 @@ import {
   turnText,
   winningLine,
   zoomOrigin as zoomOriginFor,
+  isVsKind,
   type ResultIcon,
   type Stone,
 } from '../../domain/omok';
@@ -355,14 +356,16 @@ export function WaitingRoom({
   const opp = opponentOf(game, me);
   const oppName = nameOf(opp);
   const iInvited = game.created_by === me;
-  const vs = game.kind === 'stack_vs';
+  const vs = isVsKind(game.kind);
 
   let copy = roomCopy(status, game, me, nameOf);
   if (phase === 'both') {
     copy = {
       title: '둘 다 왔어요!',
-      desc: vs
-        ? '같은 조각이 같은 순서로 나와요. 곧 시작해요'
+      desc: game.kind === 'ten_vs'
+        ? '같은 판으로 같이 시작해요'
+        : vs
+          ? '같은 조각이 같은 순서로 나와요. 곧 시작해요'
         : game.black_id === me
           ? '내가 흑으로 먼저 둬요. 곧 시작해요'
           : `${oppName}님이 흑으로 먼저 둬요. 곧 시작해요`,

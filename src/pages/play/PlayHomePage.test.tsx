@@ -24,16 +24,19 @@ vi.mock('../../app/games', () => ({
 }));
 vi.mock('../../components/PlayInvite', () => ({ PlayInviteBanner: () => null, playErrorMessage: () => '' }));
 let bests: { member_id: string; best_amount: number; best_lines: number }[] = [];
+let tenBests: { member_id: string; best_score: number }[] = [];
 const inviteGame = vi.fn(async () => 'g1');
 vi.mock('../../data/game', () => ({
   listFinishedGames: async () => [],
   listStackBests: async () => bests,
+  listTenBests: async () => tenBests,
   inviteGame: (...args: unknown[]) => inviteGame(...(args as [])),
 }));
 
 describe('미니게임 화면 (BANB-52, design.md 5.32)', () => {
   beforeEach(() => {
     bests = [];
+    tenBests = [];
     localStorage.clear();
     games.members = games.members.slice(0, 2);
   });
@@ -58,6 +61,10 @@ describe('미니게임 화면 (BANB-52, design.md 5.32)', () => {
     expect(solo.compareDocumentPosition(screen.getByRole('switch', { name: /진동/ })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(duo).getByRole('button', { name: /오목/ })).toHaveTextContent('다섯 개를 먼저 이으면 이겨요');
     expect(within(duo).getByRole('button', { name: /반반 쌓기 대전/ })).toHaveTextContent('줄을 지워 영수증을 보내요');
+    expect(within(duo).getByRole('button', { name: /도토리 열 알 대전/ })).toHaveTextContent('같은 판으로 2분 동안 겨뤄요');
+    const ten = within(solo).getByRole('link', { name: /도토리 열 알/ });
+    expect(ten).toHaveAttribute('href', '/play/ten');
+    expect(ten).toHaveTextContent('합이 10이 되게 도토리를 묶어요');
     const stack = within(solo).getByRole('link', { name: /반반 쌓기/ });
     expect(stack).toHaveAttribute('href', '/play/stack');
     expect(stack).toHaveTextContent('동전을 쌓아 한 줄씩 지워요');
@@ -105,6 +112,27 @@ describe('미니게임 화면 (BANB-52, design.md 5.32)', () => {
     expect(screen.getByRole('link', { name: /반반 쌓기/ })).toHaveTextContent('내 최고 280점');
   });
 
+  it('도토리 열 알 대전 행 → "누구랑 할까요?" 시트 + 내기 → 초대 (kind ten_vs)', async () => {
+    inviteGame.mockClear();
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /도토리 열 알 대전/ }));
+    const sheet = screen.getByRole('dialog', { name: '누구랑 할까요?' });
+    expect(within(sheet).getByText(/같은 판으로 2분 동안/)).toBeInTheDocument();
+    fireEvent.change(within(sheet).getByLabelText(/내기 걸기/), { target: { value: '진 사람이 커피' } });
+    fireEvent.click(within(sheet).getByRole('button', { name: /준호님 초대하기/ }));
+    await waitFor(() => expect(inviteGame).toHaveBeenCalledWith('ledger-1', 'mB', undefined, { kind: 'ten_vs', bet: '진 사람이 커피' }));
+  });
+
+  it('도토리 열 알 행 보조 줄 = 내 최고 기록', async () => {
+    tenBests = [
+      { member_id: 'mA', best_score: 41 },
+      { member_id: 'mB', best_score: 52 },
+    ];
+    renderPage();
+    expect(await screen.findByText('41점')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /도토리 열 알/ })).toHaveTextContent('내 최고 41점');
+  });
+
   it('진동 스위치: 기본 꺼짐, 켜면 이 기기에 저장', async () => {
     renderPage();
     const sw = screen.getByRole('switch', { name: /진동/ });
@@ -117,9 +145,11 @@ describe('미니게임 화면 (BANB-52, design.md 5.32)', () => {
   it('혼자 쓰는 가계부: 둘이 하는 게임만 비활성 + "같이 쓰는 멤버가 있어야 해요", 반반 쌓기는 할 수 있다', () => {
     games.members = games.members.slice(0, 1);
     renderPage();
-    expect(screen.getAllByText('같이 쓰는 멤버가 있어야 해요')).toHaveLength(2);
+    expect(screen.getAllByText('같이 쓰는 멤버가 있어야 해요')).toHaveLength(3);
     expect(screen.getByRole('button', { name: /오목/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /반반 쌓기 대전/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /도토리 열 알 대전/ })).toBeDisabled();
     expect(screen.getByRole('link', { name: /반반 쌓기/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /도토리 열 알/ })).toBeInTheDocument();
   });
 });

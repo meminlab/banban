@@ -275,11 +275,15 @@ export function isBusy(games: readonly Game[], memberId: string, now: Date): boo
 const nim = (name: string) => `${name}님`;
 
 /** 게임 이름 */
-export const gameName = (kind: GameKind | undefined) => (kind === 'stack_vs' ? '반반 쌓기 대전' : '오목');
+export const gameName = (kind: GameKind | undefined) =>
+  kind === 'stack_vs' ? '반반 쌓기 대전' : kind === 'ten_vs' ? '도토리 열 알 대전' : '오목';
+
+/** 실시간 대전(반반 쌓기·도토리 열 알)인가 — 오목과 달리 차례가 없고 내기를 걸 수 있다 */
+export const isVsKind = (kind: GameKind | undefined) => kind === 'stack_vs' || kind === 'ten_vs';
 
 /** 초대 알림 문구 */
 export const inviteMessage = (inviterName: string, kind: GameKind = 'omok') =>
-  kind === 'stack_vs' ? `${nim(inviterName)}이 반반 쌓기 대전을 하재요` : `${nim(inviterName)}이 오목 한 판 하자고 해요`;
+  kind === 'omok' ? `${nim(inviterName)}이 오목 한 판 하자고 해요` : `${nim(inviterName)}이 ${gameName(kind)}을 하재요`;
 
 /** 초대 남은 시간 (분 단위, 홈 카드): "9분 남았어요" / 1분 미만 "곧 사라져요" */
 export function minutesLeftText(ms: number): string {
