@@ -1680,7 +1680,7 @@ button.play-game:disabled { cursor: default; }
 .vs-opp__name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vs-opp__stat { font-size: 0.75rem; color: var(--color-text-sub); white-space: nowrap; }
 .vs-opp__stat b { color: var(--color-text); font-variant-numeric: tabular-nums; }
-.vs-bubble { position: absolute; top: 50%; left: calc(100% + 4px); z-index: 5; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 4px 14px rgb(0 0 0 / 0.16); font-size: 2rem; line-height: 1; pointer-events: none; animation: vs-pop var(--motion-fast, 150ms) ease-out; }
+.vs-bubble { position: absolute; top: 50%; left: auto; right: 8px; z-index: 5; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; background: var(--color-surface); box-shadow: 0 4px 14px rgb(0 0 0 / 0.16); font-size: 2rem; line-height: 1; pointer-events: none; animation: vs-pop var(--motion-fast, 150ms) ease-out; }
 .vs-bubble::before { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); border: 6px solid transparent; border-left: 0; border-right-color: var(--color-surface); }
 @keyframes vs-pop { from { transform: translateY(-50%) scale(0.7); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
 .vs-mine { display: flex; flex: none; flex-direction: column; align-items: flex-end; font-size: 0.75rem; color: var(--color-text-sub); white-space: nowrap; }
@@ -1707,9 +1707,9 @@ button.play-game:disabled { cursor: default; }
 .vs-away__ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.875rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .vs-away__track { fill: none; stroke: var(--color-surface-sunken); }
 .vs-away__arc { fill: none; stroke: var(--color-primary); stroke-linecap: round; transition: stroke-dashoffset 250ms linear; }
-.vs-away__title { margin: 0; font-size: 1.25rem; font-weight: 700; }
-.vs-away__desc { margin: 0; font-size: 0.9375rem; color: var(--color-text-sub); line-height: 1.5; }
-.vs-away__note { margin: 4px 0 0; font-size: 0.8125rem; color: var(--color-text-sub); }
+.vs-away__title { margin: 0; word-break: keep-all; font-size: 1.25rem; font-weight: 700; }
+.vs-away__desc { margin: 0; word-break: keep-all; font-size: 0.9375rem; color: var(--color-text-sub); line-height: 1.5; }
+.vs-away__note { margin: 4px 0 0; word-break: keep-all; font-size: 0.8125rem; color: var(--color-text-sub); }
 .vs-end-error { position: fixed; left: 16px; right: 16px; bottom: calc(96px + var(--safe-bottom)); z-index: 12; }
 /* 결과: 내기 상자 · 숫자 2칸 */
 .vs-bet-result { display: flex; width: 100%; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; padding: 14px 12px; border-radius: 16px; background: var(--color-primary-soft); }
