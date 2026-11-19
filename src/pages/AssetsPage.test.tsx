@@ -331,6 +331,45 @@ it('자산을 추가하면 목록과 순자산이 바뀐다 (기본 소유자 = 
   expect(db.history).toHaveLength(1); // 생성 시 이력 1행 (AS-10)
 });
 
+it('이름 21자를 붙여넣으면 잘리지 않고 안내 후 저장되지 않는다 (BANB-13)', async () => {
+  const user = userEvent.setup();
+  renderAt('/assets/new');
+  await screen.findByRole('heading', { name: '자산 추가' });
+  const name = screen.getByLabelText('이름');
+  expect(name).not.toHaveAttribute('maxLength');
+  await user.click(name);
+  await user.paste('가'.repeat(21));
+  expect(name).toHaveValue('가'.repeat(21));
+  expect(screen.getByText('21/20')).toBeInTheDocument();
+  await user.type(screen.getByLabelText('잔액'), '1000');
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  expect(screen.getByText('이름은 20자까지 쓸 수 있어요')).toBeInTheDocument();
+  expect(name).toHaveAttribute('aria-invalid', 'true');
+  expect(db.assets).toHaveLength(0);
+});
+
+it('이모지 이름은 1개를 1자로 센다: 20개는 저장되고 21개는 거부된다 (BANB-13)', async () => {
+  const user = userEvent.setup();
+  renderAt('/assets/new');
+  await screen.findByRole('heading', { name: '자산 추가' });
+  const name = screen.getByLabelText('이름');
+  await user.click(name);
+  await user.paste('🐷'.repeat(21));
+  expect(screen.getByText('21/20')).toBeInTheDocument();
+  await user.type(screen.getByLabelText('잔액'), '1000');
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  expect(screen.getByText('이름은 20자까지 쓸 수 있어요')).toBeInTheDocument();
+  expect(db.assets).toHaveLength(0);
+
+  await user.clear(name);
+  await user.click(name);
+  await user.paste('🐷'.repeat(20));
+  expect(screen.getByText('20/20')).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  expect(await screen.findByText('저장했어요')).toBeInTheDocument();
+  expect(db.assets[0]).toMatchObject({ name: '🐷'.repeat(20) });
+});
+
 it('부채를 고르면 금액 라벨이 "잔액 (갚을 돈)" (AS-01·03)', async () => {
   const user = userEvent.setup();
   renderAt('/assets/new');

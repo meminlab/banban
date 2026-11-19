@@ -217,6 +217,11 @@ describe('validateDraft', () => {
     const r = validateDraft({ ...base, memo: '가'.repeat(101) }, valid);
     expect(r.ok ? null : r.errors.memo).toBeTruthy();
   });
+
+  it('메모 글자 수는 이모지 1개 = 1자 (BANB-13)', () => {
+    expect(validateDraft({ ...base, memo: '가😀'.repeat(50) }, valid).ok).toBe(true);
+    expect(validateDraft({ ...base, memo: '가😀'.repeat(50) + '가' }, valid).ok).toBe(false);
+  });
 });
 
 describe('키패드 입력 (5.15 v1.4)', () => {

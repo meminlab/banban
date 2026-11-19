@@ -13,7 +13,6 @@ import { listMembers } from '../data/member';
 import type { Asset, Member } from '../data/types';
 import {
   ASSET_KINDS,
-  ASSET_MEMO_MAX,
   ASSET_NAME_MAX,
   SHARED_OWNER_LABEL,
   ownerLabel,
@@ -194,6 +193,8 @@ function AssetForm({
     );
   const describedBy = (key: keyof AssetFormErrors) => (errors[key] ? `${id}-${key}-err` : undefined);
   const liability = isLiability(values.kind);
+  // 저장 기준(validateAssetForm: 앞뒤 공백 제거 후 코드 포인트 수)과 같게 센다 (BANB-13)
+  const nameCount = [...values.name.trim()].length;
 
   const kindGroup = (group: 'asset' | 'liability', legend: string) => (
     <fieldset className="kind-grid">
@@ -251,15 +252,14 @@ function AssetForm({
             <label htmlFor={`${id}-name`} className="field__label">
               이름
             </label>
-            <span className="field__count" aria-hidden="true">
-              {values.name.trim().length}/{ASSET_NAME_MAX}
+            <span className={`field__count${nameCount > ASSET_NAME_MAX ? ' is-over' : ''}`} aria-hidden="true">
+              {nameCount}/{ASSET_NAME_MAX}
             </span>
           </div>
           <input
             id={`${id}-name`}
             className="input"
             value={values.name}
-            maxLength={ASSET_NAME_MAX}
             placeholder={liability ? '예: 전세자금대출' : '예: 생활비 통장'}
             autoComplete="off"
             aria-invalid={!!errors.name}
@@ -295,7 +295,6 @@ function AssetForm({
             id={`${id}-memo`}
             className="input input--memo"
             value={values.memo}
-            maxLength={ASSET_MEMO_MAX}
             rows={2}
             aria-invalid={!!errors.memo}
             aria-describedby={describedBy('memo')}

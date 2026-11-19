@@ -157,6 +157,7 @@ function EventForm({
   const otherPinned = pinnedIds.filter((p) => p !== event?.id).length;
   const pinDisabled = !values.pinned && (otherPinned >= EVENT_PIN_MAX || pinFull);
   const trimmedTitle = values.title.trim();
+  const titleCount = [...trimmedTitle].length;
 
   // 누구: 함께 + 현재 멤버(참여 순). 수정 중인 일정의 대상이 나간 멤버면 그 사람도 남겨 둔다
   const targets: { id: string | null; label: string }[] = [
@@ -234,15 +235,14 @@ function EventForm({
               <label htmlFor={`${id}-title`} className="field__label">
                 제목
               </label>
-              <span className="field__count" aria-hidden="true">
-                {[...trimmedTitle].length}/{EVENT_TITLE_MAX}
+              <span className={`field__count${titleCount > EVENT_TITLE_MAX ? ' is-over' : ''}`} aria-hidden="true">
+                {titleCount}/{EVENT_TITLE_MAX}
               </span>
             </div>
             <input
               id={`${id}-title`}
               className="input"
               value={values.title}
-              maxLength={EVENT_TITLE_MAX}
               autoFocus={!event}
               autoComplete="off"
               placeholder="예: 결혼기념일"
@@ -660,11 +660,15 @@ function TimeSheet({ allDay, time, onDone }: { allDay: boolean; time: string; on
 function TextSheet({ label, max, initial, onDone }: { label: string; max: number; initial: string; onDone: (text: string) => void }) {
   const id = useId();
   const [value, setValue] = useState(initial);
+  // 저장 기준(앞뒤 공백 제거 후 코드 포인트 수, validateEventForm)과 같게 센다. maxLength 는 UTF-16 단위라 두지 않는다 (BANB-13)
+  const count = [...value.trim()].length;
+  const over = count > max;
   return (
     <form
       className="tx-sheet"
       onSubmit={(e) => {
         e.preventDefault();
+        if (over) return;
         onDone(value.trim());
       }}
     >
@@ -675,15 +679,20 @@ function TextSheet({ label, max, initial, onDone }: { label: string; max: number
         id={`${id}-text`}
         className="manage-input"
         type="text"
-        maxLength={max}
         autoFocus
         enterKeyHint="done"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        aria-describedby={`${id}-count`}
+        aria-invalid={over || undefined}
+        aria-describedby={over ? `${id}-err ${id}-count` : `${id}-count`}
       />
-      <p id={`${id}-count`} className="field__count">
-        {[...value].length}/{max}
+      {over && (
+        <p id={`${id}-err`} className="field__error" role="alert">
+          {label}는 {max}자까지 쓸 수 있어요
+        </p>
+      )}
+      <p id={`${id}-count`} className={`field__count${over ? ' is-over' : ''}`}>
+        {count}/{max}
       </p>
       <button type="submit" className="button button--primary button--block">
         완료

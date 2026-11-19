@@ -107,6 +107,13 @@ describe('validateAssetForm', () => {
     expect(validateAssetForm({ ...base, memo: 'a'.repeat(100) }).ok).toBe(true);
     expect(validateAssetForm({ ...base, memo: 'a'.repeat(101) }).ok).toBe(false);
   });
+
+  it('글자 수는 DB char_length 기준: 이모지 1개 = 1자 (BANB-13)', () => {
+    expect(validateAssetForm({ ...base, name: '🐷'.repeat(20) }).ok).toBe(true);
+    expect(validateAssetForm({ ...base, name: '🐷'.repeat(21) }).ok).toBe(false);
+    expect(validateAssetForm({ ...base, memo: '가😀'.repeat(50) }).ok).toBe(true);
+    expect(validateAssetForm({ ...base, memo: '가😀'.repeat(50) + '가' }).ok).toBe(false);
+  });
 });
 
 describe('updatedAgo / daysSinceKST', () => {
