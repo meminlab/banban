@@ -20,6 +20,14 @@ export class RecurringNotFoundError extends Error {
   }
 }
 
+/** 확인하려는 회차의 정기 내역이 그사이 일시정지됨 (제안 시트를 연 채 다른 멤버가 일시정지). 요청 전체가 취소된다 */
+export class RecurringPausedError extends Error {
+  constructor() {
+    super('RECURRING_PAUSED');
+    this.name = 'RecurringPausedError';
+  }
+}
+
 /** 정기 내역 저장 값: 내역 입력값(날짜·고정지출 제외) + 반복 + 일시정지 */
 export type RecurringInput = Omit<TransactionValues, 'occurred_on' | 'is_fixed'> & RecurringScheduleValues & { is_paused: boolean };
 
@@ -98,13 +106,14 @@ export interface RecordOutcome {
 
 /**
  * 회차 확인: 기록은 내역(source 'recurring', 날짜 = 회차 날짜)을 만들고, 건너뛰기는 회차만 남긴다.
- * 하나라도 틀린 요청이면 전체가 취소된다.
+ * 하나라도 틀린 요청이면 전체가 취소된다. 일시정지한 정기 내역이 섞이면 RecurringPausedError.
  */
 export async function recordRecurring(ledgerId: string, items: RecordItem[]): Promise<RecordOutcome[]> {
   const { data, error } = await getSupabase().rpc('record_recurring', {
     p_ledger_id: ledgerId,
     p_items: items.map((i) => ({ ...i, amount: i.amount ?? null })),
   });
+  if (error?.message?.includes('RECURRING_PAUSED')) throw new RecurringPausedError();
   if (error) throw error;
   return (data ?? []) as RecordOutcome[];
 }

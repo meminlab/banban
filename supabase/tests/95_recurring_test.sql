@@ -1,5 +1,5 @@
 -- BANB-44 정기 내역: 같은 가계부 멤버만 보고 쓴다 · 회차는 한 번만(기록/건너뛰기) · 기록한 내역은 source 'recurring'·회차 날짜
---   · 건너뛴 회차는 다른 멤버도 다시 기록 못 함 · 되돌리기 · 주기 규칙(말일·윤년)
+--   · 건너뛴 회차는 다른 멤버도 다시 기록 못 함 · 되돌리기 · 주기 규칙(말일·윤년) · 일시정지한 정기 내역 회차 거부(BANB-60)
 -- 한 트랜잭션으로 실행하고 마지막에 ROLLBACK
 -- 사용자: A·B (같은 가계부 L1), X (다른 가계부 LX)
 begin;
@@ -199,6 +199,33 @@ select test.expect_count($$select * from public.recurring_occurrence where occur
 delete from public.recurring_transaction where id = test.v('weekly');
 select test.expect_count($$select * from public.recurring_occurrence$$, 0);
 select test.expect_count($$select * from public.transaction where source = 'recurring' and occurred_on = test.today()$$, 1);
+
+-- ── 9. BANB-60 일시정지한 정기 내역의 회차는 기록·건너뛰기 모두 거부, 내역·회차가 생기지 않는다 (전체 취소)
+--   A 가 시트를 연 사이 B 가 일시정지한 상황
+insert into public.recurring_transaction (ledger_id, type, amount, category_id, pocket_id, spender_id, memo, cycle, weekday, start_on, created_by, updated_by)
+  values (test.v('l1'), 'expense', 12000, test.v('cat'), test.v('pocket'), test.v('m_에이'), '일시정지 테스트', 'weekly',
+          extract(dow from test.today())::int, test.today() - 14, test.v('m_에이'), test.v('m_에이'));
+insert into test.ctx select 'paused', id::text from public.recurring_transaction where memo = '일시정지 테스트';
+insert into test.ctx select 'salary', id::text from public.recurring_transaction where memo = '월급';
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000009b1';
+update public.recurring_transaction set is_paused = true where id = test.v('paused');
+set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000009a1';
+select test.expect_error($$select public.record_recurring(test.v('l1'), test.item(test.v('paused'), test.today(), true))$$, 'RECURRING_PAUSED');
+select test.expect_error($$select public.record_recurring(test.v('l1'), test.item(test.v('paused'), test.today() - 7, false))$$, 'RECURRING_PAUSED');
+-- 활성 정기 내역(월급 10월 말일)과 함께 보내도 전체 취소 → 월급 회차도 남지 않는다
+select test.expect_error($$select public.record_recurring(test.v('l1'),
+  test.item(test.v('salary'), '2026-10-31', true) || test.item(test.v('paused'), test.today(), true))$$, 'RECURRING_PAUSED');
+select test.expect_count($$select * from public.recurring_occurrence where recurring_id in (test.v('paused'), test.v('salary'))$$, 0);
+select test.expect_count($$select * from public.transaction where memo in ('일시정지 테스트', '월급')$$, 0);
+-- 활성 정기 내역은 지금처럼 기록된다
+select test.expect_count($$select 1 from jsonb_array_elements(public.record_recurring(test.v('l1'), test.item(test.v('salary'), '2026-10-31', true))) e
+  where (e->>'applied')::boolean and e->>'status' = 'recorded'$$, 1);
+select test.expect_count($$select * from public.transaction where source = 'recurring' and memo = '월급' and occurred_on = '2026-10-31' and amount = 3500000$$, 1);
+-- 일시정지를 풀면 다시 기록된다
+update public.recurring_transaction set is_paused = false where id = test.v('paused');
+select test.expect_count($$select 1 from jsonb_array_elements(public.record_recurring(test.v('l1'), test.item(test.v('paused'), test.today(), true))) e
+  where (e->>'applied')::boolean and e->>'status' = 'recorded'$$, 1);
+select test.expect_count($$select * from public.transaction where source = 'recurring' and memo = '일시정지 테스트' and occurred_on = test.today()$$, 1);
 
 reset role;
 select 'recurring tests passed' as result;
