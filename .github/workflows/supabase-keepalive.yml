@@ -1,0 +1,64 @@
+# Supabase 무료 플랜은 약 1주일 활동이 없으면 프로젝트를 일시정지한다.
+# 3일마다(그리고 수동 버튼으로) 공개 키로 DB에 가벼운 읽기 요청 1건을 보내 깨워 둔다.
+#
+# 필요한 Repository secrets (공개 키만 — secret/service_role 키 금지):
+#   SUPABASE_URL       https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY  publishable(anon) 키 (앱 번들에 들어가는 그 키)
+#
+# 성공 판정
+#   - 2xx: 정상 응답
+#   - 401 + PostgREST code 42501: 비로그인(anon)에는 테이블 권한을 주지 않으므로(init 마이그레이션)
+#     Postgres가 "permission denied"로 답한다. 요청이 DB까지 가서 처리됐다는 뜻이라 성공으로 본다.
+#     권한/RLS는 건드리지 않는다.
+#   - 그 외(키 오류 401, 일시정지·장애 5xx/540, 네트워크 오류): 실패
+# 로그에는 상태 코드와 PostgREST 오류 코드만 남기고 키·응답 본문은 출력하지 않는다.
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: '0 18 */3 * *' # 3일마다 18:00 UTC (한국 03:00)
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: DB 읽기 요청 1건
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "::error::SUPABASE_URL / SUPABASE_ANON_KEY secret이 없습니다."
+            exit 1
+          fi
+          body="$(mktemp)"
+          status="$(curl -sS -o "$body" -w '%{http_code}' --max-time 30 --retry 2 --retry-delay 10 \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL%/}/rest/v1/ledger?select=id&limit=1")" || status="000"
+          pg_code="$(jq -r 'if type == "object" then (.code // "") else "" end' "$body" 2>/dev/null || true)"
+          rm -f "$body"
+          echo "HTTP ${status}${pg_code:+ (code ${pg_code})}"
+          case "$status" in
+            2??) echo "정상 응답" ;;
+            401)
+              if [ "$pg_code" = "42501" ]; then
+                echo "DB 응답 확인: anon 권한 없음(42501) — 요청이 DB까지 도달함"
+              else
+                echo "::error::인증 실패(키 확인 필요)"
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::비정상 응답 (일시정지·장애 가능)"
+              exit 1
+              ;;
+          esac
