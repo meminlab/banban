@@ -13,6 +13,7 @@ import {
   type RecurringFormState,
 } from '../app/routes';
 import { useLoad } from '../app/useLoad';
+import { useTodayKST } from '../app/useTodayKST';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { EventKindIcon } from '../components/EventKindIcon';
 import { RecurringSuggestSheet, useRecordDone } from '../components/RecurringSuggestSheet';
@@ -46,7 +47,7 @@ import {
   spokenAmount,
   type RecurringDue,
 } from '../domain/recurring';
-import { formatNumber, memberLabel, todayKST } from '../domain/transactionForm';
+import { formatNumber, memberLabel } from '../domain/transactionForm';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 const FLASH_TEXT: Record<EventFlash['kind'], string> = {
@@ -76,7 +77,8 @@ export function CalendarPage() {
   const [params] = useSearchParams();
   const month = parseMonth(params.get('m')) ?? currentYearMonth();
   const [selected, setSelected] = useState<string | null>(null);
-  const today = todayKST();
+  // 앱을 켜 둔 채 자정이 지나도 돌아왔을 때 "오늘" 표시가 새 날짜로 (BANB-47)
+  const today = useTodayKST();
 
   const { state, reload } = useLoad(async () => {
     const { start, end } = gridRange(month);

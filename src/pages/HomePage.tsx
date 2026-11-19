@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_PATH, CALENDAR_PATH, LEDGER_PATH, type TransactionFormState } from '../app/routes';
+import { useTodayKST } from '../app/useTodayKST';
 import { Delta, deltaSpeech } from '../components/NetWorthDelta';
 import { MonthNav } from '../components/MonthNav';
 import { TxRow, useTxLabels } from '../components/TxRow';
@@ -157,9 +158,10 @@ export function HomePage() {
  */
 function TogetherCard({ ledgerId }: { ledgerId: string }) {
   const [loaded, setLoaded] = useState<{ ledgerId: string; card: TogetherCardData | null } | null>(null);
+  // 앱을 켜 둔 채 자정이 지나면 돌아왔을 때 새 날짜로 다시 계산 (BANB-47). 새 값이 올 때까지는 이전 카드 유지
+  const today = useTodayKST();
   useEffect(() => {
     let alive = true;
-    const today = todayKST();
     Promise.all([getLedger(ledgerId), listUpcomingAnniversaries(ledgerId, today)]).then(
       ([ledger, events]) => alive && setLoaded({ ledgerId, card: buildTogetherCard(ledger.together_since, events, today) }),
       () => alive && setLoaded({ ledgerId, card: null }),
@@ -167,7 +169,7 @@ function TogetherCard({ ledgerId }: { ledgerId: string }) {
     return () => {
       alive = false;
     };
-  }, [ledgerId]);
+  }, [ledgerId, today]);
 
   // 다른 가계부의 결과는 쓰지 않는다
   const card = loaded?.ledgerId === ledgerId ? loaded.card : null;

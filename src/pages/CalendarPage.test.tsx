@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
@@ -564,5 +564,22 @@ describe('일정 탭 정기 내역 (BANB-44)', () => {
     expect(await screen.findByText('1건 기록했어요')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '되돌리기' })).toBeInTheDocument();
     await waitFor(async () => expect(await dayCell(`${m}월 ${d}일`)).toHaveAccessibleName(/기록함$/));
+  });
+});
+
+describe('앱을 켜 둔 채 자정이 지나면 "오늘" 표시 갱신 (BANB-47)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('돌아왔을 때 새로고침 없이 오늘 칸이 새 날짜로 옮겨 간다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-18T14:59:00Z')); // KST 11-18 23:59
+    renderAt('/calendar?m=2026-11');
+    const before = await dayCell('11월 18일');
+    expect(before).toHaveClass('is-today');
+
+    vi.setSystemTime(new Date('2026-11-18T15:01:00Z')); // KST 11-19 00:01
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    expect(await dayCell('11월 19일')).toHaveClass('is-today');
+    expect(await dayCell('11월 18일')).not.toHaveClass('is-today');
   });
 });
