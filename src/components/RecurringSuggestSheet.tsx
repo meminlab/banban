@@ -2,7 +2,7 @@ import { Delete } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import type { TxFlash } from '../app/routes';
-import { recordRecurring } from '../data/recurring';
+import { recordRecurring, RecurringPausedError } from '../data/recurring';
 import type { TransactionFormOptions } from '../data/transaction';
 import type { TransactionType } from '../data/types';
 import {
@@ -19,6 +19,8 @@ import { CategoryIcon } from './CategoryIcon';
 import { Sheet } from './Sheet';
 
 const SIGN: Record<TransactionType, string> = { expense: '−', income: '+', saving: '' };
+/** 확인 중 다른 멤버가 일시정지해 전체가 취소됐을 때의 토스트 (BANB-60) */
+export const PAUSED_TEXT = '일시정지된 정기 내역이 있어 기록하지 않았어요';
 
 /** 기록·건너뛰기를 마친 결과: 토스트 문구 + 되돌리기(바뀐 회차가 있을 때) */
 export type RecordDone = Extract<TxFlash, { kind: 'recorded' }>;
@@ -118,7 +120,12 @@ export function RecurringSuggestSheet({
             ? { op: 'unrecord', ledgerId, keys: applied.map((o) => ({ recurring_id: o.recurring_id, occurs_on: o.occurs_on })) }
             : undefined,
       });
-    } catch {
+    } catch (e) {
+      // 그사이 다른 멤버가 일시정지함 → 아무것도 기록되지 않았다. 시트를 닫고 목록을 다시 불러와 알린다
+      if (e instanceof RecurringPausedError) {
+        onDone({ kind: 'recorded', text: PAUSED_TEXT });
+        return;
+      }
       setBusy(false);
       setFailed(true);
     }

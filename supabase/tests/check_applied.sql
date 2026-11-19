@@ -164,7 +164,11 @@ select c.relname                                          as table_name,
         and has_function_privilege('authenticated', 'public.ten_vs_settle(uuid)', 'execute')
         and not has_function_privilege('authenticated', 'public.ten_replay(bigint,jsonb)', 'execute')
         and array_to_string(public.ten_board(12345), '') like '228278914719738259522249%'
-        and pg_get_constraintdef((select oid from pg_constraint where conname = 'game_kind_check')) like '%ten_vs%') as game_ten
+        and pg_get_constraintdef((select oid from pg_constraint where conname = 'game_kind_check')) like '%ten_vs%') as game_ten,
+       -- BANB-60 (20261119000000): record_recurring 이 일시정지한 정기 내역 회차를 거부, 실행 권한 그대로. 기대: true
+       ((select prosrc like '%RECURRING_PAUSED%' from pg_proc where oid = 'public.record_recurring(uuid,jsonb)'::regprocedure)
+        and has_function_privilege('authenticated', 'public.record_recurring(uuid,jsonb)', 'execute')
+        and not has_function_privilege('anon', 'public.record_recurring(uuid,jsonb)', 'execute')) as recurring_paused
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
