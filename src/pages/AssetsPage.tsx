@@ -4,8 +4,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_ARCHIVED_PATH, assetPath, type AssetFlash } from '../app/routes';
 import { AssetKindIcon } from '../components/AssetKindIcon';
-import { Delta, signedWon } from '../components/NetWorthDelta';
+import { Delta } from '../components/NetWorthDelta';
 import { NetWorthTrend } from '../components/NetWorthTrend';
+import { WonParts } from '../components/WonText';
 import { listAssets, listBalanceHistory, restoreAsset } from '../data/asset';
 import { listMembers } from '../data/member';
 import type { Asset, AssetBalanceHistory, Member } from '../data/types';
@@ -18,7 +19,7 @@ import {
   updatedAgo,
   type OwnerOption,
 } from '../domain/asset';
-import { formatWon } from '../domain/money';
+import { formatWon, heroAmountSize } from '../domain/money';
 import { currentYearMonth } from '../domain/month';
 import {
   composition,
@@ -247,13 +248,11 @@ export function AssetsPage() {
           <NetWorthTrend points={netWorthTrend(viewAssets, history)} />
           <CompositionCard assets={active} />
           <div ref={listRef} className="asset-lists">
-            <div className="section-head">
-              <h2 className="section-head__title">목록</h2>
-              <Link to={ASSET_NEW_PATH} className="button button--primary button--small">
-                <Plus size={16} aria-hidden="true" />
-                자산 추가
-              </Link>
-            </div>
+            {/* 묶음 제목 없이, 구역 머리 위 글자 버튼 (design.md 5.23 규칙 1·3, BANB-15) */}
+            <Link to={ASSET_NEW_PATH} className="asset-add-link">
+              <Plus size={18} aria-hidden="true" />
+              자산 추가
+            </Link>
             <AssetGroupList title="자산" items={active.filter((a) => !isLiability(a.kind))} members={members} />
             <AssetGroupList title="부채" items={active.filter((a) => isLiability(a.kind))} members={members} />
           </div>
@@ -298,14 +297,16 @@ function NetWorthCard({
 }) {
   const nw = currentNetWorth(assets);
   const delta = netWorthChange(assets, history, ym);
-  const netText = `${signedWon(nw.net)}원`;
+  const size = heroAmountSize(nw.net);
   return (
     <section className="asset-card net-worth" aria-label={label}>
       <h2 className="net-worth__label">{label}</h2>
       <p
-        className={`net-worth__value money${nw.net < 0 ? ' is-negative' : ''}${netText.length >= 14 ? ' net-worth__value--long' : ''}`}
+        className={`net-worth__value money money--wrap${nw.net < 0 ? ' is-negative' : ''}${size === 'base' ? '' : ` net-worth__value--${size}`}`}
       >
-        <span aria-hidden="true">{netText}</span>
+        <span aria-hidden="true">
+          <WonParts amount={nw.net} smallUnit />
+        </span>
         <span className="sr-only">{`${nw.net < 0 ? '마이너스 ' : ''}${formatWon(Math.abs(nw.net))}원`}</span>
       </p>
       <Delta value={delta} label="지난달 말보다" />

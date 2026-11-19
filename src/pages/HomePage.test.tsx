@@ -468,6 +468,9 @@ describe('홈: 우리집 순자산 카드', () => {
     const value = within(await nwLink()).getByTestId('home-net-worth');
     expect(value).toHaveTextContent('−9,999,999,999원');
     expect(value).toHaveClass('is-negative');
+    // 쉼표 뒤에서만 끊기게: "−"는 첫 덩어리, "원"(작게)은 마지막 덩어리에 붙는다 (BANB-15)
+    expect([...value.querySelectorAll('.money__group')].map((g) => g.textContent)).toEqual(['−9,', '999,', '999,', '999원']);
+    expect(value.querySelector('.money__unit')).toHaveTextContent(/^원$/);
   });
 
   it('순자산을 못 불러와도 아래 요약은 보이고, 카드만 다시 불러올 수 있다', async () => {

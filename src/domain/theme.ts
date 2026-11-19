@@ -16,7 +16,7 @@ export const THEME_LABEL: Record<ThemeName, string> = {
 export const THEME_DESCRIPTION: Record<ThemeName, string> = {
   clean: '깔끔한 흰 화면',
   berry: '차분한 무채색 화면',
-  cozy: '둘이 쓰는 따뜻한 화면',
+  cozy: '함께 쓰는 따뜻한 화면',
 };
 
 /** <meta name="theme-color"> = 헤더 surface (1.4). 라이트는 세 테마 공통, 다크는 테마마다 */

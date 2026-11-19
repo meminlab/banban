@@ -10,7 +10,7 @@ describe('테마 값', () => {
     expect(THEMES.map((t) => [THEME_LABEL[t], THEME_DESCRIPTION[t]])).toEqual([
       ['클린', '깔끔한 흰 화면'],
       ['베리', '차분한 무채색 화면'],
-      ['포근', '둘이 쓰는 따뜻한 화면'],
+      ['포근', '함께 쓰는 따뜻한 화면'],
     ]);
   });
 

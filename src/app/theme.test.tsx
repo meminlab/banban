@@ -145,7 +145,7 @@ describe('설정 › 화면 테마', () => {
     renderAt('/settings/theme');
     const group = await screen.findByRole('radiogroup', { name: '화면 테마' });
     const radios = within(group).getAllByRole('radio');
-    expect(radios.map((r) => r.textContent)).toEqual(['클린기본깔끔한 흰 화면', '베리차분한 무채색 화면', '포근둘이 쓰는 따뜻한 화면']);
+    expect(radios.map((r) => r.textContent)).toEqual(['클린기본깔끔한 흰 화면', '베리차분한 무채색 화면', '포근함께 쓰는 따뜻한 화면']);
     expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
   });
 

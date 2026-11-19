@@ -43,7 +43,7 @@ export function LoginPage() {
       <main className="login">
         <div className="login__brand">
           <BrandLogo className="login__logo" />
-          <h1 className="login__title">둘이 함께 쓰는 가계부</h1>
+          <h1 className="login__title">함께 쓰는 가계부</h1>
           <p className="login__desc">함께 쓴 돈과 모은 돈을 한 곳에서 봐요.</p>
         </div>
         <div className="login__actions">
