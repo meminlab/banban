@@ -381,6 +381,8 @@ button { font: inherit; }
   outline-offset: 2px;
 }
 .field__count { margin: 0; align-self: flex-end; color: var(--color-text-sub); font-size: 0.8125rem; }
+/* 글자 수가 한도를 넘으면 (BANB-13: 자르지 않고 안내 + 저장 막음) */
+.field__count.is-over { color: var(--color-danger); }
 
 /* ── 내역 입력 */
 .amount-input:has(input[aria-invalid='true']) { border-color: var(--color-danger); }

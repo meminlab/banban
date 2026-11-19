@@ -861,7 +861,7 @@ function TransactionForm({
       )}
       {sheet === 'memo' && (
         <Sheet title={isRecurring ? '이름' : '메모'} onClose={closeSheet}>
-          <MemoSheet initial={draft.memo} onDone={(memo) => {
+          <MemoSheet label={isRecurring ? '이름' : '메모'} initial={draft.memo} onDone={(memo) => {
             set('memo', memo);
             closeSheet();
           }} />
@@ -982,13 +982,17 @@ function ChoiceChips({
 }
 
 /** 메모 한 줄 입력 시트 (100자) */
-function MemoSheet({ initial, onDone }: { initial: string; onDone: (memo: string) => void }) {
+function MemoSheet({ label, initial, onDone }: { label: string; initial: string; onDone: (memo: string) => void }) {
   const [value, setValue] = useState(initial);
+  // 저장 기준(앞뒤 공백 제거 후 코드 포인트 수, validateDraft)과 같게 센다. maxLength 는 UTF-16 단위라 두지 않는다 (BANB-13)
+  const count = [...value.trim()].length;
+  const over = count > MEMO_MAX;
   return (
     <form
       className="tx-sheet"
       onSubmit={(e) => {
         e.preventDefault();
+        if (over) return;
         onDone(value);
       }}
     >
@@ -999,15 +1003,20 @@ function MemoSheet({ initial, onDone }: { initial: string; onDone: (memo: string
         id="tx-memo"
         className="manage-input"
         type="text"
-        maxLength={MEMO_MAX}
         autoFocus
         enterKeyHint="done"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        aria-describedby="tx-memo-count"
+        aria-invalid={over || undefined}
+        aria-describedby={over ? 'tx-memo-err tx-memo-count' : 'tx-memo-count'}
       />
-      <p id="tx-memo-count" className="field__count">
-        {[...value].length}/{MEMO_MAX}
+      {over && (
+        <p id="tx-memo-err" className="field__error" role="alert">
+          {label === '이름' ? '이름은' : '메모는'} {MEMO_MAX}자까지 쓸 수 있어요.
+        </p>
+      )}
+      <p id="tx-memo-count" className={`field__count${over ? ' is-over' : ''}`}>
+        {count}/{MEMO_MAX}
       </p>
       <button type="submit" className="button button--primary button--block">
         완료

@@ -22,6 +22,10 @@ export function assetKindLabel(kind: AssetKind): string {
   return ASSET_KINDS.find((k) => k.value === kind)?.label ?? '기타';
 }
 
+/**
+ * 글자 수는 DB char_length 와 같은 유니코드 문자(코드 포인트) 단위로 센다 (이모지 1개 = 1자).
+ * 입력칸에 maxLength 를 두지 않는다: UTF-16 단위라 이모지를 2자로 세고, 넘치면 안내 없이 잘린다 (BANB-13).
+ */
 export const ASSET_NAME_MAX = 20;
 export const ASSET_MEMO_MAX = 100;
 export const SHARED_OWNER_LABEL = '공동';
@@ -61,7 +65,7 @@ export function validateAssetForm(v: AssetFormValues): ValidateResult {
 
   const name = v.name.trim();
   if (name.length === 0) errors.name = '이름을 입력해 주세요';
-  else if (name.length > ASSET_NAME_MAX) errors.name = `이름은 ${ASSET_NAME_MAX}자까지 쓸 수 있어요`;
+  else if ([...name].length > ASSET_NAME_MAX) errors.name = `이름은 ${ASSET_NAME_MAX}자까지 쓸 수 있어요`;
 
   const balance = parseWonInput(v.balance);
   if (!balance.ok) {
@@ -74,7 +78,7 @@ export function validateAssetForm(v: AssetFormValues): ValidateResult {
   }
 
   const memo = v.memo.trim();
-  if (memo.length > ASSET_MEMO_MAX) errors.memo = `메모는 ${ASSET_MEMO_MAX}자까지 쓸 수 있어요`;
+  if ([...memo].length > ASSET_MEMO_MAX) errors.memo = `메모는 ${ASSET_MEMO_MAX}자까지 쓸 수 있어요`;
 
   if (Object.keys(errors).length > 0 || !balance.ok) return { ok: false, errors };
   return {

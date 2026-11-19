@@ -311,6 +311,27 @@ describe('내역 입력 — 키패드 + 알약 (5.15 v1.4)', () => {
     expect(await screen.findByText('되돌렸어요')).toBeInTheDocument();
   });
 
+  it('메모 글자 수는 저장 기준(이모지 1개 = 1자): 100자는 들어가고, 101자는 안내 후 완료되지 않는다 (BANB-13)', async () => {
+    const user = await openNewForm();
+    await user.click(pill('메모'));
+    const sheet = await screen.findByRole('dialog', { name: '메모' });
+    const input = within(sheet).getByRole('textbox');
+    expect(input).not.toHaveAttribute('maxLength');
+    await user.click(input);
+    await user.paste('가😀'.repeat(50)); // 100자 (UTF-16 으로는 150)
+    expect(within(sheet).getByText('100/100')).toBeInTheDocument();
+    expect(within(sheet).queryByRole('alert')).not.toBeInTheDocument();
+    await user.type(input, '가');
+    expect(within(sheet).getByText('101/100')).toBeInTheDocument();
+    expect(within(sheet).getByRole('alert')).toHaveTextContent('메모는 100자까지 쓸 수 있어요.');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    await user.click(within(sheet).getByRole('button', { name: '완료' }));
+    expect(screen.getByRole('dialog', { name: '메모' })).toBeInTheDocument();
+    await user.type(input, '{Backspace}');
+    await user.click(within(sheet).getByRole('button', { name: '완료' }));
+    expect(pill('메모')).toHaveAccessibleName(`메모: ${'가😀'.repeat(50)}`);
+  });
+
   it('수입은 주머니 없이, 고정지출 false 로 저장된다', async () => {
     const user = await openNewForm();
     await user.click(screen.getByRole('radio', { name: '수입' }));
