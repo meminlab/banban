@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { vi } from 'vitest';
@@ -537,6 +537,26 @@ describe('홈 맨 위 함께한 날 카드 (BANB-43)', () => {
     render(<HomePage />);
     const el = await card();
     expect(el).toHaveTextContent(/^함께한 지 1일째예요$/);
+  });
+
+  it('앱을 켜 둔 채 자정(KST)이 지나면, 돌아왔을 때 새로고침 없이 새 날짜로 N일째·D-n 갱신 (BANB-47)', async () => {
+    vi.setSystemTime(new Date('2026-11-06T14:59:00Z')); // KST 11-06 23:59
+    calDb.togetherSince = '2026-11-05';
+    calDb.events = [anniversary('e1', '결혼기념일', '2019-11-09')];
+    render(<HomePage />);
+    const el = await card();
+    expect(el).toHaveTextContent('함께한 지 2일째예요');
+    expect(el).toHaveTextContent('결혼기념일까지 3일 남았어요D-3');
+
+    vi.setSystemTime(new Date('2026-11-06T15:01:00Z')); // KST 11-07 00:01
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    await waitFor(() => expect(el).toHaveTextContent('함께한 지 3일째예요'));
+    expect(el).toHaveTextContent('결혼기념일까지 2일 남았어요D-2');
+    expect(calDb.today).toEqual(['2026-11-06', '2026-11-07']);
+
+    // 같은 날 다시 돌아오면 다시 불러오지 않는다
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    expect(calDb.today).toHaveLength(2);
   });
 
   it('함께한 날·30일 안 기념일 둘 다 없으면 카드 숨김 (불러오기 실패도 숨김)', async () => {
