@@ -300,8 +300,6 @@ button { font: inherit; }
 
 /* ── 자산 */
 .assets { display: flex; flex-direction: column; gap: 16px; }
-.section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.section-head__title { margin: 0; font-size: 1rem; }
 
 .empty { padding: 32px 16px; text-align: center; border: 1px dashed var(--color-border); border-radius: 16px; }
 .empty__title { margin: 0 0 8px; font-weight: 700; }
@@ -620,6 +618,10 @@ button { font: inherit; }
 
 /* ── 금액 표시 공통: 숫자+"원"을 한 덩어리로 (숫자 안에서 줄바꿈 금지, BANB-10 D-1) */
 .money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+/* 큰 금액 (design.md 2.3·5.4, BANB-15): 쉼표 덩어리(WonParts) 안은 붙이고, 쉼표 뒤에서만 줄바꿈. "원"은 한 단계 작게(hero·xl) */
+.money__group { white-space: nowrap; }
+.money--wrap { white-space: normal; overflow-wrap: normal; }
+.money__unit { font-size: 0.75em; font-weight: 600; margin-left: 1px; }
 
 /* ── 가계부 탭: 월 달력·목록·필터 (BANB-9) */
 .ledger { display: flex; flex-direction: column; gap: 12px; }
@@ -636,7 +638,13 @@ button { font: inherit; }
 .button--link { min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--color-primary); font: inherit; text-decoration: underline; cursor: pointer; }
 .filter-group { min-width: 0; margin: 0; padding-inline: 0; border: 0; }
 .filter-group > legend { float: left; width: 100%; padding: 0; } /* 떠 있는 legend = 묶음의 첫 줄 (gap 8로 칩과 띄움) */
-.filter-actions { position: sticky; bottom: 0; padding-top: 12px; background: var(--color-surface); }
+/* 시트 아래 여백(24 + safe-area)까지 바탕으로 덮어, 버튼 줄 아래로 뒤 내용이 비치지 않게 (BANB-15) */
+.filter-actions {
+  --sheet-pad-bottom: calc(24px + env(safe-area-inset-bottom));
+  position: sticky; bottom: calc(-1 * var(--sheet-pad-bottom));
+  margin-bottom: calc(-1 * var(--sheet-pad-bottom)); padding: 12px 0 var(--sheet-pad-bottom);
+  background: var(--color-surface);
+}
 
 /* 날짜 하루 = 카드 1장 (design.md 5.3): 머리 13/600 text-weak + 오른쪽 그날 지출 합 */
 .day-groups { display: flex; flex-direction: column; gap: var(--space-3); }
@@ -750,13 +758,14 @@ button { font: inherit; }
 .month-check__body > svg { color: var(--color-text-weak); }
 .month-check__body:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
 
-.net-worth__label { margin: 0; font-size: 0.9375rem; font-weight: 400; color: var(--color-text-sub); }
+.net-worth__label { margin: 0; font-size: 0.9375rem; font-weight: 400; color: var(--color-text-sub); word-break: keep-all; }
 /* hero 36px. 14자 이상(예: 9,999,999,999원 이상)이면 28px (5.20). 금액 안에서는 줄바꿈 안 함 */
 .net-worth__value { margin: 0; font-size: 2.25rem; font-weight: 800; line-height: 1.2; }
 .net-worth__value--long { font-size: 1.75rem; }
+.net-worth__value--longer { font-size: 1.375rem; } /* 1조원 이상: 360px 카드 안쪽 여백 안 (BANB-15) */
 .net-worth__value.is-negative { color: var(--color-negative); }
 
-.delta { margin: 0; color: var(--color-text-sub); font-size: 0.875rem; }
+.delta { margin: 0; color: var(--color-text-sub); font-size: 0.875rem; word-break: keep-all; }
 .delta--up .delta__value { color: var(--color-delta-up); font-weight: 600; }
 .delta--down, .delta--down .delta__value { color: var(--color-delta-down); font-weight: 600; }
 .delta--down .delta__label { font-weight: 400; }
@@ -793,7 +802,9 @@ a.asset-item:focus-visible { outline: 3px solid var(--color-primary); outline-of
 .asset-empty__icon { width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--color-surface-sunken); }
 .asset-empty__title { margin: 0; font-weight: 700; }
 .asset-empty .button { display: inline-flex; align-items: center; text-decoration: none; }
-.section-head .button { display: inline-flex; align-items: center; text-decoration: none; }
+/* 자산 탭 "자산 추가" 글자 버튼: 구역 머리 위, Plus + 15/600 primary-strong, 높이 44 (design.md 5.23, BANB-15) */
+.asset-add-link { align-self: flex-end; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin: -8px -8px -12px 0; padding: 0 8px; border-radius: 8px; color: var(--color-primary-strong); font-size: 0.9375rem; font-weight: 600; text-decoration: none; }
+.asset-add-link:focus-visible { outline: 3px solid var(--color-primary); outline-offset: -3px; }
 
 .toast--action:empty { display: none; }
 .toast--action { display: flex; align-items: center; gap: 16px; }
@@ -1010,14 +1021,13 @@ a.together-card:focus-visible { outline: 3px solid var(--color-primary); outline
 a.home-nw:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
 .home-nw--status { align-items: flex-start; gap: 8px; }
 .home-nw--status .hint { margin: 0; }
-.home-nw__head { display: flex; align-items: baseline; gap: 6px; }
+.home-nw__head { display: flex; align-items: baseline; gap: 6px; word-break: keep-all; }
 .home-nw__label { color: var(--color-text-sub); font-size: 0.9375rem; }
 .home-nw__sub { color: var(--color-text-weak); font-size: 0.8125rem; }
 .home-nw__chevron { margin-left: auto; align-self: center; color: var(--color-text-weak); flex: none; }
 /* 금액이 칸보다 넓으면(글자 크기 200% 등) 쉼표 뒤에서 줄바꿈된다 — 자르지 않는다 (design.md 2.2·6) */
 .home-nw__main { flex: 1 1 auto; max-width: 100%; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.home-nw__value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
-.home-nw .delta__value { white-space: normal; overflow-wrap: anywhere; }
+.home-nw__value { font-size: 1.75rem; font-weight: 800; line-height: 1.2; }
 .home-nw__value.is-negative { color: var(--color-negative); }
 .home-nw--empty { flex-direction: row; align-items: center; gap: 12px; }
 .home-nw__empty-icon { width: 44px; height: 44px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--color-surface-sunken); }
@@ -1588,7 +1598,7 @@ a.play-card:focus-visible { outline: 3px solid var(--color-primary); outline-off
 .stack-next span { font: var(--font-micro); color: var(--color-text-sub); }
 .stack-board-wrap { position: relative; width: calc(var(--stack-cell, 36px) * 8); border-radius: 12px; background: var(--color-stack-board); overflow: hidden; }
 .stack-gesture { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.stack-board { display: block; transition: opacity var(--motion-fast, 150ms); }
+.stack-board { display: block; overflow: hidden; transition: opacity var(--motion-fast, 150ms); } /* 판 밖(위로 밀린 조각)은 잘라 숨긴다 (BANB-15) */
 .stack-board.is-dim { opacity: 0.35; }
 .stack-dots circle { fill: var(--color-stack-dot); }
 .stack-ghost rect { fill: none; stroke: var(--color-stack-ghost); stroke-width: 1.5; stroke-dasharray: 4 3; }

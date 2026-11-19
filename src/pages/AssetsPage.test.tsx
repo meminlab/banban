@@ -170,6 +170,29 @@ it('순자산이 음수면 "−" + 빨간색 클래스 (AS-15·16)', async () =>
   expect(within(card('자산 구성')).getByText('총자산이 0원이라 비율을 표시하지 않아요')).toBeInTheDocument();
 });
 
+it('"목록" 묶음 제목 없이, 구역 머리 위 "자산 추가" 글자 버튼 (BANB-15, 5.23 규칙 1·3)', async () => {
+  seed('1', 'ma', 2_700_000, 'A통장');
+  renderAt();
+  await screen.findByText('A통장');
+  expect(screen.queryByRole('heading', { name: '목록' })).not.toBeInTheDocument();
+  const add = screen.getByRole('link', { name: '자산 추가' });
+  expect(add).toHaveAttribute('href', '/assets/new');
+  expect(add).toHaveClass('asset-add-link');
+  expect(add).not.toHaveClass('button--primary');
+});
+
+it('큰 순자산: 쉼표 뒤에서만 줄바꿈, "원"은 작게, 1조원 이상은 한 단계 더 작게 (BANB-15)', async () => {
+  for (let i = 0; i < 101; i++) seed(String(i), null, 9_999_999_999, `통장${i}`); // 1,009,999,999,899원
+  renderAt();
+  await screen.findByText('통장0');
+  const value = card('순자산').querySelector('.net-worth__value') as HTMLElement;
+  expect(netWorth()).toBe('1,009,999,999,899원');
+  expect(value).toHaveClass('money--wrap', 'net-worth__value--longer');
+  const groups = [...value.querySelectorAll('.money__group')].map((g) => g.textContent);
+  expect(groups).toEqual(['1,', '009,', '999,', '999,', '899원']);
+  expect(value.querySelector('.money__unit')).toHaveTextContent(/^원$/);
+});
+
 it('전월 대비: 늘면 ▲, 줄면 ▼, 같으면 변동 없음, 지난달 이력이 없으면 "–" (5.21)', async () => {
   const delta = () => card('순자산').querySelector('.delta') as HTMLElement;
   seed('1', 'ma', 1_000_000, 'A통장', 'checking', '2026-10-10T00:00:00Z');

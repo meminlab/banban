@@ -1,9 +1,5 @@
 import { formatWon } from '../domain/money';
-
-/** 순자산 등 부호 있는 금액: 음수는 U+2212 "−" (design.md 2.3) */
-export function signedWon(n: number): string {
-  return n < 0 ? `−${formatWon(-n)}` : formatWon(n);
-}
+import { WonParts } from './WonText';
 
 /** 화면낭독용 증감 문장 (design.md 5.21) */
 export function deltaSpeech(value: number | null, label: string): string {
@@ -24,13 +20,21 @@ export function Delta({ value, label }: { value: number | null; label: string })
     );
   if (value === 0) return <p className="delta">{label} 변동 없음</p>;
   const up = value > 0;
-  const amount = `${formatWon(Math.abs(value))}원`;
   return (
     <p className={`delta ${up ? 'delta--up' : 'delta--down'}`}>
       <span aria-hidden="true">
         <span className="delta__label">{label}</span>{' '}
-        <span className="delta__value money">
-          <span className="delta__arrow">{up ? '▲' : '▼'}</span> {amount}
+        {/* 줄바꿈은 쉼표 뒤에서만 — ▲▼와 숫자, 숫자와 "원"은 붙인다 (BANB-15) */}
+        <span className="delta__value money money--wrap">
+          <WonParts
+            amount={Math.abs(value)}
+            lead={
+              <>
+                <span className="delta__arrow">{up ? '▲' : '▼'}</span>
+                {'\u00a0'}
+              </>
+            }
+          />
         </span>
       </span>
       <span className="sr-only">{deltaSpeech(value, label)}</span>

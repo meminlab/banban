@@ -1,4 +1,4 @@
-import { formatWon, formatWonInput, formatWonKorean, parseWonInput, MAX_WON } from './money';
+import { formatWon, formatWonInput, formatWonKorean, heroAmountSize, parseWonInput, wonGroups, MAX_WON } from './money';
 
 describe('formatWon', () => {
   it('천 단위 쉼표', () => {
@@ -56,4 +56,28 @@ describe('formatWonKorean (화면낭독용)', () => {
   ])('%d → %s', (n, text) => {
     expect(formatWonKorean(n)).toBe(text);
   });
+});
+
+describe('wonGroups', () => {
+  it('쉼표 단위 덩어리, 부호는 뺀다', () => {
+    expect(wonGroups(0)).toEqual(['0']);
+    expect(wonGroups(999)).toEqual(['999']);
+    expect(wonGroups(1_000_000)).toEqual(['1', '000', '000']);
+    expect(wonGroups(-52_000)).toEqual(['52', '000']);
+  });
+});
+
+describe('heroAmountSize (BANB-15)', () => {
+  it.each([
+    [0, 'base'],
+    [999_999_999, 'base'], // 999,999,999원 12자
+    [-999_999_999, 'base'], // −999,999,999원 13자
+    [1_000_000_000, 'long'], // 1,000,000,000원 14자 (예전 문자열 길이 기준과 같은 결과)
+    [-1_000_000_000, 'long'], // 15자
+    [999_999_999_999, 'long'],
+    [-999_999_999_999, 'long'],
+    [1_000_000_000_000, 'longer'], // 1조원대 양수 (18자) — 예전 length > 18 기준에서 빠지던 값
+    [9_999_999_999_999, 'longer'],
+    [-1_000_000_000_000, 'longer'],
+  ] as const)('%d → %s', (n, size) => expect(heroAmountSize(n)).toBe(size));
 });

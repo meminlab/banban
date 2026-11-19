@@ -1,12 +1,12 @@
 import { ChevronRight, Heart, Landmark, Repeat, X } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLedgerId } from '../app/guards';
 import { ASSET_NEW_PATH, ASSETS_PATH, CALENDAR_PATH, LEDGER_PATH, type TransactionFormState } from '../app/routes';
-import { Delta, deltaSpeech, signedWon } from '../components/NetWorthDelta';
+import { Delta, deltaSpeech } from '../components/NetWorthDelta';
 import { MonthNav } from '../components/MonthNav';
 import { TxRow, useTxLabels } from '../components/TxRow';
-import { WonText } from '../components/WonText';
+import { WonParts, WonText } from '../components/WonText';
 import { RecurringSuggestSheet, useRecordDone } from '../components/RecurringSuggestSheet';
 import { PlayHomeCard, PlayInviteRow } from '../components/PlayInvite';
 import { listOccurrences, listRecurring } from '../data/recurring';
@@ -18,6 +18,7 @@ import { getMonthSummaryData, type MonthSummaryData } from '../data/summary';
 import { getTransactionFormOptions, listLatestTransactions, type TransactionFormOptions } from '../data/transaction';
 import type { Asset, AssetBalanceHistory, Transaction } from '../data/types';
 import { formatWon } from '../domain/format';
+import { heroAmountSize } from '../domain/money';
 import { buildLedgerQuery, EMPTY_FILTER } from '../domain/ledgerView';
 import { addMonths, currentYearMonth, type YearMonth } from '../domain/month';
 import { homeNetWorth, trendWindowStart } from '../domain/netWorth';
@@ -279,8 +280,8 @@ function RecurringSuggestRow({ ledgerId }: { ledgerId: string }) {
   );
 }
 
-/** 14자 이상(예: 9,999,999,999원 이상)이면 hero 36px → xl 28px (design.md 5.4) */
-const heroSizeClass = (amount: number) => (formatWon(amount).length >= 14 ? ' summary-card__value--long' : '');
+/** 14자 이상(1,000,000,000원부터)이면 hero 36px → xl 28px (design.md 5.4) */
+const heroSizeClass = (amount: number) => (heroAmountSize(amount) === 'base' ? '' : ' summary-card__value--long');
 
 /**
  * 이번 달 카드 (design.md 5.23 홈 3): "11월 남은 돈" / hero 금액 / 한 줄 "수입 … · 지출 … · 저축 …"(원 생략, 수입 숫자만 포인트 색).
@@ -297,7 +298,7 @@ function MonthSummaryCard({ summary }: { summary: MonthSummary }) {
         className={`summary-card__value money${remaining < 0 ? ' is-negative' : ''}${heroSizeClass(remaining)}`}
         data-testid="home-remaining"
       >
-        <WonText amount={remaining} />
+        <WonText amount={remaining} smallUnit />
       </p>
       {summary.count === 0 ? (
         <p className="summary-card__line">이 달에 입력한 내역이 없어요.</p>
@@ -461,19 +462,6 @@ const HOME_RETURN: TransactionFormState = { returnTo: '/' };
 
 const monthNo = (ym: YearMonth) => Number(ym.slice(5));
 
-/** 큰 글자(200%)에서 금액이 줄바꿈될 때 쉼표 뒤에서 먼저 끊기게 <wbr> 을 넣는다 */
-const breakAtCommas = (text: string) =>
-  text.split(',').map((part, i) => (
-    <Fragment key={i}>
-      {i > 0 && (
-        <>
-          ,<wbr />
-        </>
-      )}
-      {part}
-    </Fragment>
-  ));
-
 /**
  * 홈 맨 위 "우리집 순자산" 카드 (design.md 5.23 홈 2): 라벨 / xl 금액 / 증감. 작은 추이 그래프는 없다(자산 탭에 있음). 카드 전체가 자산 탭(합친 보기)으로 가는 링크.
  * 이번 달 = 현재 값, 지난 달 = 그 달 월말 값("10월 말 기준"), 미래 달 = 현재 값(Q13). 자산이 없으면 자산 추가로.
@@ -521,7 +509,6 @@ function HomeNetWorthCard({ state, retry, month }: { state: AssetLoadState; retr
     data.basis === 'month_end' ? `${monthNo(month)}월 말 기준` : data.basis === 'future' ? '지금 기준' : null;
   const deltaLabel = data.basis === 'now' ? '지난달보다' : `${monthNo(addMonths(month, -1))}월 말보다`;
   const net = data.net;
-  const netText = net === null ? '–' : `${signedWon(net)}원`;
   const netSpeech = net === null ? '기록이 없어요' : `${net < 0 ? '마이너스 ' : ''}${formatWon(Math.abs(net))}`;
   const label = ['우리집 순자산', sub, netSpeech, deltaSpeech(data.change, deltaLabel), '자산 탭으로 이동']
     .filter(Boolean)
@@ -536,10 +523,10 @@ function HomeNetWorthCard({ state, retry, month }: { state: AssetLoadState; retr
       </div>
       <div className="home-nw__main" aria-hidden="true">
         <span
-          className={`home-nw__value money${net !== null && net < 0 ? ' is-negative' : ''}`}
+          className={`home-nw__value money money--wrap${net !== null && net < 0 ? ' is-negative' : ''}`}
           data-testid="home-net-worth"
         >
-          {breakAtCommas(netText)}
+          {net === null ? '–' : <WonParts amount={net} smallUnit />}
         </span>
         <Delta value={data.change} label={deltaLabel} />
       </div>

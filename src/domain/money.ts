@@ -47,3 +47,24 @@ export function formatWonKorean(n: number): string {
   const parts = [eok > 0 ? `${eok.toLocaleString('ko-KR')}억` : '', man > 0 ? `${man.toLocaleString('ko-KR')}만` : ''];
   return `${sign}${parts.filter(Boolean).join(' ')} 원`;
 }
+
+/** 1234567 → ['1', '234', '567'] (부호 없이). 큰 금액을 쉼표 뒤에서만 줄바꿈할 때 덩어리 단위 */
+export function wonGroups(n: number): string[] {
+  return formatWon(Math.abs(n)).split(',');
+}
+
+/** 1조원 — 이 이상이면 자산 합계 금액을 한 단계 더 줄인다 (BANB-15) */
+export const TRILLION_WON = 1_000_000_000_000;
+
+/**
+ * 큰 금액(hero) 글자 크기 단계 (design.md 2.3·5.4). 문자열 길이 대신 자릿수로 판단해 기호 글자가 바뀌어도 깨지지 않는다.
+ * - 'long': "−" 포함 "…원"이 14자 이상(1,000,000,000원 · −1,000,000,000원부터) → 36 → 28px
+ * - 'longer': 1조원 이상(양수·음수) → 22px (자산 탭 순자산, 360px 카드 안쪽 여백 안)
+ */
+export function heroAmountSize(n: number): 'base' | 'long' | 'longer' {
+  const abs = Math.trunc(Math.abs(n));
+  if (abs >= TRILLION_WON) return 'longer';
+  const digits = String(abs).length;
+  const chars = (n < 0 ? 1 : 0) + digits + Math.floor((digits - 1) / 3) + 1; // 기호 + 숫자 + 쉼표 + '원'
+  return chars >= 14 ? 'long' : 'base';
+}
